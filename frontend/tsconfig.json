@@ -16,7 +16,8 @@
     // - "@/*"            → "src/*" (광범위한 별칭, 위 둘을 포함하는 상위 별칭)
     "paths": {
       "@/*": ["src/*"]
-    }
+    },
+    "jsx": "react-jsx"
   },
 
   // TypeScript가 소스 코드를 찾을 기본 포함 경로
@@ -27,7 +28,6 @@
   // 기존의 프로젝트 참조는 그대로 유지합니다.
   "files": [],
   "references": [
-    { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" }
   ]
 }

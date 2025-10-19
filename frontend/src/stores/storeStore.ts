@@ -2,6 +2,12 @@ import { create } from "zustand";
 
 type Store = { id: string; name: string };
 
+interface AuthState {
+  isLoggedIn: boolean;
+  login: () => void;
+  logout: () => void;
+}
+
 interface StoreState {
   stores: Store[];
   selectedStoreId: string | null;
@@ -9,7 +15,14 @@ interface StoreState {
   setSelectedStoreId: (id: string | null) => void;
 }
 
-export const useStoreSelection = create<StoreState>((set) => ({
+// 인증 상태와 가맹점 선택 상태를 하나의 스토어에서 관리합니다.
+export const useBoundStore = create<AuthState & StoreState>((set) => ({
+  // --- Auth State ---
+  isLoggedIn: false, // 기본적으로 로그인되지 않은 상태
+  login: () => set({ isLoggedIn: true }),
+  logout: () => set({ isLoggedIn: false }),
+
+  // --- Store State ---
   stores: [
     { id: "gangnam", name: "강남점" },
     { id: "jamsil", name: "잠실점" },
