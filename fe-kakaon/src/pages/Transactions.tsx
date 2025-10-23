@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, parse } from "date-fns";
+import { addDays, format, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 const transactions = [
@@ -28,9 +28,10 @@ const transactions = [
 export default function Transactions() {
   const [selectedTransaction, setSelectedTransaction] = useState<typeof transactions[0] | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: new Date(2025, 9, 1),
-    to: new Date(2025, 9, 15),
+    from: startOfMonth(new Date()),
+    to: endOfMonth(new Date()),
   });
+  const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [startInput, setStartInput] = useState<string>("");
   const [endInput, setEndInput] = useState<string>("");
 
@@ -46,6 +47,35 @@ export default function Transactions() {
       setEndInput("");
     }
   }, [dateRange]);
+
+  const handlePeriodChange = (value: string) => {
+    if (!value) return;
+    setActivePeriod(value);
+    const today = new Date();
+    let from: Date, to: Date = today;
+
+    switch (value) {
+      case 'today':
+        from = startOfDay(today);
+        to = endOfDay(today);
+        break;
+      case 'yesterday':
+        from = startOfDay(addDays(today, -1));
+        to = endOfDay(addDays(today, -1));
+        break;
+      case 'last-month':
+        const prevMonth = subMonths(today, 1);
+        from = startOfMonth(prevMonth);
+        to = endOfMonth(prevMonth);
+        break;
+      case 'this-month':
+      default:
+        from = startOfMonth(today);
+        to = endOfMonth(today);
+        break;
+    }
+    setDateRange({ from, to });
+  };
 
   // 스샷 톤의 세그먼트 공통 클래스
   const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
@@ -68,7 +98,7 @@ export default function Transactions() {
           <div className="text-sm font-semibold text-[#333]">조회기간</div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <ToggleGroup type="single" defaultValue="today" className={`${segmentWrap} flex-1`}>
+            <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
               <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>
               <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
               <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
@@ -125,7 +155,7 @@ export default function Transactions() {
                   mode="range"
                   defaultMonth={dateRange?.from}
                   selected={dateRange}
-                  onSelect={setDateRange}
+                  onSelect={(range) => { setDateRange(range); setActivePeriod(""); }}
                   numberOfMonths={2}
                 />
               </PopoverContent>

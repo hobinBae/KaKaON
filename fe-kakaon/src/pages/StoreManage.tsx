@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 import { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -142,10 +143,7 @@ export default function StoreManage() {
   const [isAddingAlert, setIsAddingAlert] = useState(false);
   const [alertRecipients, setAlertRecipients] = useState(initialAlertRecipients);
   const [newRecipient, setNewRecipient] = useState({ name: "", position: "", email: "" });
-  const [date, setDate] = useState<DateRange | undefined>({
-    from: new Date(),
-    to: new Date(),
-  });
+  const [date, setDate] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [newStore, setNewStore] = useState({
@@ -383,18 +381,18 @@ export default function StoreManage() {
               {date?.from ? (
                 date.to ? (
                   <>
-                    {format(date.from, "LLL dd, y")} -{" "}
-                    {format(date.to, "LLL dd, y")}
+                    {format(date.from, "yyyy.MM.dd")} ~{" "}
+                    {format(date.to, "yyyy.MM.dd")}
                   </>
                 ) : (
-                  format(date.from, "LLL dd, y")
+                  format(date.from, "yyyy.MM.dd")
                 )
               ) : (
                 <span>날짜를 선택하세요</span>
               )}
             </Button>
             {showCalendar && (
-              <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg">
+              <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
                 <Calendar
                   initialFocus
                   mode="range"
@@ -406,7 +404,29 @@ export default function StoreManage() {
                       setShowCalendar(false);
                     }
                   }}
-                  numberOfMonths={2}
+                  numberOfMonths={1}
+                  components={{}}
+                  locale={ko}
+                  formatters={{
+                    formatCaption: (date) =>
+                      `${format(date, "yyyy년 M월", { locale: ko })}`,
+                    formatWeekdayName: (day) =>
+                      format(day, "eee", { locale: ko }),
+                  }}
+                  classNames={{
+                    table: "w-full border-collapse space-y-1",
+                    head_row: "flex",
+                    head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                    row: "flex w-full mt-2",
+                    cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                    day_today: "bg-accent text-accent-foreground",
+                    day_outside: "day-outside text-muted-foreground opacity-50",
+                    day_disabled: "text-muted-foreground opacity-50",
+                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                    day_hidden: "invisible",
+                  }}
                 />
               </div>
             )}

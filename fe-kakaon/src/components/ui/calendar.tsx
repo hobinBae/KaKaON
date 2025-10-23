@@ -5,8 +5,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { format } from "date-fns";
 
-import { cn } from "./utils";
-import { buttonVariants } from "./button";
+import { cn } from "@/lib/utils";
+import { buttonVariants } from "./variants";
 
 // 각 날짜 셀의 내용을 구성하는 커스텀 컴포넌트
 function DayContent({ date }: { date: Date }) {
