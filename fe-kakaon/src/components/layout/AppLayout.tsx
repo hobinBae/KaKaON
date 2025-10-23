@@ -26,11 +26,11 @@ export function AppLayout() {
   ];
 
   return (
-    <div className="flex h-screen w-full bg-white overflow-hidden">
+    <div className="flex h-screen w-full bg-white">
       {/* --- Sidebar --- */}
       <aside className="w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col">
         {/* 로고 */}
-        <div className="p-6 border-b border-[rgba(0,0,0,0.06)]">
+        <div className="h-16 flex items-center p-6">
           <Link to="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-[#FEE500] flex items-center justify-center">
               <span className="text-[#3C1E1E] font-bold">K</span>
@@ -93,25 +93,26 @@ export function AppLayout() {
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <header className="h-16 bg-white border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between px-6">
+        <header className="h-16 bg-white border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-4">
-            {/* Zustand 스토어와 연동된 가맹점 선택 드롭다운 */}
-            <Select
-              value={selectedStoreId ?? "all"}
-              onValueChange={(val) => setSelectedStoreId(val === "all" ? null : val)}
-            >
-              <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 가맹점</SelectItem>
-                {stores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* 가맹점 관리 페이지가 아닐 때만 필터를 보여줍니다. */}
+            {location.pathname !== '/stores' && (
+              <Select
+                value={selectedStoreId ?? ""}
+                onValueChange={(val) => setSelectedStoreId(val)}
+              >
+                <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex items-center gap-3">
