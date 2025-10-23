@@ -25,7 +25,7 @@ export default function Login() {
           </div>
 
           {/* Login Form */}
-          <div className="space-y-4 mb-6">
+          <form onSubmit={(e) => { e.preventDefault(); handleLogin(); }} className="space-y-4 mb-6">
             <div>
               <label className="block text-sm text-[#333333] mb-2">이메일</label>
               <Input
@@ -42,15 +42,13 @@ export default function Login() {
                 className="w-full rounded-lg border border-[rgba(0,0,0,0.1)] bg-[#F5F5F5] px-4 py-3"
               />
             </div>
-          </div>
-
-          {/* Local Login Button */}
-          <Button
-            onClick={handleLogin}
-            className="w-full bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg py-3 flex items-center justify-center gap-2 shadow-none"
-          >
-            로그인
-          </Button>
+            <Button
+              type="submit"
+              className="w-full bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg py-3 flex items-center justify-center gap-2 shadow-none !mt-6"
+            >
+              로그인
+            </Button>
+          </form>
 
           {/* Divider */}
           <div className="my-6 flex items-center">
@@ -98,7 +96,7 @@ export default function Login() {
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M10 12V4H12V12H10Z" fill="white"/>
                 <path d="M6 4L6 12H4V4H6Z" fill="white"/>
-                <path d="M6 4L10 12" stroke="white" stroke-width="2"/>
+                <path d="M6 4L10 12" stroke="white" strokeWidth="2"/>
               </svg>
               네이버로 시작하기
             </Button>

@@ -2,15 +2,17 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar as CalendarIcon } from "lucide-react";
-import { useState, useMemo } from "react";
+import { AlertTriangle, Calendar as CalendarIcon, RotateCw } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { DateRange } from "react-day-picker";
-import { format } from "date-fns";
+import { format, addDays, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Input } from "@/components/ui/input";
 
 const transactionDetails = {
   'TX-20251015-003': { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소' },
@@ -70,15 +72,34 @@ const alerts = [
 export default function Alerts() {
   const [selectedAlert, setSelectedAlert] = useState<typeof alerts[0] | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<typeof transactionDetails[keyof typeof transactionDetails] | null>(null);
-  const [date, setDate] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: new Date(2025, 9, 1),
+    to: new Date(2025, 9, 15),
+  });
+  const [startInput, setStartInput] = useState<string>("");
+  const [endInput, setEndInput] = useState<string>("");
+  const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    if (dateRange?.from) {
+      setStartInput(format(dateRange.from, 'yyyy.MM.dd'));
+    } else {
+      setStartInput("");
+    }
+    if (dateRange?.to) {
+      setEndInput(format(dateRange.to, 'yyyy.MM.dd'));
+    } else {
+      setEndInput("");
+    }
+  }, [dateRange]);
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter(alert => {
       const alertDate = new Date(alert.time);
-      const fromDate = date?.from;
-      const toDate = date?.to;
+      const fromDate = dateRange?.from;
+      const toDate = dateRange?.to;
 
       if (fromDate && alertDate < fromDate) return false;
       if (toDate && alertDate > toDate) return false;
@@ -87,7 +108,42 @@ export default function Alerts() {
 
       return true;
     });
-  }, [date, typeFilter, statusFilter]);
+  }, [dateRange, typeFilter, statusFilter]);
+
+  const handlePeriodChange = (value: string) => {
+    if (!value) return;
+    setActivePeriod(value);
+    const today = new Date();
+    let from: Date, to: Date = today;
+
+    switch (value) {
+      case 'today':
+        from = startOfDay(today);
+        to = endOfDay(today);
+        break;
+      case 'yesterday':
+        from = startOfDay(addDays(today, -1));
+        to = endOfDay(addDays(today, -1));
+        break;
+      case 'last-month':
+        const prevMonth = subMonths(today, 1);
+        from = startOfMonth(prevMonth);
+        to = endOfMonth(prevMonth);
+        break;
+      case 'this-month':
+      default:
+        from = startOfMonth(today);
+        to = endOfMonth(today);
+        break;
+    }
+    setDateRange({ from, to });
+  };
+
+  // 스샷 톤의 세그먼트 공통 클래스
+  const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
+  const segmentItem =
+    "rounded-lg px-4 h-8 text-sm data-[state=on]:bg-white data-[state=on]:shadow-sm " +
+    "data-[state=on]:text-[#111] data-[state=off]:text-[#50505f] hover:bg-white transition";
 
   return (
     <div className="p-8 space-y-6">
@@ -103,69 +159,127 @@ export default function Alerts() {
       </div>
 
       {/* Filters */}
-      <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <div className="grid grid-cols-4 gap-4">
-          <div className="col-span-2">
-            <label className="block text-sm text-[#333333] mb-2">기간 선택</label>
+      <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white">
+        {/* ====== 조회기간 : 한 줄 전체 폭 사용 ====== */}
+        <div className="grid grid-cols-[72px_1fr] items-center gap-3">
+          <div className="text-sm font-semibold text-[#333]">조회기간</div>
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
+              <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>
+              <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
+              <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
+              <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+            </ToggleGroup>
+
+
             <Popover>
               <PopoverTrigger asChild>
                 <Button
-                  variant={"outline"}
-                  className="w-full justify-start text-left font-normal rounded-lg"
+                  variant="outline"
+                  className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
                 >
-                  <CalendarIcon className="mr-2 h-4 w-4" />
-                  {date?.from ? (
-                    date.to ? (
-                      <>
-                        {format(date.from, "yyyy-MM-dd")} ~ {format(date.to, "yyyy-MM-dd")}
-                      </>
-                    ) : (
-                      format(date.from, "yyyy-MM-dd")
-                    )
-                  ) : (
-                    <span>기간을 선택하세요</span>
-                  )}
+                  <CalendarIcon className="w-4 h-4" />
+                  {dateRange?.from && dateRange?.to
+                    ? `${format(dateRange.from, "yyyy.MM.dd")} ~ ${format(dateRange.to, "yyyy.MM.dd")}`
+                    : "직접입력"}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
+              <PopoverContent className="w-auto p-4 space-y-4" align="start">
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={startInput}
+                    onChange={(e) => setStartInput(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parse(startInput, 'yyyy.MM.dd', new Date());
+                      if (!isNaN(parsed.getTime())) {
+                        setDateRange((prev) => ({ from: parsed, to: prev?.to }));
+                      } else {
+                        setStartInput(dateRange?.from ? format(dateRange.from, 'yyyy.MM.dd') : "");
+                      }
+                    }}
+                    placeholder="시작일"
+                    className="h-8 rounded-md"
+                  />
+                  <span>-</span>
+                  <Input
+                    value={endInput}
+                    onChange={(e) => setEndInput(e.target.value)}
+                    onBlur={() => {
+                      const parsed = parse(endInput, 'yyyy.MM.dd', new Date());
+                      if (!isNaN(parsed.getTime())) {
+                        setDateRange((prev) => ({ from: prev?.from, to: parsed }));
+                      } else {
+                        setEndInput(dateRange?.to ? format(dateRange.to, 'yyyy.MM.dd') : "");
+                      }
+                    }}
+                    placeholder="종료일"
+                    className="h-8 rounded-md"
+                  />
+                </div>
                 <Calendar
-                  mode="range"
-                  selected={date}
-                  onSelect={setDate}
                   initialFocus
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={(range) => { setDateRange(range); setActivePeriod(""); }}
+                  numberOfMonths={2}
                 />
               </PopoverContent>
             </Popover>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm text-[#333333] mb-2">유형</label>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="rounded-lg bg-[#F5F5F5]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="취소율">취소율</SelectItem>
-                <SelectItem value="다중결제">다중결제</SelectItem>
-                <SelectItem value="정산">정산</SelectItem>
-                <SelectItem value="고액">고액</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* ====== 유형 + 상태 : 같은 줄 ====== */}
+        <div className="grid grid-cols-[72px_1fr] items-center gap-3 mt-4">
+          <div className="text-sm font-semibold text-[#333]">필터</div>
+          <div className="flex items-center gap-10 flex-wrap">
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-semibold text-[#333] shrink-0">유형</div>
+              <Select value={typeFilter} onValueChange={setTypeFilter}>
+                <SelectTrigger className="rounded-lg bg-[#F5F5F5] w-[180px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체</SelectItem>
+                  <SelectItem value="취소율">취소율</SelectItem>
+                  <SelectItem value="다중결제">다중결제</SelectItem>
+                  <SelectItem value="정산">정산</SelectItem>
+                  <SelectItem value="고액">고액</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-semibold text-[#333] shrink-0">상태</div>
+              <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)} className={segmentWrap}>
+                <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                <ToggleGroupItem value="unread" className={segmentItem}>미확인</ToggleGroupItem>
+                <ToggleGroupItem value="read" className={segmentItem}>확인됨</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
+        </div>
 
-          <div>
-            <label className="block text-sm text-[#333333] mb-2">상태</label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="rounded-lg bg-[#F5F5F5]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체</SelectItem>
-                <SelectItem value="unread">미확인</SelectItem>
-                <SelectItem value="read">확인됨</SelectItem>
-              </SelectContent>
-            </Select>
+        {/* 하단 요약/버튼 */}
+        <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
+          <div className="text-sm text-[#333]">
+            {dateRange?.from && dateRange?.to && (
+              <>
+                {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
+                <span className="text-[#007AFF] ml-1">
+                  ({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)
+                </span>
+              </>
+            )}
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
+              <RotateCw className="w-4 h-4 mr-1" />
+              초기화
+            </Button>
+            <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
+              조회하기
+            </Button>
           </div>
         </div>
       </Card>
