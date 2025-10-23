@@ -2,19 +2,27 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, X } from "lucide-react";
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { AlertTriangle, Calendar as CalendarIcon } from "lucide-react";
+import { useState, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { DateRange } from "react-day-picker";
+import { format } from "date-fns";
+
+const transactionDetails = {
+  'TX-20251015-003': { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소' },
+  'TX-20251015-008': { id: 'TX-20251015-008', time: '2025-10-15 12:58:14', amount: 48000, method: '카드결제', status: '취소' },
+};
 
 const alerts = [
   {
     id: 'AL-20251015-001',
     type: '전주 대비 취소율 20% 이상 증가',
     time: '2025-10-15 12:30:00',
-    store: '사장님 카페',
     status: 'unread',
-    severity: 'urgent',
     description: '취소율이 전주 대비 60% 증가했습니다. 고객 불만이나 제품 문제를 확인해주세요.',
     details: {
       '현재 취소율': '3.2%',
@@ -27,9 +35,7 @@ const alerts = [
     id: 'AL-20251015-002',
     type: '10분 내 동일결제수단 다중결제 감지',
     time: '2025-10-15 10:45:00',
-    store: '사장님 카페',
     status: 'unread',
-    severity: 'urgent',
     details: {
       cardNumber: '**** **** **** 1234',
       transactionCount: 3,
@@ -41,9 +47,7 @@ const alerts = [
     id: 'AL-20251015-003',
     type: '정산 완료',
     time: '2025-10-15 06:00:00',
-    store: '사장님 카페',
     status: 'read',
-    severity: 'info',
     details: {
       settlementDate: '2025-10-14',
       amount: '2,900,000원',
@@ -54,9 +58,7 @@ const alerts = [
     id: 'AL-20251014-001',
     type: '고액 거래 발생',
     time: '2025-10-14 15:22:00',
-    store: '사장님 카페',
     status: 'read',
-    severity: 'warning',
     details: {
       amount: '500,000원',
       method: '카드결제',
@@ -67,32 +69,25 @@ const alerts = [
 
 export default function Alerts() {
   const [selectedAlert, setSelectedAlert] = useState<typeof alerts[0] | null>(null);
+  const [selectedTransaction, setSelectedTransaction] = useState<typeof transactionDetails[keyof typeof transactionDetails] | null>(null);
+  const [date, setDate] = useState<DateRange | undefined>();
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const getSeverityColor = (severity: string) => {
-    switch (severity) {
-      case 'urgent':
-        return 'bg-[#FF4D4D] text-white';
-      case 'warning':
-        return 'bg-[#FFB800] text-[#3C1E1E]';
-      case 'info':
-        return 'bg-[#4CAF50] text-white';
-      default:
-        return 'bg-[#F5F5F5] text-[#333333]';
-    }
-  };
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter(alert => {
+      const alertDate = new Date(alert.time);
+      const fromDate = date?.from;
+      const toDate = date?.to;
 
-  const getSeverityLabel = (severity: string) => {
-    switch (severity) {
-      case 'urgent':
-        return '긴급';
-      case 'warning':
-        return '주의';
-      case 'info':
-        return '알림';
-      default:
-        return '일반';
-    }
-  };
+      if (fromDate && alertDate < fromDate) return false;
+      if (toDate && alertDate > toDate) return false;
+      if (typeFilter !== 'all' && !alert.type.includes(typeFilter)) return false;
+      if (statusFilter !== 'all' && alert.status !== statusFilter) return false;
+
+      return true;
+    });
+  }, [date, typeFilter, statusFilter]);
 
   return (
     <div className="p-8 space-y-6">
@@ -107,25 +102,73 @@ export default function Alerts() {
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-4 gap-6">
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <div className="text-sm text-[#717182] mb-2">전체 알림</div>
-          <div className="text-2xl text-[#333333]">4건</div>
-        </Card>
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <div className="text-sm text-[#717182] mb-2">미확인</div>
-          <div className="text-2xl text-[#FF4D4D]">2건</div>
-        </Card>
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <div className="text-sm text-[#717182] mb-2">긴급</div>
-          <div className="text-2xl text-[#FF4D4D]">2건</div>
-        </Card>
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <div className="text-sm text-[#717182] mb-2">오늘 발생</div>
-          <div className="text-2xl text-[#333333]">3건</div>
-        </Card>
-      </div>
+      {/* Filters */}
+      <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+        <div className="grid grid-cols-4 gap-4">
+          <div className="col-span-2">
+            <label className="block text-sm text-[#333333] mb-2">기간 선택</label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant={"outline"}
+                  className="w-full justify-start text-left font-normal rounded-lg"
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date?.from ? (
+                    date.to ? (
+                      <>
+                        {format(date.from, "yyyy-MM-dd")} ~ {format(date.to, "yyyy-MM-dd")}
+                      </>
+                    ) : (
+                      format(date.from, "yyyy-MM-dd")
+                    )
+                  ) : (
+                    <span>기간을 선택하세요</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="range"
+                  selected={date}
+                  onSelect={setDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          <div>
+            <label className="block text-sm text-[#333333] mb-2">유형</label>
+            <Select value={typeFilter} onValueChange={setTypeFilter}>
+              <SelectTrigger className="rounded-lg bg-[#F5F5F5]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="취소율">취소율</SelectItem>
+                <SelectItem value="다중결제">다중결제</SelectItem>
+                <SelectItem value="정산">정산</SelectItem>
+                <SelectItem value="고액">고액</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
+            <label className="block text-sm text-[#333333] mb-2">상태</label>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="rounded-lg bg-[#F5F5F5]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체</SelectItem>
+                <SelectItem value="unread">미확인</SelectItem>
+                <SelectItem value="read">확인됨</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      </Card>
 
       {/* Alerts Table */}
       <Card className="rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none overflow-hidden">
@@ -133,16 +176,13 @@ export default function Alerts() {
           <TableHeader>
             <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
               <TableHead className="text-[#333333]">알림ID</TableHead>
-              <TableHead className="text-[#333333]">유형</TableHead>
               <TableHead className="text-[#333333]">발생시각</TableHead>
-              <TableHead className="text-[#333333]">가맹점명</TableHead>
-              <TableHead className="text-[#333333]">심각도</TableHead>
+              <TableHead className="text-[#333333]">유형</TableHead>
               <TableHead className="text-[#333333]">상태</TableHead>
-              <TableHead className="text-[#333333]">확인</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {alerts.map((alert) => (
+            {filteredAlerts.map((alert) => (
               <TableRow
                 key={alert.id}
                 className={`hover:bg-[#F5F5F5] cursor-pointer ${
@@ -151,26 +191,12 @@ export default function Alerts() {
                 onClick={() => setSelectedAlert(alert)}
               >
                 <TableCell className="text-[#333333]">{alert.id}</TableCell>
+                <TableCell className="text-[#717182]">{alert.time}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
-                    <AlertTriangle
-                      className={`w-4 h-4 ${
-                        alert.severity === 'urgent'
-                          ? 'text-[#FF4D4D]'
-                          : alert.severity === 'warning'
-                          ? 'text-[#FFB800]'
-                          : 'text-[#4CAF50]'
-                      }`}
-                    />
+                    <AlertTriangle className="w-4 h-4 text-[#FF4D4D]" />
                     <span className="text-[#333333]">{alert.type}</span>
                   </div>
-                </TableCell>
-                <TableCell className="text-[#717182]">{alert.time}</TableCell>
-                <TableCell className="text-[#717182]">{alert.store}</TableCell>
-                <TableCell>
-                  <Badge className={`rounded ${getSeverityColor(alert.severity)}`}>
-                    {getSeverityLabel(alert.severity)}
-                  </Badge>
                 </TableCell>
                 <TableCell>
                   <Badge
@@ -179,19 +205,6 @@ export default function Alerts() {
                   >
                     {alert.status === 'unread' ? '미확인' : '확인됨'}
                   </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="rounded-lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedAlert(alert);
-                    }}
-                  >
-                    상세보기
-                  </Button>
                 </TableCell>
               </TableRow>
             ))}
@@ -224,16 +237,6 @@ export default function Alerts() {
                   <span className="text-gray-800">{selectedAlert.time}</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="font-medium text-gray-500 mb-1">가맹점</span>
-                  <span className="text-gray-800">{selectedAlert.store}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-medium text-gray-500 mb-1">심각도</span>
-                  <Badge className={`rounded w-fit ${getSeverityColor(selectedAlert.severity)}`}>
-                    {getSeverityLabel(selectedAlert.severity)}
-                  </Badge>
-                </div>
-                <div className="flex flex-col">
                   <span className="font-medium text-gray-500 mb-1">상태</span>
                   <Badge
                     variant={selectedAlert.status === 'unread' ? 'destructive' : 'secondary'}
@@ -250,18 +253,18 @@ export default function Alerts() {
               </div>
 
               {/* Related Transactions */}
-              {selectedAlert.severity === 'urgent' && (
+              {selectedAlert.type !== '정산 완료' && (
                 <div>
                   <h4 className="text-[#333333] mb-4">관련 거래 내역</h4>
                   <div className="space-y-2">
-                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm">
+                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm cursor-pointer hover:bg-gray-200" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-003'])}>
                       <div className="flex justify-between mb-1">
                         <span className="text-[#717182]">TX-20251015-003</span>
                         <span className="text-[#FF4D4D]">취소</span>
                       </div>
                       <div className="text-[#333333]">15,000원 · 카드결제</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm">
+                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm cursor-pointer hover:bg-gray-200" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-008'])}>
                       <div className="flex justify-between mb-1">
                         <span className="text-[#717182]">TX-20251015-008</span>
                         <span className="text-[#FF4D4D]">취소</span>
@@ -284,14 +287,54 @@ export default function Alerts() {
                 <Button className="w-full bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
                   확인 완료
                 </Button>
-                <Button asChild variant="outline" className="w-full rounded-lg">
-                  <Link to="/transactions">관련 거래 상세보기</Link>
-                </Button>
               </div>
             </div>
           )}
         </SheetContent>
       </Sheet>
+
+      {/* Transaction Detail Modal */}
+      <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+        <DialogContent className="max-w-2xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle>결제 상세정보</DialogTitle>
+          </DialogHeader>
+          {selectedTransaction && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제ID</div>
+                  <div className="text-[#333333]">{selectedTransaction.id}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제시간</div>
+                  <div className="text-[#333333]">{selectedTransaction.time}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제금액</div>
+                  <div className="text-[#333333]">{selectedTransaction.amount.toLocaleString()}원</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제수단</div>
+                  <div className="text-[#333333]">{selectedTransaction.method}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제상태</div>
+                  <Badge
+                    variant={selectedTransaction.status === '취소' ? 'destructive' : 'secondary'}
+                    className="rounded"
+                  >
+                    {selectedTransaction.status}
+                  </Badge>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full rounded-lg" onClick={() => setSelectedTransaction(null)}>
+                닫기
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

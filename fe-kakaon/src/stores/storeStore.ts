@@ -28,7 +28,7 @@ export const useBoundStore = create<AuthState & StoreState>((set) => ({
     { id: "jamsil", name: "잠실점" },
     { id: "hongdae", name: "홍대점" }
   ],
-  selectedStoreId: null,
+  selectedStoreId: "gangnam", // 초기 선택값을 첫 번째 가맹점으로 설정
   setStores: (stores) => set({ stores }),
   setSelectedStoreId: (id) => set({ selectedStoreId: id })
 }));

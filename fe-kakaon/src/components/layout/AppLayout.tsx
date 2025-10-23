@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoImg from "@/assets/logo.png";
 import {
   Select,
   SelectContent,
@@ -20,25 +21,19 @@ export function AppLayout() {
     { id: 'dashboard', icon: Home, label: '대시보드', path: '/' },
     { id: 'transactions', icon: CreditCard, label: '거래내역', path: '/transactions' },
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
-    { id: 'alerts', icon: Bell, label: '이상거래 알림', path: '/alerts' },
+    { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
     { id: 'stores', icon: Store, label: '가맹점 관리', path: '/stores' },
     { id: 'settings', icon: Settings, label: '설정', path: '/settings' },
   ];
 
   return (
-    <div className="flex h-screen w-full bg-white overflow-hidden">
+    <div className="flex h-screen w-full bg-white">
       {/* --- Sidebar --- */}
       <aside className="w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col">
         {/* 로고 */}
-        <div className="p-6 border-b border-[rgba(0,0,0,0.06)]">
+        <div className="h-16 flex items-center justify-center p-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#FEE500] flex items-center justify-center">
-              <span className="text-[#3C1E1E] font-bold">K</span>
-            </div>
-            <div>
-              <div className="text-[#333333] font-bold">KakaoPay</div>
-              <div className="text-xs text-[#717182]">Franchise</div>
-            </div>
+            <img src={logoImg} alt="KaKaON Logo" className="h-8" />
           </Link>
         </div>
 
@@ -93,25 +88,26 @@ export function AppLayout() {
       {/* --- Main Content --- */}
       <main className="flex-1 flex flex-col overflow-hidden">
         {/* 헤더 */}
-        <header className="h-16 bg-white border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between px-6">
+        <header className="h-16 bg-white border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-4">
-            {/* Zustand 스토어와 연동된 가맹점 선택 드롭다운 */}
-            <Select
-              value={selectedStoreId ?? "all"}
-              onValueChange={(val) => setSelectedStoreId(val === "all" ? null : val)}
-            >
-              <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 가맹점</SelectItem>
-                {stores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>
-                    {store.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* 가맹점 관리 페이지가 아닐 때만 필터를 보여줍니다. */}
+            {location.pathname !== '/stores' && (
+              <Select
+                value={selectedStoreId ?? ""}
+                onValueChange={(val) => setSelectedStoreId(val)}
+              >
+                <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {stores.map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           <div className="flex items-center gap-3">

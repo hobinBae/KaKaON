@@ -12,6 +12,7 @@ import Alerts from "@/pages/Alerts";
 import StoreManage from "@/pages/StoreManage";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
+import SignUp from "@/pages/SignUp";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,10 @@ const router = createBrowserRouter([
   {
     path: "/login",
     element: <Login />,
+  },
+  {
+    path: "/signup",
+    element: <SignUp />,
   },
   {
     path: "/",
