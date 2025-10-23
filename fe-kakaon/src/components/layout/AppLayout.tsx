@@ -1,6 +1,7 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import logoImg from "@/assets/logo.png";
 import {
   Select,
   SelectContent,
@@ -20,7 +21,7 @@ export function AppLayout() {
     { id: 'dashboard', icon: Home, label: '대시보드', path: '/' },
     { id: 'transactions', icon: CreditCard, label: '거래내역', path: '/transactions' },
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
-    { id: 'alerts', icon: Bell, label: '이상거래 알림', path: '/alerts' },
+    { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
     { id: 'stores', icon: Store, label: '가맹점 관리', path: '/stores' },
     { id: 'settings', icon: Settings, label: '설정', path: '/settings' },
   ];
@@ -30,15 +31,9 @@ export function AppLayout() {
       {/* --- Sidebar --- */}
       <aside className="w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col">
         {/* 로고 */}
-        <div className="h-16 flex items-center p-6">
+        <div className="h-16 flex items-center justify-center p-4">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-[#FEE500] flex items-center justify-center">
-              <span className="text-[#3C1E1E] font-bold">K</span>
-            </div>
-            <div>
-              <div className="text-[#333333] font-bold">KakaoPay</div>
-              <div className="text-xs text-[#717182]">Franchise</div>
-            </div>
+            <img src={logoImg} alt="KaKaON Logo" className="h-8" />
           </Link>
         </div>
 
