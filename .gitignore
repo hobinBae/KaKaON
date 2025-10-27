@@ -1,0 +1,6 @@
+### 환경 설정 ###
+.env
+
+
+### IDE / build / cache ###
+.idea
