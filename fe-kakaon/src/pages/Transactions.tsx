@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RotateCw, Calendar as CalendarIcon } from "lucide-react";
+import { RotateCw, Calendar as CalendarIcon, Upload, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -86,9 +86,21 @@ export default function Transactions() {
   return (
     <div className="p-8 space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-[#333333] mb-1">거래내역</h1>
-        <p className="text-sm text-[#717182]">결제내역을 조회하고 관리하세요</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-[#333333] mb-1">거래내역</h1>
+          <p className="text-sm text-[#717182]">결제내역을 조회하고 관리하세요</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" className="h-9 rounded-lg flex items-center gap-2 text-sm px-4">
+            <Upload className="w-4 h-4" />
+            CSV 업로드
+          </Button>
+          <Button variant="outline" className="h-9 rounded-lg flex items-center gap-2 text-sm px-4">
+            <Download className="w-4 h-4" />
+            CSV 다운로드
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
