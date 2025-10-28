@@ -12,7 +12,6 @@ import lombok.Setter;
 @NoArgsConstructor
 public class MemberUpdateRequestDto {
 
-    @NotBlank(message = "이름은 필수 입력 항목입니다.")
     private String name;
 
     @Pattern(regexp = "^(010|011|016|017|018|019)-?\\d{3,4}-?\\d{4}$",
