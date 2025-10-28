@@ -1,6 +1,23 @@
 ### 환경 설정 ###
 .env
-
+**/.env
 
 ### IDE / build / cache ###
 .idea
+
+### OS 파일
+.DS_Store
+Thumbs.db
+
+### 루트 레벨 로그만
+/*.log
+
+### Node.js
+**/node_modules
+**/dist
+
+### Java/Gradle
+**/build
+**/.gradle
+**/bin
+**/.settings

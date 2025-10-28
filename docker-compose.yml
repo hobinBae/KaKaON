@@ -53,6 +53,20 @@ services:
       interval: 5s
       retries: 10
 
+  fe-kakaon:
+    build: ./fe-kakaon
+    container_name: fe-kakaon
+    restart: always
+    env_file:
+      - ./.env
+      - ./fe-kakaon/.env
+    ports:
+      - "${FRONT_PORT}:80"
+    depends_on:
+      - be-kakaon
+    networks:
+      - backend-net
+
 volumes:
   mysql_data:
   redis_data:
