@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.member.repository;
 
 import com.s310.kakaon.domain.member.entity.Member;
+import com.s310.kakaon.domain.member.entity.Provider;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -14,7 +15,7 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     /**
      * provider + providerId로 회원 조회 (OAuth 로그인용)
      */
-    Optional<Member> findByProviderAndProviderId(Member.Provider provider, String providerId);
+    Optional<Member> findByProviderAndProviderId(Provider provider, String providerId);
 
     /**
      * 이메일로 회원 조회
