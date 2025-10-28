@@ -1,13 +1,19 @@
 import * as React from "react";
-
 import { cn } from "@/lib/utils";
 
-function Card({ className, ...props }: React.ComponentProps<"div">) {
+interface CardProps extends React.ComponentProps<"div"> {
+  variant?: "default" | "destructive";
+}
+
+function Card({ className, variant = "default", ...props }: CardProps) {
   return (
     <div
       data-slot="card"
       className={cn(
         "bg-card text-card-foreground flex flex-col gap-6 rounded-xl border",
+        {
+          "border-[#FF4D4D]/20 bg-[#FF4D4D]/5": variant === "destructive",
+        },
         className,
       )}
       {...props}

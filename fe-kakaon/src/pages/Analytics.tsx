@@ -4,10 +4,10 @@ import { Calendar as CalendarIcon, RotateCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
 import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse } from "date-fns";
+import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
 // --- Helper Functions & Dummy Data ---
@@ -55,6 +55,7 @@ export default function Analytics() {
     to: endOfMonth(new Date()),
   });
   const [activePeriod, setActivePeriod] = useState<string>("this-month");
+  const [showCalendar, setShowCalendar] = useState(false);
 
   // State for processed chart data
   const [periodSales, setPeriodSales] = useState<any[]>([]);
@@ -184,7 +185,7 @@ export default function Analytics() {
     "data-[state=on]:text-[#111] data-[state=off]:text-[#50505f] hover:bg-white transition";
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-[#333333] mb-1">매출분석</h1>
@@ -202,56 +203,67 @@ export default function Analytics() {
               <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
               <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
             </ToggleGroup>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
-                >
-                  <CalendarIcon className="w-4 h-4" />
-                  {dateRange?.from && dateRange?.to
-                    ? `${format(dateRange.from, "yyyy.MM.dd")} ~ ${format(dateRange.to, "yyyy.MM.dd")}`
-                    : "직접입력"}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-4 space-y-4" align="start">
-                <div className="flex items-center gap-2">
-                  <Input
-                    value={dateRange?.from ? format(dateRange.from, 'yyyy.MM.dd') : ''}
-                    onChange={(e) => {
-                      const parsed = parse(e.target.value, 'yyyy.MM.dd', new Date());
-                      if (!isNaN(parsed.getTime())) {
-                        setDateRange((prev) => ({ from: parsed, to: prev?.to }));
-                        setActivePeriod("");
+            <div className="relative">
+              <Button
+                variant={"outline"}
+                className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
+                onClick={() => setShowCalendar(!showCalendar)}
+              >
+                <CalendarIcon className="w-4 h-4" />
+                {dateRange?.from ? (
+                  dateRange.to ? (
+                    <>
+                      {format(dateRange.from, "yyyy.MM.dd")} ~{" "}
+                      {format(dateRange.to, "yyyy.MM.dd")}
+                    </>
+                  ) : (
+                    format(dateRange.from, "yyyy.MM.dd")
+                  )
+                ) : (
+                  <span>날짜를 선택하세요</span>
+                )}
+              </Button>
+              {showCalendar && (
+                <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
+                  <Calendar
+                    initialFocus
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={(range) => {
+                      setDateRange(range);
+                      setActivePeriod("");
+                      if (range?.from && range?.to) {
+                        setShowCalendar(false);
                       }
                     }}
-                    placeholder="시작일"
-                    className="h-8 rounded-md"
-                  />
-                  <span>-</span>
-                  <Input
-                    value={dateRange?.to ? format(dateRange.to, 'yyyy.MM.dd') : ''}
-                    onChange={(e) => {
-                      const parsed = parse(e.target.value, 'yyyy.MM.dd', new Date());
-                      if (!isNaN(parsed.getTime())) {
-                        setDateRange((prev) => ({ from: prev?.from, to: parsed }));
-                        setActivePeriod("");
-                      }
+                    numberOfMonths={1}
+                    components={{}}
+                    locale={ko}
+                    formatters={{
+                      formatCaption: (date) =>
+                        `${format(date, "yyyy년 M월", { locale: ko })}`,
+                      formatWeekdayName: (day) =>
+                        format(day, "eee", { locale: ko }),
                     }}
-                    placeholder="종료일"
-                    className="h-8 rounded-md"
+                    classNames={{
+                      table: "w-full border-collapse space-y-1",
+                      head_row: "flex",
+                      head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                      row: "flex w-full mt-2",
+                      cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                      day_today: "bg-accent text-accent-foreground",
+                      day_outside: "day-outside text-muted-foreground opacity-50",
+                      day_disabled: "text-muted-foreground opacity-50",
+                      day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                      day_hidden: "invisible",
+                    }}
                   />
                 </div>
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={(range) => { setDateRange(range); setActivePeriod(""); }}
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
+              )}
+            </div>
           </div>
         </div>
 

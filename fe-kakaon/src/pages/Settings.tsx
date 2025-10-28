@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 
 export default function Settings() {
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       {/* Header */}
       <div>
         <h1 className="text-[#333333] mb-1">설정</h1>
@@ -84,7 +84,7 @@ export default function Settings() {
       </div>
 
       {/* Danger Zone */}
-      <Card className="p-6 rounded-xl border border-[#FF4D4D]/20 shadow-none bg-[#FF4D4D]/5">
+      <Card className="p-6" variant="default">
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-[#FF4D4D] mb-1">계정 삭제</h3>

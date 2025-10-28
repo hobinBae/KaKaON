@@ -139,6 +139,7 @@ const initialAlertRecipients = [
 
 export default function StoreManage() {
   const [stores, setStores] = useState(initialStoreData);
+  const maxSales = Math.max(...stores.map(s => s.todaySales));
   const [selectedStore, setSelectedStore] = useState<typeof initialStoreData[0] | null>(null);
   const [isAddingAlert, setIsAddingAlert] = useState(false);
   const [alertRecipients, setAlertRecipients] = useState(initialAlertRecipients);
@@ -281,6 +282,7 @@ export default function StoreManage() {
               <TableHead className="text-[#333333]">취소율</TableHead>
               <TableHead className="text-[#333333]">알림</TableHead>
               <TableHead className="text-[#333333]">상태</TableHead>
+              <TableHead className="text-[#333333]">매출 현황</TableHead>
               <TableHead className="text-[#333333]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -351,12 +353,25 @@ export default function StoreManage() {
                     {store.status}
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button asChild variant="ghost" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                <TableCell className="w-[200px]">
+                  <div className="flex items-center gap-2">
+                    <div className="w-full h-2.5 relative">
+                      <div
+                        className="bg-[#FFB800] h-2.5"
+                        style={{ width: `${(store.todaySales / maxSales) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500 w-16 text-right">
+                      {(store.todaySales / 10000).toFixed(0)}만원
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
                       <Link to="/transactions">거래내역</Link>
                     </Button>
-                    <Button asChild variant="ghost" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                    <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
                       <Link to="/analytics">매출분석</Link>
                     </Button>
                   </div>
@@ -365,88 +380,6 @@ export default function StoreManage() {
             ))}
           </TableBody>
         </Table>
-      </Card>
-
-      {/* Store Comparison Chart */}
-      <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[#333333]">가맹점별 매출 비교</h3>
-          <div className="relative">
-            <Button
-              variant={"outline"}
-              className="w-[280px] justify-start text-left font-normal rounded-lg"
-              onClick={() => setShowCalendar(!showCalendar)}
-            >
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              {date?.from ? (
-                date.to ? (
-                  <>
-                    {format(date.from, "yyyy.MM.dd")} ~{" "}
-                    {format(date.to, "yyyy.MM.dd")}
-                  </>
-                ) : (
-                  format(date.from, "yyyy.MM.dd")
-                )
-              ) : (
-                <span>날짜를 선택하세요</span>
-              )}
-            </Button>
-            {showCalendar && (
-              <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
-                <Calendar
-                  initialFocus
-                  mode="range"
-                  defaultMonth={date?.from}
-                  selected={date}
-                  onSelect={(range) => {
-                    setDate(range);
-                    if (range?.from && range?.to) {
-                      setShowCalendar(false);
-                    }
-                  }}
-                  numberOfMonths={1}
-                  components={{}}
-                  locale={ko}
-                  formatters={{
-                    formatCaption: (date) =>
-                      `${format(date, "yyyy년 M월", { locale: ko })}`,
-                    formatWeekdayName: (day) =>
-                      format(day, "eee", { locale: ko }),
-                  }}
-                  classNames={{
-                    table: "w-full border-collapse space-y-1",
-                    head_row: "flex",
-                    head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                    row: "flex w-full mt-2",
-                    cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                    day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                    day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                    day_today: "bg-accent text-accent-foreground",
-                    day_outside: "day-outside text-muted-foreground opacity-50",
-                    day_disabled: "text-muted-foreground opacity-50",
-                    day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                    day_hidden: "invisible",
-                  }}
-                />
-              </div>
-            )}
-          </div>
-        </div>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={storeComparisonData} layout="vertical">
-            <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-            <XAxis type="number" stroke="#717182" />
-            <YAxis dataKey="name" type="category" stroke="#717182" width={80} />
-            <Tooltip
-              contentStyle={{
-                backgroundColor: '#FFFFFF',
-                border: '1px solid rgba(0,0,0,0.08)',
-                borderRadius: '8px',
-              }}
-            />
-            <Bar dataKey="sales" fill="#FFB800" radius={[0, 8, 8, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
       </Card>
 
       {/* Store Detail Tabs */}
@@ -505,7 +438,7 @@ export default function StoreManage() {
                       readOnly
                     />
                   </div>
-                  <div className="col-span-2">
+                  <div>
                     <label className="text-sm text-[#717182] mb-2 block">주소</label>
                     <Input
                       value={selectedStore.address}
@@ -523,21 +456,28 @@ export default function StoreManage() {
                   </div>
                   <div>
                     <label className="text-sm text-[#717182] mb-2 block">영업시간</label>
-                    <Input
-                      value="09:00 - 22:00"
-                      className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-                      readOnly
-                    />
+                    <div className="flex items-center gap-2">
+                      <Input
+                        defaultValue="09:00 - 22:00"
+                        className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+                      />
+                      <Button size="sm" className="rounded-lg h-9 px-4 text-xs shrink-0">수정</Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex justify-center mt-6">
-                  <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
-                    수정하기
-                  </Button>
+                  <div>
+                    <label className="text-sm text-[#717182] mb-2 block">휴무일</label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        defaultValue="매주 월요일"
+                        className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+                      />
+                      <Button size="sm" className="rounded-lg h-9 px-4 text-xs shrink-0">수정</Button>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Danger Zone */}
-                <Card className="p-6 mt-6 rounded-xl border border-[#FF4D4D]/20 shadow-none bg-[#FF4D4D]/5">
+                <Card className="p-6 mt-6" variant="default">
                   <div className="flex items-center justify-between">
                     <div>
                       <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
