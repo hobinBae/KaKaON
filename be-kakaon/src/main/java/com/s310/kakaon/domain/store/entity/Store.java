@@ -15,7 +15,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
-@EqualsAndHashCode(of = "storeId")
+@EqualsAndHashCode(of = "storeId", callSuper = false)
 @ToString(exclude = "member")
 
 public class Store extends BaseEntity {
@@ -35,6 +35,7 @@ public class Store extends BaseEntity {
     @Column(name = "business_number", nullable = false, unique = true, length = 30)
     private String businessNumber;
 
+    //여기는 enum으로 할 수 있음
     @Column(name = "business_type", nullable = false, length = 10)
     private String businessType;
 
