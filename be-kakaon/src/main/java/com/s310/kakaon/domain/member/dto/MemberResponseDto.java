@@ -17,8 +17,8 @@ public class MemberResponseDto {
     private String provider;
     private String role;
     private boolean receiveEmail;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private LocalDateTime createdDateTime;
+    private LocalDateTime lastModifiedDateTime;
 
     /** Entity → DTO 변환 메서드 */
     public static MemberResponseDto fromEntity(Member member) {
@@ -30,8 +30,8 @@ public class MemberResponseDto {
                 .provider(member.getProvider().name())
                 .role(member.getRole().name())
                 .receiveEmail(member.isReceiveEmail())
-                .createdAt(member.getCreatedAt())
-                .updatedAt(member.getUpdatedAt())
+                .createdDateTime(member.getCreatedDateTime())
+                .lastModifiedDateTime(member.getLastModifiedDateTime())
                 .build();
     }
 }
