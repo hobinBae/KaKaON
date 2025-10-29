@@ -145,15 +145,15 @@ export default function Dashboard() {
 
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">이번주 취소율</span>
-              <div className="w-10 h-10 rounded-lg bg-[#FF4D4D]/10 flex items-center justify-center">
-                <TrendingDown className="w-5 h-5 text-[#FF4D4D]" />
+              <span className="text-sm text-[#717182]">전일 매출</span>
+              <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
             </div>
-            <div className="text-2xl text-[#333333] mb-2">3.2%</div>
+            <div className="text-2xl text-[#333333] mb-2">2,900,000원</div>
             <div className="flex items-center gap-1 text-sm text-[#FF4D4D]">
-              <TrendingUp className="w-4 h-4" />
-              <span>1.2%p 전주 대비</span>
+              <TrendingDown className="w-4 h-4" />
+              <span>-6.0% 그제 대비</span>
             </div>
           </Card>
 

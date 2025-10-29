@@ -8,6 +8,7 @@ import {
   TrendingDown,
   X,
   Calendar as CalendarIcon,
+  ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
@@ -16,6 +17,12 @@ import { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -61,6 +68,8 @@ const initialStoreData = [
     code: "KN001",
     address: "서울 강남구 테헤란로 123",
     todaySales: 6200000,
+    weeklySales: 43400000,
+    monthlySales: 186000000,
     salesChange: 12.5,
     cancellationRate: 3.2,
     alertCount: 2,
@@ -73,6 +82,8 @@ const initialStoreData = [
     code: "HD001",
     address: "서울 마포구 홍익로 45",
     todaySales: 5800000,
+    weeklySales: 40600000,
+    monthlySales: 174000000,
     salesChange: 8.3,
     cancellationRate: 2.8,
     alertCount: 1,
@@ -85,6 +96,8 @@ const initialStoreData = [
     code: "JS001",
     address: "서울 송파구 올림픽로 234",
     todaySales: 4200000,
+    weeklySales: 29400000,
+    monthlySales: 126000000,
     salesChange: -5.2,
     cancellationRate: 4.1,
     alertCount: 3,
@@ -97,6 +110,8 @@ const initialStoreData = [
     code: "SC001",
     address: "서울 서대문구 신촌역로 78",
     todaySales: 3800000,
+    weeklySales: 26600000,
+    monthlySales: 114000000,
     salesChange: 3.1,
     cancellationRate: 2.5,
     alertCount: 0,
@@ -110,36 +125,27 @@ const initialAlertRecipients = [
   { id: 2, name: "김직원", position: "점장", email: "manager@kakaopay.com" },
 ];
 
-// const staffData = [
-//   {
-//     id: 1,
-//     name: "김직원",
-//     role: "점장",
-//     hourlyWage: 15000,
-//     status: "근무중",
-//     lastCheckIn: "09:00",
-//   },
-//   {
-//     id: 2,
-//     name: "이사원",
-//     role: "스태프",
-//     hourlyWage: 12000,
-//     status: "근무중",
-//     lastCheckIn: "09:30",
-//   },
-//   {
-//     id: 3,
-//     name: "박알바",
-//     role: "스태프",
-//     hourlyWage: 11000,
-//     status: "퇴근",
-//     lastCheckIn: "18:00",
-//   },
-// ];
+type SalesPeriod = "일별" | "주별" | "월별";
 
 export default function StoreManage() {
   const [stores, setStores] = useState(initialStoreData);
-  const maxSales = Math.max(...stores.map(s => s.todaySales));
+  const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
+
+  const getSalesData = (store: typeof initialStoreData[0], period: SalesPeriod) => {
+    switch (period) {
+      case "일별":
+        return store.todaySales;
+      case "주별":
+        return store.weeklySales;
+      case "월별":
+        return store.monthlySales;
+      default:
+        return 0;
+    }
+  };
+  
+  const maxSales = Math.max(...stores.map(s => getSalesData(s, selectedPeriod)));
+
   const [selectedStore, setSelectedStore] = useState<typeof initialStoreData[0] | null>(null);
   const [isAddingAlert, setIsAddingAlert] = useState(false);
   const [alertRecipients, setAlertRecipients] = useState(initialAlertRecipients);
@@ -181,8 +187,10 @@ export default function StoreManage() {
       const newStoreData = {
         ...newStore,
         id: `ST${String(stores.length + 1).padStart(3, '0')}`,
-        code: `CODE${String(stores.length + 1).padStart(3, '0')}`, // 임시 코드 자동 생성
+        code: `CODE${String(stores.length + 1).padStart(3, '0')}`,
         todaySales: 0,
+        weeklySales: 0,
+        monthlySales: 0,
         salesChange: 0,
         cancellationRate: 0,
         alertCount: 0,
@@ -277,12 +285,26 @@ export default function StoreManage() {
         <Table>
           <TableHeader>
             <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-              <TableHead className="text-[#333333]">가맹점명</TableHead>
-              <TableHead className="text-[#333333]">오늘 매출</TableHead>
-              <TableHead className="text-[#333333]">취소율</TableHead>
-              <TableHead className="text-[#333333]">알림</TableHead>
-              <TableHead className="text-[#333333]">상태</TableHead>
-              <TableHead className="text-[#333333]">매출 현황</TableHead>
+              <TableHead className="text-[#333333] pl-6">가맹점명</TableHead>
+              <TableHead className="text-[#333333] text-center">오늘 매출</TableHead>
+              <TableHead className="text-[#333333] text-center">취소율</TableHead>
+              <TableHead className="text-[#333333] text-center">알림</TableHead>
+              <TableHead className="text-[#333333] text-center">상태</TableHead>
+              <TableHead className="text-[#333333] text-center">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2 -ml-2">
+                      {selectedPeriod} 매출 현황
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("일별")}>일별 매출 현황</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("주별")}>주별 매출 현황</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("월별")}>월별 매출 현황</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
               <TableHead className="text-[#333333]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -293,7 +315,7 @@ export default function StoreManage() {
                 className="border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer"
                 onClick={() => handleStoreClick(store)}
               >
-                <TableCell>
+                <TableCell className="pl-6">
                   <div>
                     <div className="flex items-center gap-2">
                       <Star className="w-4 h-4 text-[#717182]" />
@@ -301,13 +323,13 @@ export default function StoreManage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <div>
                     <p className="text-sm text-[#333333]">
                       ₩{(store.todaySales / 1000000).toFixed(1)}M
                     </p>
                     <div
-                      className={`flex items-center gap-1 text-xs ${
+                      className={`flex items-center gap-1 text-xs justify-center ${
                         store.salesChange > 0
                           ? "text-[#4CAF50]"
                           : "text-[#FF4D4D]"
@@ -322,7 +344,7 @@ export default function StoreManage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Badge
                     variant="outline"
                     className={`rounded ${
@@ -334,7 +356,7 @@ export default function StoreManage() {
                     {store.cancellationRate}%
                   </Badge>
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   {store.alertCount > 0 ? (
                     <Badge
                       variant="destructive"
@@ -346,7 +368,7 @@ export default function StoreManage() {
                     <span className="text-xs text-[#717182]">없음</span>
                   )}
                 </TableCell>
-                <TableCell>
+                <TableCell className="text-center">
                   <Badge
                     className="rounded bg-[#4CAF50] text-white"
                   >
@@ -358,11 +380,11 @@ export default function StoreManage() {
                     <div className="w-full h-2.5 relative">
                       <div
                         className="bg-[#FFB800] h-2.5"
-                        style={{ width: `${(store.todaySales / maxSales) * 100}%` }}
+                        style={{ width: `${(getSalesData(store, selectedPeriod) / maxSales) * 100}%` }}
                       ></div>
                     </div>
                     <span className="text-xs text-gray-500 w-16 text-right">
-                      {(store.todaySales / 10000).toFixed(0)}만원
+                      {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
                     </span>
                   </div>
                 </TableCell>
@@ -394,9 +416,6 @@ export default function StoreManage() {
                 <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
                   기본정보
                 </TabsTrigger>
-                {/* <TabsTrigger value="staff" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
-                  직원관리
-                </TabsTrigger> */}
                 <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
                   알림설정
                 </TabsTrigger>
@@ -489,49 +508,6 @@ export default function StoreManage() {
                   </div>
                 </Card>
               </TabsContent>
-
-              {/* <TabsContent value="staff" className="mt-6">
-                <div className="space-y-4">
-                  {staffData.map((staff) => (
-                    <div
-                      key={staff.id}
-                      className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-[#FEE500] rounded-full flex items-center justify-center">
-                          <Users className="w-5 h-5 text-[#3C1E1E]" />
-                        </div>
-                        <div>
-                          <p className="text-sm text-[#333333]">{staff.name}</p>
-                          <p className="text-xs text-[#717182]">
-                            {staff.role} · 시급 ₩{staff.hourlyWage.toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-4">
-                        <Badge
-                          className={`rounded ${
-                            staff.status === "근무중"
-                              ? "bg-[#4CAF50] text-white"
-                              : "bg-[#F5F5F5] text-[#717182]"
-                          }`}
-                        >
-                          {staff.status}
-                        </Badge>
-                        <span className="text-xs text-[#717182]">
-                          최근 출근: {staff.lastCheckIn}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex justify-center mt-6">
-                  <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
-                    <Plus className="w-4 h-4 mr-2" />
-                    직원 추가
-                  </Button>
-                </div>
-              </TabsContent> */}
 
               <TabsContent value="alerts" className="mt-6">
                 <div className="space-y-4">
