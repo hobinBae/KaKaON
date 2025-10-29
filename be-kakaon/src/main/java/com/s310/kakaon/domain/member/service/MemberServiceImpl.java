@@ -41,9 +41,7 @@ public class MemberServiceImpl implements MemberService {
         Member member =  memberRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
 
-        if (dto.getName() != null) member.updateName(dto.getName());
-        if (dto.getPhone() != null) member.updatePhone(dto.getPhone());
-        member.setReceiveEmail(dto.isReceiveEmail());
+        dto.applyToEntity(member);
 
         return MemberResponseDto.fromEntity(member);
     }

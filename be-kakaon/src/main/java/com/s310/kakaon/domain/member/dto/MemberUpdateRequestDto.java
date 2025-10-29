@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.member.dto;
 
+import com.s310.kakaon.domain.member.entity.Member;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -21,15 +22,14 @@ public class MemberUpdateRequestDto {
     @Email(message = "이메일 형식이 올바르지 않습니다.")
     private String email;
 
-    private boolean receiveEmail;
+    private Boolean receiveEmail;
 
     /**
      * 엔티티에 반영하는 메서드 (Service 계층에서 사용)
      */
-    public void applyToEntity(com.s310.kakaon.domain.member.entity.Member member) {
-        member.updateName(this.name);
-        member.updatePhone(this.phone);
-        member.setReceiveEmail(this.receiveEmail);
-
+    public void applyToEntity(Member member) {
+        if (this.name != null) member.updateName(this.name);
+        if (this.phone != null) member.updatePhone(this.phone);
+        if (this.receiveEmail != null) member.setReceiveEmail(this.receiveEmail);
     }
 }
