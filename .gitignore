@@ -4,6 +4,7 @@
 
 ### IDE / build / cache ###
 .idea
+.idea/
 
 ### OS 파일
 .DS_Store
