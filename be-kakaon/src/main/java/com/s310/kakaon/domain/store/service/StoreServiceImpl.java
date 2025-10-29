@@ -65,8 +65,28 @@ public class StoreServiceImpl implements StoreService{
     }
 
     @Override
-    public StoreResponseDto findStoreById(Long storeId) {
-        return null;
+    public StoreResponseDto findStoreById(Long memberId, Long storeId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        if (!store.getMember().getId().equals(member.getId())) {
+//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS); // 추가 예정
+        }
+        // 매퍼 추가 예정
+        return StoreResponseDto.builder()
+                .storeId(store.getStoreId())
+                .ownerName(store.getMember().getName())
+                .businessType(store.getBusinessType())
+                .address(store.getAddress())
+                .name(store.getName())
+                .phone(store.getPhone())
+                .businessNumber(store.getBusinessNumber())
+                .status(store.getStatus())
+                .createdAt(store.getCreatedDateTime())
+                .build();
     }
 
     @Override

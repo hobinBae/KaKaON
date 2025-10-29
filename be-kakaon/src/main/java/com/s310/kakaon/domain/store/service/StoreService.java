@@ -9,7 +9,7 @@ import java.util.List;
 public interface StoreService {
     StoreResponseDto registerStore(Long memberId, StoreCreateRequestDto request);
 
-    StoreResponseDto findStoreById(Long storeId);
+    StoreResponseDto findStoreById(Long memberId, Long storeId);
 
     void deleteStore(Long storeId);
 
