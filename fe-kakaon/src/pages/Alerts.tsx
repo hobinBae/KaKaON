@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { format, addDays, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
+import { format, addDays, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
@@ -78,10 +78,14 @@ export default function Alerts() {
   });
   const [startInput, setStartInput] = useState<string>("");
   const [endInput, setEndInput] = useState<string>("");
-  const [activePeriod, setActivePeriod] = useState<string>("this-month");
+  const [activePeriod, setActivePeriod] = useState<string>("today");
   const [showCalendar, setShowCalendar] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+
+  useEffect(() => {
+    handlePeriodChange(activePeriod);
+  }, []);
 
   useEffect(() => {
     if (dateRange?.from) {
@@ -122,19 +126,21 @@ export default function Alerts() {
         from = startOfDay(today);
         to = endOfDay(today);
         break;
-      case 'yesterday':
-        from = startOfDay(addDays(today, -1));
-        to = endOfDay(addDays(today, -1));
-        break;
-      case 'last-month':
-        const prevMonth = subMonths(today, 1);
-        from = startOfMonth(prevMonth);
-        to = endOfMonth(prevMonth);
+      case 'this-week':
+        from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
+        to = endOfWeek(today, { weekStartsOn: 1 });
         break;
       case 'this-month':
-      default:
         from = startOfMonth(today);
         to = endOfMonth(today);
+        break;
+      case 'this-year':
+        from = startOfYear(today);
+        to = endOfYear(today);
+        break;
+      default:
+        from = startOfDay(today);
+        to = endOfDay(today);
         break;
     }
     setDateRange({ from, to });
@@ -167,10 +173,10 @@ export default function Alerts() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-              <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>
               <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-              <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
+              <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
               <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+              <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
             </ToggleGroup>
 
 
@@ -297,7 +303,7 @@ export default function Alerts() {
         <Table>
           <TableHeader>
             <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-              <TableHead className="text-[#333333]">알림ID</TableHead>
+              <TableHead className="text-[#333333] pl-6">알림ID</TableHead>
               <TableHead className="text-[#333333]">발생시각</TableHead>
               <TableHead className="text-[#333333]">유형</TableHead>
               <TableHead className="text-[#333333]">상태</TableHead>
@@ -312,7 +318,7 @@ export default function Alerts() {
                 }`}
                 onClick={() => setSelectedAlert(alert)}
               >
-                <TableCell className="text-[#333333]">{alert.id}</TableCell>
+                <TableCell className="text-[#333333] pl-6">{alert.id}</TableCell>
                 <TableCell className="text-[#717182]">{alert.time}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-2">
