@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "busiess_hour")
+@Table(name = "business_hour")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
@@ -36,5 +36,9 @@ public class BusinessHour {
     private LocalTime closeTime;
 
     @Column(name = "is_closed", nullable = false)
-    private boolean isClosed;
+    private boolean closed;
+
+    public void setStore(Store store) {
+        this.store = store;
+    }
 }
