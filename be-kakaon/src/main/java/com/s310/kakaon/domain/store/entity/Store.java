@@ -8,6 +8,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "store")
@@ -67,6 +69,14 @@ public class Store extends BaseEntity {
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
+
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<BusinessHour> businessHours = new ArrayList<>();
+
+    public void addBusinessHour(BusinessHour businessHour) {
+        businessHours.add(businessHour);
+        businessHour.setStore(this);
+    }
 
     public void delete() {
         this.deletedAt = LocalDateTime.now();
