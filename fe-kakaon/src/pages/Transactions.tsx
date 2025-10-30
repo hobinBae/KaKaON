@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { RotateCw, Calendar as CalendarIcon, Upload, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useBoundStore } from "@/stores/storeStore";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,19 +15,9 @@ import { addDays, format, differenceInCalendarDays, parse, startOfMonth, endOfMo
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-const transactions = [
-  { id: 'TX-20251015-001', time: '2025-10-15 14:35:22', amount: 45000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-002', time: '2025-10-15 14:22:11', amount: 28000, method: '간편결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소', store: '사장님 카페' },
-  { id: 'TX-20251015-004', time: '2025-10-15 13:55:33', amount: 52000, method: '계좌이체', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-005', time: '2025-10-15 13:42:18', amount: 33000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-006', time: '2025-10-15 13:28:47', amount: 67000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-007', time: '2025-10-15 13:15:29', amount: 22000, method: '현금', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-008', time: '2025-10-15 12:58:14', amount: 48000, method: '카드결제', status: '취소', store: '사장님 카페' },
-];
-
 export default function Transactions() {
-  const [selectedTransaction, setSelectedTransaction] = useState<typeof transactions[0] | null>(null);
+  const { transactions, cancelTransaction, selectedStoreId } = useBoundStore();
+  const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -265,22 +256,22 @@ export default function Transactions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((tx) => (
+              {transactions.filter(tx => tx.storeId === selectedStoreId).map((tx) => (
                 <TableRow
                   key={tx.id}
-                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === '취소' ? 'opacity-60' : ''}`}
+                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === 'cancelled' ? 'opacity-60' : ''}`}
                   onClick={() => setSelectedTransaction(tx)}
                 >
                   <TableCell className="text-[#333333] pl-6">{tx.id}</TableCell>
-                  <TableCell className="text-[#717182]">{tx.time}</TableCell>
-                  <TableCell className="text-[#333333]">{tx.amount.toLocaleString()}원</TableCell>
-                  <TableCell className="text-[#717182]">{tx.method}</TableCell>
+                  <TableCell className="text-[#717182]">{tx.date}</TableCell>
+                  <TableCell className="text-[#333333]">{tx.total.toLocaleString()}원</TableCell>
+                  <TableCell className="text-[#717182]">{tx.paymentMethod}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={tx.status === '취소' ? 'destructive' : 'secondary'}
+                      variant={tx.status === 'cancelled' ? 'destructive' : 'secondary'}
                       className="rounded bg-[#F5F5F5] text-[#333333]"
                     >
-                      {tx.status}
+                      {tx.status === 'completed' ? '완료' : '취소'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -343,8 +334,20 @@ export default function Transactions() {
               )}
 
               <div className="flex gap-3">
+                {selectedTransaction.status === 'completed' && (
+                  <Button
+                    variant="destructive"
+                    className="flex-1 rounded-lg"
+                    onClick={() => {
+                      cancelTransaction(selectedTransaction.id);
+                      setSelectedTransaction(null);
+                    }}
+                  >
+                    결제 취소
+                  </Button>
+                )}
                 <Button className="flex-1 bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">영수증 출력</Button>
-                <Button variant="outline" className="flex-1 rounded-lg">닫기</Button>
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedTransaction(null)}>닫기</Button>
               </div>
             </div>
           )}
