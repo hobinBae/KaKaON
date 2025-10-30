@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User, Terminal } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
 import {
@@ -18,7 +18,7 @@ export function AppLayout() {
 
   // 메뉴 아이템 배열: 아이디, 아이콘, 라벨, 경로를 포함합니다.
   const menuItems = [
-    { id: 'dashboard', icon: Home, label: '대시보드', path: '/' },
+    { id: 'dashboard', icon: Home, label: '대시보드', path: '/dashboard' },
     { id: 'transactions', icon: CreditCard, label: '거래내역', path: '/transactions' },
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
     { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },

@@ -40,22 +40,21 @@ const router = createBrowserRouter([
     element: <AdditionalInfo />,
   },
   {
-    path: "/dashboard",
-    element: <PrivateRoute />, // PrivateRoute가 하위 경로들을 보호합니다.
+    path: "/pos",
+    element: <Pos />,
+  },
+  {
+    element: <PrivateRoute />,
     children: [
       {
-        path: "pos",
-        element: <Pos />,
-      },
-      {
-        element: <AppLayout />, // AppLayout은 로그인된 사용자에게만 보입니다.
+        element: <AppLayout />,
         children: [
-          { index: true, element: <Dashboard /> },
-          { path: "transactions", element: <Transactions /> },
-          { path: "analytics", element: <Analytics /> },
-          { path: "alerts", element: <Alerts /> },
-          { path: "stores", element: <StoreManage /> },
-          { path: "settings", element: <Settings /> },
+          { path: "/dashboard", element: <Dashboard /> },
+          { path: "/transactions", element: <Transactions /> },
+          { path: "/analytics", element: <Analytics /> },
+          { path: "/alerts", element: <Alerts /> },
+          { path: "/stores", element: <StoreManage /> },
+          { path: "/settings", element: <Settings /> },
         ],
       },
     ],
