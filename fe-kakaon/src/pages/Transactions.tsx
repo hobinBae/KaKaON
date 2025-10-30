@@ -10,7 +10,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay } from "date-fns";
+import { addDays, format, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
@@ -31,10 +31,14 @@ export default function Transactions() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
-  const [activePeriod, setActivePeriod] = useState<string>("this-month");
+  const [activePeriod, setActivePeriod] = useState<string>("today");
   const [startInput, setStartInput] = useState<string>("");
   const [endInput, setEndInput] = useState<string>("");
   const [showCalendar, setShowCalendar] = useState(false);
+
+  useEffect(() => {
+    handlePeriodChange(activePeriod);
+  }, []);
 
   useEffect(() => {
     if (dateRange?.from) {
@@ -60,19 +64,21 @@ export default function Transactions() {
         from = startOfDay(today);
         to = endOfDay(today);
         break;
-      case 'yesterday':
-        from = startOfDay(addDays(today, -1));
-        to = endOfDay(addDays(today, -1));
-        break;
-      case 'last-month':
-        const prevMonth = subMonths(today, 1);
-        from = startOfMonth(prevMonth);
-        to = endOfMonth(prevMonth);
+      case 'this-week':
+        from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
+        to = endOfWeek(today, { weekStartsOn: 1 });
         break;
       case 'this-month':
-      default:
         from = startOfMonth(today);
         to = endOfMonth(today);
+        break;
+      case 'this-year':
+        from = startOfYear(today);
+        to = endOfYear(today);
+        break;
+      default:
+        from = startOfDay(today);
+        to = endOfDay(today);
         break;
     }
     setDateRange({ from, to });
@@ -112,10 +118,10 @@ export default function Transactions() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-              <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>
               <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-              <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
+              <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
               <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+              <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
             </ToggleGroup>
 
 
@@ -250,7 +256,7 @@ export default function Transactions() {
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-                <TableHead className="text-[#333333]">승인번호</TableHead>
+                <TableHead className="text-[#333333] pl-6">승인번호</TableHead>
                 <TableHead className="text-[#333333]">결제시간</TableHead>
                 <TableHead className="text-[#333333]">금액</TableHead>
                 <TableHead className="text-[#333333]">결제수단</TableHead>
@@ -265,7 +271,7 @@ export default function Transactions() {
                   className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === '취소' ? 'opacity-60' : ''}`}
                   onClick={() => setSelectedTransaction(tx)}
                 >
-                  <TableCell className="text-[#333333]">{tx.id}</TableCell>
+                  <TableCell className="text-[#333333] pl-6">{tx.id}</TableCell>
                   <TableCell className="text-[#717182]">{tx.time}</TableCell>
                   <TableCell className="text-[#333333]">{tx.amount.toLocaleString()}원</TableCell>
                   <TableCell className="text-[#717182]">{tx.method}</TableCell>

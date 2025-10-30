@@ -1,6 +1,8 @@
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export default function Settings() {
   return (
@@ -8,7 +10,7 @@ export default function Settings() {
       {/* Header */}
       <div>
         <h1 className="text-[#333333] mb-1">설정</h1>
-        <p className="text-sm text-[#717182]">계정 정보를 관리하세요</p>
+        <p className="text-sm text-[#717182]">계정 및 알림 설정을 관리하세요</p>
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
@@ -20,59 +22,39 @@ export default function Settings() {
               <label className="block text-sm text-[#333333] mb-2">이름</label>
               <Input
                 defaultValue="김사장"
-                className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
               />
             </div>
             <div>
               <label className="block text-sm text-[#333333] mb-2">전화번호</label>
               <Input
                 defaultValue="010-1234-5678"
-                className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
               />
             </div>
             <div>
-              <label className="block text-sm text-[#333333] mb-2">이메일</label>
+              <label className="block text-sm text-[#333333] mb-2">이메일 (카카오 계정)</label>
               <Input
                 defaultValue="admin@example.com"
                 className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                readOnly
               />
             </div>
           </div>
-
         </Card>
 
-        {/* Password Change */}
+        {/* Notification Settings */}
         <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <h3 className="text-[#333333] mb-6">비밀번호 변경</h3>
+          <h3 className="text-[#333333] mb-6">알림 설정</h3>
           <div className="space-y-4">
-            <div>
-              <label className="block text-sm text-[#333333] mb-2">현재 비밀번호</label>
-              <Input
-                type="password"
-                placeholder="현재 비밀번호를 입력하세요"
-                className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-[#333333] mb-2">새 비밀번호</label>
-              <Input
-                type="password"
-                placeholder="새 비밀번호를 입력하세요"
-                className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm text-[#333333] mb-2">새 비밀번호 확인</label>
-              <Input
-                type="password"
-                placeholder="새 비밀번호를 다시 입력하세요"
-                className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-              />
+            <div className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
+              <div>
+                <Label htmlFor="all-notifications" className="text-sm text-[#333333]">전체 알림</Label>
+                <p className="text-xs text-[#717182]">모든 종류의 알림을 받습니다.</p>
+              </div>
+              <Switch id="all-notifications" defaultChecked />
             </div>
           </div>
-
         </Card>
       </div>
 

@@ -3,12 +3,12 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { Calendar as CalendarIcon, RotateCw } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse } from "date-fns";
+import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // --- Helper Functions & Dummy Data ---
 
@@ -54,7 +54,7 @@ export default function Analytics() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
-  const [activePeriod, setActivePeriod] = useState<string>("this-month");
+  const [activePeriod, setActivePeriod] = useState<string>("today");
   const [showCalendar, setShowCalendar] = useState(false);
 
   // State for processed chart data
@@ -150,6 +150,10 @@ export default function Analytics() {
     })).sort((a,b) => a.month.localeCompare(b.month)));
   }, [dateRange]);
 
+  useEffect(() => {
+    handlePeriodChange(activePeriod);
+  }, []);
+
   const handlePeriodChange = (value: string) => {
     if (!value) return;
     setActivePeriod(value);
@@ -161,19 +165,21 @@ export default function Analytics() {
         from = startOfDay(today);
         to = endOfDay(today);
         break;
-      case 'yesterday':
-        from = startOfDay(addDays(today, -1));
-        to = endOfDay(addDays(today, -1));
-        break;
-      case 'last-month':
-        const prevMonth = subMonths(today, 1);
-        from = startOfMonth(prevMonth);
-        to = endOfMonth(prevMonth);
+      case 'this-week':
+        from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
+        to = endOfWeek(today, { weekStartsOn: 1 });
         break;
       case 'this-month':
-      default:
         from = startOfMonth(today);
         to = endOfMonth(today);
+        break;
+      case 'this-year':
+        from = startOfYear(today);
+        to = endOfYear(today);
+        break;
+      default:
+        from = startOfDay(today);
+        to = endOfDay(today);
         break;
     }
     setDateRange({ from, to });
@@ -192,225 +198,188 @@ export default function Analytics() {
         <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
       </div>
 
-      {/* Filters */}
-      <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white">
-        <div className="grid grid-cols-[72px_1fr] items-center gap-3">
-          <div className="text-sm font-semibold text-[#333]">조회기간</div>
-          <div className="flex items-center gap-2 flex-wrap">
-            <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-              <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>
-              <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-              <ToggleGroupItem value="last-month" className={segmentItem}>지난달</ToggleGroupItem>
-              <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
-            </ToggleGroup>
-            <div className="relative">
-              <Button
-                variant={"outline"}
-                className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
-                onClick={() => setShowCalendar(!showCalendar)}
-              >
-                <CalendarIcon className="w-4 h-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "yyyy.MM.dd")} ~{" "}
-                      {format(dateRange.to, "yyyy.MM.dd")}
-                    </>
+      <Tabs defaultValue="sales-trend" className="w-full">
+        <TabsList className="grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
+            <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
+            <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
+            <TabsTrigger value="hourly-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">시간대별 매출</TabsTrigger>
+            <TabsTrigger value="cancellation-rate" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">취소율 추이</TabsTrigger>
+            <TabsTrigger value="sales-vs-labor" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">인건비 대비 매출</TabsTrigger>
+        </TabsList>
+
+        {/* Filters */}
+        <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-6">
+          <div className="grid grid-cols-[72px_1fr] items-center gap-3">
+            <div className="text-sm font-semibold text-[#333]">조회기간</div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
+                <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
+                <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
+                <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+                <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+              </ToggleGroup>
+              <div className="relative">
+                <Button
+                  variant={"outline"}
+                  className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                  {dateRange?.from ? (
+                    dateRange.to ? (
+                      <>
+                        {format(dateRange.from, "yyyy.MM.dd")} ~{" "}
+                        {format(dateRange.to, "yyyy.MM.dd")}
+                      </>
+                    ) : (
+                      format(dateRange.from, "yyyy.MM.dd")
+                    )
                   ) : (
-                    format(dateRange.from, "yyyy.MM.dd")
-                  )
-                ) : (
-                  <span>날짜를 선택하세요</span>
+                    <span>날짜를 선택하세요</span>
+                  )}
+                </Button>
+                {showCalendar && (
+                  <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      defaultMonth={dateRange?.from}
+                      selected={dateRange}
+                      onSelect={(range) => {
+                        setDateRange(range);
+                        setActivePeriod("");
+                        if (range?.from && range?.to) {
+                          setShowCalendar(false);
+                        }
+                      }}
+                      numberOfMonths={1}
+                      components={{}}
+                      locale={ko}
+                      formatters={{
+                        formatCaption: (date) =>
+                          `${format(date, "yyyy년 M월", { locale: ko })}`,
+                        formatWeekdayName: (day) =>
+                          format(day, "eee", { locale: ko }),
+                      }}
+                      classNames={{
+                        table: "w-full border-collapse space-y-1",
+                        head_row: "flex",
+                        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                        row: "flex w-full mt-2",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                        day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                        day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                        day_today: "bg-accent text-accent-foreground",
+                        day_outside: "day-outside text-muted-foreground opacity-50",
+                        day_disabled: "text-muted-foreground opacity-50",
+                        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                        day_hidden: "invisible",
+                      }}
+                    />
+                  </div>
                 )}
-              </Button>
-              {showCalendar && (
-                <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    defaultMonth={dateRange?.from}
-                    selected={dateRange}
-                    onSelect={(range) => {
-                      setDateRange(range);
-                      setActivePeriod("");
-                      if (range?.from && range?.to) {
-                        setShowCalendar(false);
-                      }
-                    }}
-                    numberOfMonths={1}
-                    components={{}}
-                    locale={ko}
-                    formatters={{
-                      formatCaption: (date) =>
-                        `${format(date, "yyyy년 M월", { locale: ko })}`,
-                      formatWeekdayName: (day) =>
-                        format(day, "eee", { locale: ko }),
-                    }}
-                    classNames={{
-                      table: "w-full border-collapse space-y-1",
-                      head_row: "flex",
-                      head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                      row: "flex w-full mt-2",
-                      cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
-                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                      day_today: "bg-accent text-accent-foreground",
-                      day_outside: "day-outside text-muted-foreground opacity-50",
-                      day_disabled: "text-muted-foreground opacity-50",
-                      day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
-                      day_hidden: "invisible",
-                    }}
-                  />
-                </div>
-              )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* 하단 요약/버튼 */}
-        <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
-          <div className="text-sm text-[#333]">
-            {dateRange?.from && dateRange?.to && (
-              <>
-                {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
-                <span className="text-[#007AFF] ml-1">
-                  ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
-                </span>
-              </>
-            )}
+          {/* 하단 요약/버튼 */}
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
+            <div className="text-sm text-[#333]">
+              {dateRange?.from && dateRange?.to && (
+                <>
+                  {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
+                  <span className="text-[#007AFF] ml-1">
+                    ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
+                <RotateCw className="w-4 h-4 mr-1" />
+                초기화
+              </Button>
+              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
+                조회하기
+              </Button>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
-              <RotateCw className="w-4 h-4 mr-1" />
-              초기화
-            </Button>
-            <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
-              조회하기
-            </Button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Charts Grid */}
-      <div className="grid grid-cols-2 gap-6">
-        {/* Period Sales Trend */}
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none col-span-2">
-          <h3 className="text-[#333333] mb-6">기간별 매출 추이</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={periodSales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-              <XAxis dataKey={xAxisDataKey} stroke="#717182" />
-              <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '8px',
-                }}
-              />
-              <Line
-                type="linear"
-                dataKey="sales"
-                stroke="#FEE500"
-                strokeWidth={3}
-                dot={{ fill: '#FEE500', r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
         </Card>
 
-        {/* Payment Method Distribution */}
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <h3 className="text-[#333333] mb-6">결제수단별 비중</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <PieChart>
-              <Pie
-                data={paymentDistribution}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-                outerRadius={90}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {paymentDistribution.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-            </PieChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Hourly Sales */}
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <h3 className="text-[#333333] mb-6">시간대별 매출</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={hourlySales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-              <XAxis dataKey="time" stroke="#717182" />
-              <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '8px',
-                }}
-              />
-              <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Cancellation Rate */}
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <h3 className="text-[#333333] mb-6">취소율 추이</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <LineChart data={cancellationRate}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-              <XAxis dataKey="month" stroke="#717182" />
-              <YAxis stroke="#717182" />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '8px',
-                }}
-              />
-              <Line
-                type="linear"
-                dataKey="rate"
-                stroke="#FF4D4D"
-                strokeWidth={3}
-                dot={{ fill: '#FF4D4D', r: 4 }}
-              />
-            </LineChart>
-          </ResponsiveContainer>
-        </Card>
-
-        {/* Sales vs Labor Cost */}
-        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-          <h3 className="text-[#333333] mb-6">인건비 대비 매출 비율</h3>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={salesVsLabor} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-              <XAxis dataKey="month" stroke="#717182" />
-              <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#FFFFFF',
-                  border: '1px solid rgba(0,0,0,0.08)',
-                  borderRadius: '8px',
-                }}
-              />
-              <Legend />
-              <Bar dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
-              <Bar dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </Card>
-      </div>
+        <TabsContent value="sales-trend">
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-6">기간별 매출 추이</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={periodSales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey={xAxisDataKey} stroke="#717182" />
+                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
+                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="payment-method">
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-6">결제수단별 비중</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <PieChart>
+                <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={150} fill="#8884d8" dataKey="value">
+                  {paymentDistribution.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="hourly-sales">
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-6">시간대별 매출</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={hourlySales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey="time" stroke="#717182" />
+                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
+                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="cancellation-rate">
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-6">취소율 추이</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <LineChart data={cancellationRate}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey="month" stroke="#717182" />
+                <YAxis stroke="#717182" />
+                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Line type="linear" dataKey="rate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="sales-vs-labor">
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-6">인건비 대비 매출 비율</h3>
+            <ResponsiveContainer width="100%" height={400}>
+              <BarChart data={salesVsLabor} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey="month" stroke="#717182" />
+                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
+                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Legend />
+                <Bar dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
