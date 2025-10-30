@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User, Terminal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
 import {
@@ -62,6 +62,19 @@ export function AppLayout() {
             );
           })}
         </nav>
+
+        {/* 포스기 화면 전환 버튼 */}
+        <div className="p-4">
+          <Button
+            variant="outline"
+            asChild
+            className="w-full h-12 text-lg"
+          >
+            <Link to="/pos">
+              포스기 화면으로 전환
+            </Link>
+          </Button>
+        </div>
 
         {/* 사용자 프로필 및 로그아웃 */}
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">

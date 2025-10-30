@@ -13,6 +13,7 @@ import StoreManage from "@/pages/StoreManage";
 import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import AdditionalInfo from "@/pages/AdditionalInfo";
+import Pos from "@/pages/Pos";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,10 @@ const router = createBrowserRouter([
     path: "/",
     element: <PrivateRoute />, // PrivateRoute가 하위 경로들을 보호합니다.
     children: [
+      {
+        path: "pos",
+        element: <Pos />,
+      },
       {
         element: <AppLayout />, // AppLayout은 로그인된 사용자에게만 보입니다.
         children: [
