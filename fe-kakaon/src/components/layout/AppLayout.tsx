@@ -18,7 +18,7 @@ export function AppLayout() {
 
   // 메뉴 아이템 배열: 아이디, 아이콘, 라벨, 경로를 포함합니다.
   const menuItems = [
-    { id: 'dashboard', icon: Home, label: '대시보드', path: '/' },
+    { id: 'dashboard', icon: Home, label: '대시보드', path: '/dashboard' },
     { id: 'transactions', icon: CreditCard, label: '거래내역', path: '/transactions' },
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
     { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
@@ -62,6 +62,19 @@ export function AppLayout() {
             );
           })}
         </nav>
+
+        {/* 포스기 화면 전환 버튼 */}
+        <div className="p-4">
+          <Button
+            variant="outline"
+            asChild
+            className="w-full h-12 text-lg"
+          >
+            <Link to="/pos">
+              포스기 화면으로 전환
+            </Link>
+          </Button>
+        </div>
 
         {/* 사용자 프로필 및 로그아웃 */}
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">

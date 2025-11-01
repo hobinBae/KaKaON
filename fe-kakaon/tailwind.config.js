@@ -15,6 +15,9 @@ module.exports = {
       screens: {
         "2xl": "1400px",
       },
+      fontFamily: {
+        sans: ['Noto Sans KR', 'sans-serif'],
+      },
     },
     extend: {
       colors: {

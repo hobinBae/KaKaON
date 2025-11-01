@@ -1,56 +1,56 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, Calendar as CalendarIcon, Upload, Download } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
+import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-const transactions = [
-  { id: 'TX-20251015-001', time: '2025-10-15 14:35:22', amount: 45000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-002', time: '2025-10-15 14:22:11', amount: 28000, method: '간편결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소', store: '사장님 카페' },
-  { id: 'TX-20251015-004', time: '2025-10-15 13:55:33', amount: 52000, method: '계좌이체', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-005', time: '2025-10-15 13:42:18', amount: 33000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-006', time: '2025-10-15 13:28:47', amount: 67000, method: '카드결제', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-007', time: '2025-10-15 13:15:29', amount: 22000, method: '현금', status: '완료', store: '사장님 카페' },
-  { id: 'TX-20251015-008', time: '2025-10-15 12:58:14', amount: 48000, method: '카드결제', status: '취소', store: '사장님 카페' },
-];
-
 export default function Transactions() {
-  const [selectedTransaction, setSelectedTransaction] = useState<typeof transactions[0] | null>(null);
+  // 더미 데이터 정의
+  const dummyTransactions = [
+    { id: 'T123456789', storeId: '1', date: '2025-10-31 10:30:00', total: 5000, paymentMethod: '카드', status: 'completed', time: '10:30:00', amount: 5000, method: '카드' },
+    { id: 'T123456790', storeId: '1', date: '2025-10-31 11:05:00', total: 12000, paymentMethod: '카카오페이', status: 'completed', time: '11:05:00', amount: 12000, method: '카카오페이' },
+    { id: 'T123456791', storeId: '1', date: '2025-10-31 12:15:00', total: 7500, paymentMethod: '현금', status: 'cancelled', time: '12:15:00', amount: 7500, method: '현금' },
+    { id: 'T123456792', storeId: '2', date: '2025-10-31 14:00:00', total: 25000, paymentMethod: '카드', status: 'completed', time: '14:00:00', amount: 25000, method: '카드' },
+    { id: 'T123456793', storeId: '1', date: '2025-10-30 18:45:00', total: 8800, paymentMethod: '계좌', status: 'completed', time: '18:45:00', amount: 8800, method: '계좌' },
+    { id: 'T123456794', storeId: '1', date: '2025-10-30 20:10:00', total: 15000, paymentMethod: '카드', status: 'completed', time: '20:10:00', amount: 15000, method: '카드' },
+    { id: 'T123456795', storeId: '2', date: '2025-10-29 09:20:00', total: 3200, paymentMethod: '현금', status: 'completed', time: '09:20:00', amount: 3200, method: '현금' },
+    { id: 'T123456796', storeId: '1', date: '2025-10-29 13:00:00', total: 18000, paymentMethod: '카카오페이', status: 'cancelled', time: '13:00:00', amount: 18000, method: '카카오페이' },
+    { id: 'T123456797', storeId: '1', date: '2025-10-15 09:00:00', total: 3500, paymentMethod: '카드', status: 'completed', time: '09:00:00', amount: 3500, method: '카드' },
+    { id: 'T123456798', storeId: '2', date: '2025-10-15 10:30:00', total: 22000, paymentMethod: '카카오페이', status: 'completed', time: '10:30:00', amount: 22000, method: '카카오페이' },
+    { id: 'T123456799', storeId: '1', date: '2025-10-14 19:20:00', total: 9500, paymentMethod: '현금', status: 'completed', time: '19:20:00', amount: 9500, method: '현금' },
+    { id: 'T123456800', storeId: '1', date: '2025-10-12 11:45:00', total: 12500, paymentMethod: '카드', status: 'cancelled', time: '11:45:00', amount: 12500, method: '카드' },
+    { id: 'T123456801', storeId: '2', date: '2025-10-10 08:10:00', total: 5500, paymentMethod: '계좌', status: 'completed', time: '08:10:00', amount: 5500, method: '계좌' },
+    { id: 'T123456802', storeId: '1', date: '2025-10-05 14:50:00', total: 16000, paymentMethod: '카드', status: 'completed', time: '14:50:00', amount: 16000, method: '카드' },
+    { id: 'T123456803', storeId: '1', date: '2025-10-03 16:00:00', total: 7000, paymentMethod: '카카오페이', status: 'completed', time: '16:00:00', amount: 7000, method: '카카오페이' },
+    { id: 'T123456804', storeId: '2', date: '2025-10-01 12:00:00', total: 30000, paymentMethod: '카드', status: 'completed', time: '12:00:00', amount: 30000, method: '카드' },
+  ];
+
+  const [filteredTransactions, setFilteredTransactions] = useState(dummyTransactions);
+  const [selectedTransaction, setSelectedTransaction] = useState<(typeof dummyTransactions)[0] | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
+    from: startOfDay(new Date()),
+    to: endOfDay(new Date()),
   });
   const [activePeriod, setActivePeriod] = useState<string>("today");
-  const [startInput, setStartInput] = useState<string>("");
-  const [endInput, setEndInput] = useState<string>("");
   const [showCalendar, setShowCalendar] = useState(false);
 
   useEffect(() => {
-    handlePeriodChange(activePeriod);
-  }, []);
-
-  useEffect(() => {
-    if (dateRange?.from) {
-      setStartInput(format(dateRange.from, 'yyyy.MM.dd'));
-    } else {
-      setStartInput("");
+    let data = dummyTransactions;
+    if (dateRange?.from && dateRange?.to) {
+      data = data.filter(tx => {
+        const txDate = new Date(tx.date);
+        return txDate >= (dateRange.from as Date) && txDate <= (dateRange.to as Date);
+      });
     }
-    if (dateRange?.to) {
-      setEndInput(format(dateRange.to, 'yyyy.MM.dd'));
-    } else {
-      setEndInput("");
-    }
+    setFilteredTransactions(data);
   }, [dateRange]);
 
   const handlePeriodChange = (value: string) => {
@@ -265,22 +265,22 @@ export default function Transactions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.map((tx) => (
+              {filteredTransactions.map((tx) => (
                 <TableRow
                   key={tx.id}
-                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === '취소' ? 'opacity-60' : ''}`}
+                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === 'cancelled' ? 'opacity-60' : ''}`}
                   onClick={() => setSelectedTransaction(tx)}
                 >
                   <TableCell className="text-[#333333] pl-6">{tx.id}</TableCell>
-                  <TableCell className="text-[#717182]">{tx.time}</TableCell>
-                  <TableCell className="text-[#333333]">{tx.amount.toLocaleString()}원</TableCell>
-                  <TableCell className="text-[#717182]">{tx.method}</TableCell>
+                  <TableCell className="text-[#717182]">{tx.date}</TableCell>
+                  <TableCell className="text-[#333333]">{tx.total.toLocaleString()}원</TableCell>
+                  <TableCell className="text-[#717182]">{tx.paymentMethod}</TableCell>
                   <TableCell>
                     <Badge
-                      variant={tx.status === '취소' ? 'destructive' : 'secondary'}
+                      variant={tx.status === 'cancelled' ? 'destructive' : 'secondary'}
                       className="rounded bg-[#F5F5F5] text-[#333333]"
                     >
-                      {tx.status}
+                      {tx.status === 'completed' ? '완료' : '취소'}
                     </Badge>
                   </TableCell>
                   <TableCell>
@@ -295,7 +295,7 @@ export default function Transactions() {
         </div>
 
         <div className="flex items-center justify-between p-4 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="text-sm text-[#717182]">총 8건</div>
+          <div className="text-sm text-[#717182]">총 {filteredTransactions.length}건</div>
           <div className="flex gap-2">
             <Button size="sm" variant="outline" className="rounded">이전</Button>
             <Button size="sm" className="bg-[#FEE500] text-[#3C1E1E] rounded shadow-none">1</Button>
@@ -343,8 +343,20 @@ export default function Transactions() {
               )}
 
               <div className="flex gap-3">
+                {selectedTransaction.status === 'completed' && (
+                  <Button
+                    variant="destructive"
+                    className="flex-1 rounded-lg"
+                    onClick={() => {
+                      // This is a dummy action
+                      setSelectedTransaction(null);
+                    }}
+                  >
+                    결제 취소
+                  </Button>
+                )}
                 <Button className="flex-1 bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">영수증 출력</Button>
-                <Button variant="outline" className="flex-1 rounded-lg">닫기</Button>
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedTransaction(null)}>닫기</Button>
               </div>
             </div>
           )}
