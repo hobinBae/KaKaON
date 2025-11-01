@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.store.entity;
 
 import com.s310.kakaon.domain.member.entity.Member;
+import com.s310.kakaon.domain.store.dto.BusinessType;
 import com.s310.kakaon.domain.store.dto.StoreStatus;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -38,8 +39,9 @@ public class Store extends BaseEntity {
     private String businessNumber;
 
     //여기는 enum으로 할 수 있음
+    @Enumerated(EnumType.STRING)
     @Column(name = "business_type", nullable = false, length = 10)
-    private String businessType;
+    private BusinessType businessType;
 
     @Column(name = "address", nullable = false, length = 255)
     private String address;
