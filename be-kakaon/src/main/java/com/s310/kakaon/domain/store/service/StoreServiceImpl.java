@@ -62,7 +62,6 @@ public class StoreServiceImpl implements StoreService{
 //            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS); // 추가 예정
         }
 
-        // 매퍼 추가 예정
         return storeMapper.toResponseDto(store);
     }
 
