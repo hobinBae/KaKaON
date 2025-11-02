@@ -3,14 +3,17 @@ package com.s310.kakaon.domain.store.controller;
 import com.s310.kakaon.domain.store.dto.AlertRecipientCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
+import com.s310.kakaon.domain.store.dto.BusinessType;
 import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
+import com.s310.kakaon.domain.store.dto.StoreStatus;
 import com.s310.kakaon.domain.store.service.AlertService;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.domain.store.service.StoreServiceImpl;
 import com.s310.kakaon.global.dto.ApiResponse;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -66,6 +69,50 @@ public class StoreController {
         StoreResponseDto response = storeService.findStoreById(memberDetails.getId(), storeId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "가맹점 조회 성공", response, httpRequest.getRequestURI()));
+    }
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<StoreResponseDto>>> getMyStores(
+            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            HttpServletRequest httpRequest
+    ) {
+//        List<StoreResponseDto> response = storeService.getMyStores(memberDetails.getId());
+//        return ResponseEntity.status(HttpStatus.OK)
+//                .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 리스트 조회 성공", response, httpRequest.getRequestURI()));
+
+        List<StoreResponseDto> dummyStores = List.of(
+                StoreResponseDto.builder()
+                        .storeId(1L)
+                        .ownerName("홍길동")
+                        .businessType(BusinessType.RESTAURANT)
+                        .address("서울 강남구 테헤란로 123")
+                        .name("강남점")
+                        .phone("02-1234-5678")
+                        .businessNumber("123-45-67890")
+                        .status(StoreStatus.OPEN)
+                        .totalSales(6200000L)
+                        .cancelRate(3.2)
+                        .changeRate(12.5)
+                        .alertCount(2)
+                        .build(),
+                StoreResponseDto.builder()
+                        .storeId(2L)
+                        .ownerName("홍길동")
+                        .businessType(BusinessType.CAFE)
+                        .address("서울 마포구 양화로 45")
+                        .name("홍대점")
+                        .phone("02-9876-5432")
+                        .businessNumber("234-56-78901")
+                        .status(StoreStatus.OPEN)
+                        .totalSales(5800000L)
+                        .cancelRate(2.8)
+                        .changeRate(8.3)
+                        .alertCount(1)
+                        .build()
+        );
+        return ResponseEntity.ok(
+                ApiResponse.of(HttpStatus.OK, "✅ 더미 데이터로 가맹점 리스트 조회 성공", dummyStores, httpRequest.getRequestURI())
+        );
     }
 
     @PostMapping("/{storeId}/alert-recipient")
