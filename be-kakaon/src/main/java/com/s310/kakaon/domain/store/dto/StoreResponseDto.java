@@ -15,7 +15,7 @@ import java.util.List;
 public class StoreResponseDto {
     private Long storeId;
     private String ownerName;
-    private String businessType;
+    private BusinessType businessType;
     private String address;
     private String name;
     private String phone;
@@ -23,6 +23,8 @@ public class StoreResponseDto {
     private StoreStatus status;
     private LocalDateTime createdAt;
     private List<BusinessHourDto> businessHours;
+
+    private List<AlertRecipientResponseDto> alertRecipientResponse;
 
     private Long totalSales;          // 오늘 매출
     private Double cancelRate;        // 취소율 (%)

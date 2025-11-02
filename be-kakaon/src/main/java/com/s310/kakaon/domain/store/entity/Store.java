@@ -25,8 +25,7 @@ public class Store extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "store_id")
-    private Long storeId;
-
+    private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
@@ -75,9 +74,17 @@ public class Store extends BaseEntity {
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BusinessHour> businessHours = new ArrayList<>();
 
+    @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<AlertRecipient> alertRecipient = new ArrayList<>();
+
     public void addBusinessHour(BusinessHour businessHour) {
         businessHours.add(businessHour);
         businessHour.setStore(this);
+    }
+
+    public void addAlertRecipient(AlertRecipient recipient) {
+        alertRecipient.add(recipient);
+        recipient.setStore(this);
     }
 
     public void delete() {

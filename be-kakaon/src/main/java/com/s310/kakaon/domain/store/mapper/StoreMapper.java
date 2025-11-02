@@ -1,21 +1,25 @@
 package com.s310.kakaon.domain.store.mapper;
 
 import com.s310.kakaon.domain.member.entity.Member;
+import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.BusinessHourDto;
 import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.BusinessHour;
 import com.s310.kakaon.domain.store.entity.Store;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
 
 @Component
+@RequiredArgsConstructor
 public class StoreMapper {
+    private final AlertMapper alertMapper;
 
     public StoreResponseDto toResponseDto(Store store){
         return StoreResponseDto.builder()
-                .storeId(store.getStoreId())
+                .storeId(store.getId())
                 .ownerName(store.getMember().getName())
                 .businessType(store.getBusinessType())
                 .address(store.getAddress())
@@ -33,6 +37,11 @@ public class StoreMapper {
                                         bh.isClosed()
                                 ))
                                 .toList()
+                )
+                .alertRecipientResponse(
+                        store.getAlertRecipient().stream()
+                                .map(al -> alertMapper.toResponseDto(al)
+                                        ).toList()
                 )
                 .build();
     }

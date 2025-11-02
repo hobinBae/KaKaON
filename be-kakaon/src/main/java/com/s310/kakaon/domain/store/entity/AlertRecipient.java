@@ -1,6 +1,6 @@
-package com.s310.kakaon.domain.store.alert.entity;
+package com.s310.kakaon.domain.store.entity;
 
-import com.s310.kakaon.domain.store.entity.Store;
+import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -17,6 +17,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(
@@ -43,6 +44,7 @@ public class AlertRecipient extends BaseEntity {
     @Column(name = "position", nullable = false, length = 30)
     private String position;
 
+    @Setter
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
@@ -54,11 +56,25 @@ public class AlertRecipient extends BaseEntity {
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
-    public void setStore(Store store) {
-        this.store = store;
+    public void updateName(String name) {
+        this.name = name;
     }
 
+    public void updatePosition(String position) {
+        this.position = position;
+    }
+
+    public void updateEmail(String email) {
+        this.email = email;
+    }
     public void updateActive(boolean active) {
         this.active = active;
+    }
+    public void updateFrom(AlertRecipientUpdateRequestDto request){
+        if(request.getName() != null) this.name = request.getName();
+        if(request.getPosition() != null) this.position = request.getPosition();
+        if(request.getEmail() != null) this.email = request.getEmail();
+        if(request.getActive() != null) this.active = request.getActive();
+
     }
 }

@@ -58,20 +58,34 @@ public class StoreServiceImpl implements StoreService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        if (!store.getMember().getId().equals(member.getId())) {
-//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS); // 추가 예정
-        }
+        validateStoreOwner(store, member);
 
         return storeMapper.toResponseDto(store);
     }
 
     @Override
-    public void deleteStore(Long storeId) {
+    @Transactional
+    public void deleteStore(Long memberId, Long storeId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
+
+        store.delete();
 
     }
 
     @Override
     public List<StoreResponseDto> getMyStores(Long memberId) {
         return List.of();
+    }
+
+    private void validateStoreOwner(Store store, Member member) {
+        if (!store.getMember().getId().equals(member.getId())) {
+//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
     }
 }

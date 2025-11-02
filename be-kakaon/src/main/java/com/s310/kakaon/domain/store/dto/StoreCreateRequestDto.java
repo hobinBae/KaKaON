@@ -24,7 +24,7 @@ public class StoreCreateRequestDto {
     private String postalCode;
     private BigDecimal latitude;
     private BigDecimal longitude;
-    private String businessType;
+    private BusinessType businessType;
     private List<BusinessHourDto> businessHours;
 
 

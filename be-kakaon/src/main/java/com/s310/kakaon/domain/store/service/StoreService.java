@@ -11,12 +11,8 @@ public interface StoreService {
 
     StoreResponseDto findStoreById(Long memberId, Long storeId);
 
-    void deleteStore(Long storeId);
+    void deleteStore(Long memberId, Long storeId);
 
     List<StoreResponseDto> getMyStores(Long memberId);
-
-
-
-
 
 }
