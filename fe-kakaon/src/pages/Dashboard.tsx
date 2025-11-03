@@ -145,15 +145,29 @@ export default function Dashboard() {
 
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">전일 매출</span>
+              <span className="text-sm text-[#717182]">저번주 동일 요일 매출</span>
               <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
             </div>
-            <div className="text-2xl text-[#333333] mb-2">2,900,000원</div>
-            <div className="flex items-center gap-1 text-sm text-[#FF4D4D]">
-              <TrendingDown className="w-4 h-4" />
-              <span>-6.0% 그제 대비</span>
+            <div className="text-2xl text-[#333333] mb-2">3,200,000원</div>
+            <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
+              <TrendingUp className="w-4 h-4" />
+              <span>4.5% 저번주 대비</span>
+            </div>
+          </Card>
+
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
+            <div className="flex items-center justify-between mb-3">
+              <span className="text-sm text-[#717182]">이번달 누적 매출</span>
+              <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
+              </div>
+            </div>
+            <div className="text-2xl text-[#333333] mb-2">45,500,000원</div>
+            <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
+              <TrendingUp className="w-4 h-4" />
+              <span>12.0% 지난달 대비</span>
             </div>
           </Card>
 

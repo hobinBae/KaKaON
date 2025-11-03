@@ -24,6 +24,8 @@ public class MemberUpdateRequestDto {
 
     private Boolean receiveEmail;
 
+    private String adminPin;
+
     /**
      * 엔티티에 반영하는 메서드 (Service 계층에서 사용)
      */
@@ -31,5 +33,6 @@ public class MemberUpdateRequestDto {
         if (this.name != null) member.updateName(this.name);
         if (this.phone != null) member.updatePhone(this.phone);
         if (this.receiveEmail != null) member.setReceiveEmail(this.receiveEmail);
+        if (this.adminPin != null) member.updateAdminPin(this.adminPin);
     }
 }
