@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.order.dto;
 
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -25,7 +26,7 @@ public class OrderRequestDto {
     private OrderType  orderType;
 
     @NotNull(message = "결제 수단은 필수입니다.")
-    private PaymentMethod  paymentMethod;
+    private PaymentMethod paymentMethod;
 
     // 내부 OrderItemDto 클래스
     @Getter

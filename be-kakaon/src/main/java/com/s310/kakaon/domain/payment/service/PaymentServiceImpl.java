@@ -62,6 +62,8 @@ public class PaymentServiceImpl implements PaymentService{
 
         Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
 
+        paymentRepository.save(payment);
+
         return paymentMapper.toResponseDto(payment);
     }
 

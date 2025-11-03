@@ -8,7 +8,7 @@ import java.util.List;
 
 public interface PaymentService {
 
-    PaymentResponseDto registerPayment(Long memberId, Long storeId, Long orderId, PaymentCreateRequestDto request);
+    PaymentResponseDto registerPayment(Long memberId,Long storeId, Long orderId, PaymentCreateRequestDto request);
 
     void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId);
 

@@ -35,8 +35,8 @@ public class Payment extends BaseEntity {
     @Column(name = "authorization_no", nullable = false, length = 20, unique = true)
     private String authorizationNo;
 
-    @Column(name = "amount", nullable = false, precision = 12, scale = 2)
-    private BigDecimal amount;
+    @Column(name = "amount", nullable = false)
+    private Integer amount;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method", nullable = false)

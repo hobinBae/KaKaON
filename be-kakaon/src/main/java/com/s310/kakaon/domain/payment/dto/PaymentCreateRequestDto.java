@@ -13,7 +13,7 @@ import java.math.BigDecimal;
 @Getter
 public class PaymentCreateRequestDto {
 
-    private BigDecimal amount;
+    private Integer amount;
     private PaymentMethod paymentMethod;
 //    private PaymentStatus status; // 이건 좀 생각 좀
     private Boolean delivery;

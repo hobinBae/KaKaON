@@ -19,7 +19,7 @@ public class PaymentResponseDto {
     private Long orderId;
     private String storeName;
     private PaymentStatus status;
-    private BigDecimal amount;
+    private Integer amount;
     private LocalDateTime approvedAt;
     private String authorizationCode;
 
