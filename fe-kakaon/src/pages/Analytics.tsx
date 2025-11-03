@@ -54,8 +54,9 @@ export default function Analytics() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
-  const [activePeriod, setActivePeriod] = useState<string>("today");
+  const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("sales-trend");
 
   // State for processed chart data
   const [periodSales, setPeriodSales] = useState<any[]>([]);
@@ -70,7 +71,11 @@ export default function Analytics() {
 
     const filteredData = allSalesData.filter(d => {
       const date = new Date(d.date);
-      return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
+      const today = new Date();
+      const endDate = (activePeriod === 'this-week' || activePeriod === 'this-year')
+        ? endOfDay(addDays(today, -1))
+        : endOfDay(dateRange.to!);
+      return date >= startOfDay(dateRange.from!) && date <= endDate;
     });
 
     const daysDiff = differenceInCalendarDays(dateRange.to, dateRange.from);
@@ -120,7 +125,7 @@ export default function Analytics() {
     });
     setHourlySales(Object.entries(hourlyTotals).map(([time, sales]) => ({ time, sales })).sort((a, b) => a.time.localeCompare(b.time)));
 
-  }, [dateRange]);
+  }, [dateRange, activePeriod]);
 
   useEffect(() => {
     if (!dateRange?.from) return;
@@ -167,7 +172,7 @@ export default function Analytics() {
         break;
       case 'this-week':
         from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
-        to = endOfWeek(today, { weekStartsOn: 1 });
+        to = endOfWeek(today, { weekStartsOn: 1 }); // Sunday (display full week)
         break;
       case 'this-month':
         from = startOfMonth(today);
@@ -175,7 +180,7 @@ export default function Analytics() {
         break;
       case 'this-year':
         from = startOfYear(today);
-        to = endOfYear(today);
+        to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
         break;
       default:
         from = startOfDay(today);
@@ -198,7 +203,7 @@ export default function Analytics() {
         <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
       </div>
 
-      <Tabs defaultValue="sales-trend" className="w-full">
+      <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
             <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
@@ -213,7 +218,7 @@ export default function Analytics() {
             <div className="text-sm font-semibold text-[#333]">조회기간</div>
             <div className="flex items-center gap-2 flex-wrap">
               <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-                <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
+                {activeTab !== "sales-trend" && <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>}
                 <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
                 <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
                 <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
