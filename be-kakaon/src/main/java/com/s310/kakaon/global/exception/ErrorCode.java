@@ -20,7 +20,18 @@ public enum ErrorCode {
 
     // 공통
     VALIDATION_FAILED("VALIDATION_FAILED", HttpStatus.BAD_REQUEST, "입력값 검증에 실패했습니다."),
-    INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다.")
+    INTERNAL_SERVER_ERROR("INTERNAL_SERVER_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "서버 오류가 발생했습니다."),
+
+    EMAIL_ALREADY_EXISTS("EMAIL_ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),
+    NICKNAME_ALREADY_EXISTS("NICKNAME_ALREADY_EXISTS", HttpStatus.CONFLICT, "이미 사용 중인 닉네임입니다."),
+
+    // 이미지 관련 에러
+    IMAGE_NOT_FOUND("IMAGE_NOT_FOUND", HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."),
+
+    STORE_NOT_FOUND("STORE_NOT_FOUND", HttpStatus.NOT_FOUND, "가맹점을 찾을 수 없습니다."),
+    BUSINESS_NUMBER_ALREADY_EXISTS("BUSINESS_NUMBER_ALREADY_EXISTS", HttpStatus.CONFLICT,"이미 등록된 사업자번호입니다."),
+
+    ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다.")
 
     ;
     //
