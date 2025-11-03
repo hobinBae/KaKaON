@@ -159,6 +159,26 @@ export default function Analytics() {
     handlePeriodChange(activePeriod);
   }, []);
 
+  const handleDateSelect = (day: Date | undefined) => {
+    if (!day) return;
+
+    if (!dateRange?.from || dateRange.to) {
+      // Start new selection
+      setDateRange({ from: day, to: undefined });
+      setActivePeriod("");
+    } else {
+      // End of selection
+      if (day > dateRange.from) {
+        setDateRange({ from: dateRange.from, to: day });
+        setShowCalendar(false); // Close on valid range selection
+      } else {
+        // Clicked date is before start date, so reset and start new selection
+        setDateRange({ from: day, to: undefined });
+      }
+      setActivePeriod("");
+    }
+  };
+
   const handlePeriodChange = (value: string) => {
     if (!value) return;
     setActivePeriod(value);
@@ -227,7 +247,13 @@ export default function Analytics() {
                 <Button
                   variant={"outline"}
                   className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
-                  onClick={() => setShowCalendar(!showCalendar)}
+                  onClick={() => {
+                    setShowCalendar(!showCalendar);
+                    if (!showCalendar && activePeriod) {
+                      setDateRange(undefined);
+                      setActivePeriod("");
+                    }
+                  }}
                 >
                   <CalendarIcon className="w-4 h-4" />
                   {dateRange?.from ? (
@@ -250,16 +276,12 @@ export default function Analytics() {
                       mode="range"
                       defaultMonth={dateRange?.from}
                       selected={dateRange}
-                      onSelect={(range) => {
-                        setDateRange(range);
-                        setActivePeriod("");
-                        if (range?.from && range?.to) {
-                          setShowCalendar(false);
-                        }
-                      }}
+                      onDayClick={handleDateSelect}
                       numberOfMonths={1}
+                      fixedWeeks={false}
                       components={{}}
                       locale={ko}
+                      disabled={{ after: new Date() }}
                       formatters={{
                         formatCaption: (date) =>
                           `${format(date, "yyyy년 M월", { locale: ko })}`,
@@ -271,13 +293,15 @@ export default function Analytics() {
                         head_row: "flex",
                         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
                         row: "flex w-full mt-2",
-                        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                         day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
                         day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                        day_today: "bg-accent text-accent-foreground",
+                        day_range_start: "rounded-l-full",
+                        day_range_end: "rounded-r-full",
+                        day_today: "bg-accent/50 text-accent-foreground rounded-full",
                         day_outside: "day-outside text-muted-foreground opacity-50",
                         day_disabled: "text-muted-foreground opacity-50",
-                        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                        day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
                         day_hidden: "invisible",
                       }}
                     />
