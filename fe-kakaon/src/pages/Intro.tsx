@@ -1,5 +1,4 @@
 import Hero from '@/components/intro/Hero';
-import LogoWall from '@/components/intro/LogoWall';
 import Benefits from '@/components/intro/Benefits';
 import Features from '@/components/intro/Features';
 import HowItWorks from '@/components/intro/HowItWorks';
@@ -15,7 +14,6 @@ export default function Intro() {
       <IntroHeader />
       <main>
         <Hero />
-        <LogoWall />
         <Benefits />
         <Features />
         <HowItWorks />

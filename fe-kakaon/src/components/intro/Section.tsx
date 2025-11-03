@@ -17,13 +17,15 @@ export default function Section({ children, className, id }: SectionProps) {
       id={id}
       ref={ref}
       className={cn(
-        'w-full max-w-5xl mx-auto px-4 md:px-6 py-12 md:py-20 lg:py-24',
+        'w-full py-12 md:py-20 lg:py-24',
         'transition-opacity duration-500 ease-in-out',
         isVisible ? 'opacity-100' : 'opacity-0',
-        className
+        className,
       )}
     >
-      {children}
+      <div className="w-full max-w-7xl mx-auto px-4 md:px-6">
+        {children}
+      </div>
     </section>
   );
 }

@@ -1,4 +1,5 @@
 import Section from './Section';
+import SlideInView from './SlideInView';
 
 const features = [
   {
@@ -24,32 +25,36 @@ const features = [
 export default function Features() {
   return (
     <Section id="features" className="bg-gray-50 dark:bg-gray-900">
-      <div className="text-center space-y-4 mb-12">
+      <div className="text-center space-y-4 mb-16">
         <h2 className="text-3xl md:text-4xl font-bold">사장님을 위한 똑똑한 기능들</h2>
         <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400">
           매장 운영에 꼭 필요한 기능만 모아, 복잡함은 덜고 효율성은 높였습니다.
         </p>
       </div>
-      <div className="space-y-16">
+      <div className="space-y-20">
         {features.map((feature, index) => (
           <div
             key={feature.title}
-            className={`grid md:grid-cols-2 gap-8 md:gap-12 items-center ${
-              index % 2 === 1 ? 'md:grid-flow-col-dense' : ''
-            }`}
+            className={`grid md:grid-cols-2 gap-8 md:gap-16 items-center`}
           >
-            <div className={`space-y-4 ${index % 2 === 1 ? 'md:col-start-2' : ''}`}>
-              <h3 className="text-2xl font-bold">{feature.title}</h3>
-              <p className="text-gray-600 dark:text-gray-400">{feature.description}</p>
+            <div className={`space-y-5 ${index % 2 === 1 ? 'md:order-last' : ''}`}>
+              <h3 className="text-3xl font-bold relative pb-4 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-12 after:h-1 after:bg-primary">
+                {feature.title}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-lg leading-relaxed">
+                {feature.description}
+              </p>
             </div>
-            <img
-              src={feature.image}
-              alt={feature.imageAlt}
-              className="rounded-lg shadow-lg"
-              width={500}
-              height={300}
-              loading="lazy"
-            />
+            <SlideInView className={`${index % 2 === 1 ? 'md:order-first' : ''}`}>
+              <img
+                src={feature.image}
+                alt={feature.imageAlt}
+                className="rounded-xl border border-gray-200 shadow-lg"
+                width={600}
+                height={400}
+                loading="lazy"
+              />
+            </SlideInView>
           </div>
         ))}
       </div>
