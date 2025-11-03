@@ -1,8 +1,8 @@
-package com.c102.picky.global.security.jwt;
+package com.s310.kakaon.global.jwt;
 
-import com.c102.picky.global.exception.ErrorCode;
-import com.c102.picky.global.exception.ErrorResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.s310.kakaon.global.exception.ErrorCode;
+import com.s310.kakaon.global.exception.ErrorResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;

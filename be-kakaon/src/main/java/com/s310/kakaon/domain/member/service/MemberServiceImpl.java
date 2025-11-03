@@ -26,7 +26,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberResponseDto getMemberById(Long id) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
         return MemberResponseDto.fromEntity(member);
     }
 
@@ -39,7 +39,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public MemberResponseDto updateMember(Long id, MemberUpdateRequestDto dto) {
         Member member =  memberRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         dto.applyToEntity(member);
 
@@ -54,7 +54,7 @@ public class MemberServiceImpl implements MemberService {
     @Override
     public void softDeleteMember(Long id) {
         Member member = memberRepository.findById(id)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
         member.softDelete();
     }
 }
