@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.payment.service;
 
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.entity.Payment;
@@ -37,12 +38,12 @@ public class PaymentServiceImpl implements PaymentService{
     @Transactional
     public PaymentResponseDto registerPayment(Long memberId, Long storeId, Long orderId, PaymentCreateRequestDto request) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-//        Order order = orderRepository.findById(orderId)
+//        Orders order = orderRepository.findById(orderId)
 //                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
         validateStoreOwner(store, member);
@@ -56,7 +57,7 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.toEntity(store, member, order, authorizationNo ,request);
+        Payment payment = paymentMapper.toEntity(store, member, order , authorizationNo ,request);
 
         return paymentMapper.toResponseDto(payment);
     }
@@ -65,7 +66,7 @@ public class PaymentServiceImpl implements PaymentService{
     @Transactional
     public void deletePayment(Long memberId, Long storeId, Long id) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
@@ -84,7 +85,7 @@ public class PaymentServiceImpl implements PaymentService{
     public List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId) {
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
@@ -103,7 +104,7 @@ public class PaymentServiceImpl implements PaymentService{
     public PaymentResponseDto getPaymentById(Long memberId, Long storeId, Long id) {
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));

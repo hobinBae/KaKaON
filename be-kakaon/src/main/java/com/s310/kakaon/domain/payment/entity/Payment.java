@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.payment.entity;
 
+import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.dto.PaymentStatus;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -29,7 +30,7 @@ public class Payment extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "order_id", nullable = false)
-    private Order order;
+    private Orders order;
 
     @Column(name = "authorization_no", nullable = false, length = 20, unique = true)
     private String authorizationNo;
