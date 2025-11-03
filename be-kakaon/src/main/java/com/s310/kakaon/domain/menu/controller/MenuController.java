@@ -1,9 +1,9 @@
-package com.s310.kakaon.menu.controller;
+package com.s310.kakaon.domain.menu.controller;
 
 import com.s310.kakaon.global.dto.ApiResponse;
-import com.s310.kakaon.menu.dto.MenuRequestDto;
-import com.s310.kakaon.menu.dto.MenuSummaryResponseDto;
-import com.s310.kakaon.menu.validation.MenuValidationGroups;
+import com.s310.kakaon.domain.menu.dto.MenuRequestDto;
+import com.s310.kakaon.domain.menu.dto.MenuSummaryResponseDto;
+import com.s310.kakaon.domain.menu.validation.MenuValidationGroups;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

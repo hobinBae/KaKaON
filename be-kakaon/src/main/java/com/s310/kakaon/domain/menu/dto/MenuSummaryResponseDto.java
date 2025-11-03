@@ -1,4 +1,4 @@
-package com.s310.kakaon.menu.dto;
+package com.s310.kakaon.domain.menu.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;

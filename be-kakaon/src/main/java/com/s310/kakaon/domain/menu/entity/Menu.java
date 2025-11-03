@@ -1,4 +1,4 @@
-package com.s310.kakaon.menu.entity;
+package com.s310.kakaon.domain.menu.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,7 +19,7 @@ public class Menu {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "menu_id")
-    private Long id;
+    private Long menuId;
 
     @Column(name = "store_id", nullable = false)
     private Long storeId;
