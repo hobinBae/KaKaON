@@ -9,6 +9,8 @@ public interface PaymentService {
 
     PaymentResponseDto registerPayment(Long memberId, Long storeId, Long orderId, PaymentCreateRequestDto request);
 
+    void deletePayment(Long memberId, Long storeId, Long id);
+
     List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId);
 
     PaymentResponseDto getPaymentById(Long memberId, Long storeId, Long id);

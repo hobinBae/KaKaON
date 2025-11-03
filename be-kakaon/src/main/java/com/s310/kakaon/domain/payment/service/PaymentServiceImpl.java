@@ -14,6 +14,7 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.annotations.ManyToAny;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +59,24 @@ public class PaymentServiceImpl implements PaymentService{
         Payment payment = paymentMapper.toEntity(store, member, order, authorizationNo ,request);
 
         return paymentMapper.toResponseDto(payment);
+    }
+
+    @Override
+    @Transactional
+    public void deletePayment(Long memberId, Long storeId, Long id) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
+
+        Payment payment = paymentRepository.findById(id)
+                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        payment.cancel();
+
     }
 
     @Override
