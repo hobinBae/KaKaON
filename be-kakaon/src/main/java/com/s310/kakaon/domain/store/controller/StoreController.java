@@ -11,6 +11,7 @@ import com.s310.kakaon.domain.store.service.AlertService;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.domain.store.service.StoreServiceImpl;
 import com.s310.kakaon.global.dto.ApiResponse;
+import com.s310.kakaon.global.oauth2.CustomOAuth2User;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -39,22 +40,22 @@ public class StoreController {
     //jwt 구현 이후 작업
     @PostMapping
     public ResponseEntity<ApiResponse<StoreResponseDto>> registerStore(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             StoreCreateRequestDto request,
             HttpServletRequest httpRequest
     ){
-        StoreResponseDto response = storeService.registerStore(memberDetails.getId(), request);
+        StoreResponseDto response = storeService.registerStore(memberDetails.getMemberId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "가맹점 등록 성공", response, httpRequest.getRequestURI()));
     }
 
     @DeleteMapping("/{storeId}")
     public ResponseEntity<ApiResponse<Void>> deleteStore(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
     ){
-        storeService.deleteStore(memberDetails.getId(), storeId);
+        storeService.deleteStore(memberDetails.getMemberId(), storeId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "가맹점 삭제 성공", null , httpRequest.getRequestURI()));
     }
@@ -62,18 +63,18 @@ public class StoreController {
 
     @GetMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreResponseDto>> findStoreById(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
     ){
-        StoreResponseDto response = storeService.findStoreById(memberDetails.getId(), storeId);
+        StoreResponseDto response = storeService.findStoreById(memberDetails.getMemberId(), storeId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "가맹점 조회 성공", response, httpRequest.getRequestURI()));
     }
 
     @GetMapping
     public ResponseEntity<ApiResponse<List<StoreResponseDto>>> getMyStores(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             HttpServletRequest httpRequest
     ) {
 //        List<StoreResponseDto> response = storeService.getMyStores(memberDetails.getId());
@@ -117,37 +118,37 @@ public class StoreController {
 
     @PostMapping("/{storeId}/alert-recipient")
     public ResponseEntity<ApiResponse<AlertRecipientResponseDto>> registerAlert(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             @PathVariable Long storeId,
             AlertRecipientCreateRequestDto request,
             HttpServletRequest httpRequest
     ){
-        AlertRecipientResponseDto response = alertService.registerAlert(storeId, memberDetails.getId(), request);
+        AlertRecipientResponseDto response = alertService.registerAlert(storeId, memberDetails.getMemberId(), request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "알림 수신자 등록 성공", response, httpRequest.getRequestURI()));
     }
 
     @PatchMapping("/{storeId}/alert-recipient/{alertId}")
     public ResponseEntity<ApiResponse<AlertRecipientResponseDto>> updateAlert(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             @PathVariable Long storeId,
             @PathVariable Long alertId,
             AlertRecipientUpdateRequestDto request,
             HttpServletRequest httpRequest
     ) {
-        AlertRecipientResponseDto response = alertService.updateAlert(storeId, memberDetails.getId(), alertId, request);
+        AlertRecipientResponseDto response = alertService.updateAlert(storeId, memberDetails.getMemberId(), alertId, request);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "알림 수신자 수정 성공", response, httpRequest.getRequestURI()));
     }
 
     @DeleteMapping("/{storeId}/alert-recipient/{alertId}")
     public ResponseEntity<ApiResponse<Void>> deleteAlert(
-            @AuthenticationPrincipal CustomMemberDetails memberDetails,
+            @AuthenticationPrincipal CustomOAuth2User memberDetails,
             @PathVariable Long storeId,
             @PathVariable Long alertId,
             HttpServletRequest httpRequest
     ) {
-        alertService.deleteAlert(storeId, memberDetails.getId(), alertId);
+        alertService.deleteAlert(storeId, memberDetails.getMemberId(), alertId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "알림 수신자 삭제 성공", null , httpRequest.getRequestURI()));
     }
