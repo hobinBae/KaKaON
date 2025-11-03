@@ -3,11 +3,13 @@ package com.s310.kakaon.menu.controller;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.menu.dto.MenuRequestDto;
 import com.s310.kakaon.menu.dto.MenuSummaryResponseDto;
+import com.s310.kakaon.menu.validation.MenuValidationGroups;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.OffsetDateTime;
@@ -44,7 +46,7 @@ public class MenuController {
     @PostMapping()
     public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> createMenu(
             @RequestParam(name = "storeId") Long storeId,
-            @Valid @RequestBody MenuRequestDto req,
+            @Validated(MenuValidationGroups.Create.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
 
         // Dummy Data
@@ -65,16 +67,16 @@ public class MenuController {
     public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> updateMenu(
             @PathVariable(name = "menuId") Long menuId,
             @RequestParam(name = "storeId") Long storeId,
-            @Valid @RequestBody MenuRequestDto req,
+            @Validated(MenuValidationGroups.Update.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
 
         // Dummy Data
         MenuSummaryResponseDto dummy = MenuSummaryResponseDto.builder()
                 .menuId(1L)
                 .storeId(11L)
-                .menu(req.getMenu())
-                .price(req.getPrice())
-                .imgUrl(req.getImgUrl())
+                .menu(req.getMenu()==null ? "아메리카노" : req.getMenu())
+                .price(req.getPrice()==null ? 1000 : req.getPrice())
+                .imgUrl(req.getImgUrl()==null ? "www.dummy.com" : req.getImgUrl())
                 .updatedAt(OffsetDateTime.now().toString())
                 .build();
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 수정이 성공적으로 완료 되었습니다.", dummy, httpRequest.getRequestURI()));
