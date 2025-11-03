@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 type Product = { id: number; name: string; price: number; category: string };
+export type CartItem = Product & { quantity: number };
 type Store = { id: string; name: string; products: Product[] };
 
 interface AuthState {
@@ -24,10 +25,19 @@ interface StoreState {
   stores: Store[];
   selectedStoreId: string | null;
   transactions: Transaction[];
+  cart: CartItem[];
   setStores: (stores: Store[]) => void;
   setSelectedStoreId: (id: string | null) => void;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'date' | 'storeId'>) => void;
   cancelTransaction: (transactionId: string) => void;
+  addToCart: (product: Product) => void;
+  removeFromCart: (productId: number) => void;
+  updateQuantity: (productId: number, amount: number) => void;
+  clearCart: () => void;
+  // Product management actions
+  addProduct: (product: Omit<Product, 'id'>) => void;
+  updateProduct: (product: Product) => void;
+  deleteProduct: (productId: number) => void;
 }
 
 // 인증 상태와 가맹점 선택 상태를 하나의 스토어에서 관리합니다.
@@ -90,6 +100,7 @@ export const useBoundStore = create<AuthState & StoreState>((set, get) => ({
   ],
   setStores: (stores) => set({ stores }),
   setSelectedStoreId: (id) => set({ selectedStoreId: id }),
+  cart: [],
   addTransaction: (transaction) => {
     const { selectedStoreId } = get();
     const newTransaction = {
@@ -107,5 +118,72 @@ export const useBoundStore = create<AuthState & StoreState>((set, get) => ({
         t.id === transactionId ? { ...t, status: 'cancelled' } : t
       ),
     }));
+  },
+  // --- Cart Actions ---
+  addToCart: (product) => {
+    const { cart } = get();
+    const existingItem = cart.find((item) => item.id === product.id);
+    if (existingItem) {
+      set({
+        cart: cart.map((item) =>
+          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+        ),
+      });
+    } else {
+      set({ cart: [...cart, { ...product, quantity: 1 }] });
+    }
+  },
+  removeFromCart: (productId) => {
+    set({ cart: get().cart.filter((item) => item.id !== productId) });
+  },
+  updateQuantity: (productId, amount) => {
+    set({
+      cart: get()
+        .cart.map((item) =>
+          item.id === productId ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item // 0이 아닌 1로 수정
+        )
+        .filter(item => item.quantity > 0),
+    });
+  },
+  clearCart: () => set({ cart: [] }),
+  // --- Product Management Actions ---
+  addProduct: (product) => {
+    const { stores, selectedStoreId } = get();
+    const newProduct = { ...product, id: Date.now() };
+    set({
+      stores: stores.map(store =>
+        store.id === selectedStoreId
+          ? { ...store, products: [...store.products, newProduct] }
+          : store
+      ),
+    });
+  },
+  updateProduct: (updatedProduct) => {
+    const { stores, selectedStoreId } = get();
+    set({
+      stores: stores.map(store =>
+        store.id === selectedStoreId
+          ? {
+              ...store,
+              products: store.products.map(p =>
+                p.id === updatedProduct.id ? updatedProduct : p
+              ),
+            }
+          : store
+      ),
+    });
+  },
+  deleteProduct: (productId) => {
+    const { stores, selectedStoreId } = get();
+    set({
+      stores: stores.map(store =>
+        store.id === selectedStoreId
+          ? {
+              ...store,
+              products: store.products.filter(p => p.id !== productId),
+            }
+          : store
+      ),
+    });
   },
 }));

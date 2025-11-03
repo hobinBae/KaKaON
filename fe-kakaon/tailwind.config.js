@@ -16,10 +16,10 @@ module.exports = {
         "2xl": "1400px",
       },
     },
-    fontFamily: {
-      sans: ['Noto Sans KR', 'sans-serif'],
-    },
     extend: {
+      fontFamily: {
+        sans: ['Noto Sans KR', 'sans-serif'],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -69,10 +69,25 @@ module.exports = {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        typing: {
+          from: { width: "0" },
+          to: { width: "100%" },
+        },
+        "blink-caret": {
+          "from, to": { borderColor: "transparent" },
+          "50%": { borderColor: "black" },
+        },
+        "slide-bottom": {
+          "from": { transform: "translateY(50px)", opacity: "0" },
+          "to": { transform: "translateY(0)", opacity: "1" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "typing-width": "typing var(--typing-duration, 2s) steps(var(--typing-steps, 1)) var(--animation-delay, 0s) forwards",
+        "blink-caret": "blink-caret .75s step-end infinite",
+        "slide-bottom": "slide-bottom 0.4s ease forwards",
       },
     },
   },

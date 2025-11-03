@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
+import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -29,10 +29,19 @@ const generateDailyData = () => {
         kakaopay: sales * 0.15,
         cash: sales * 0.05,
       },
-      hourly: Array.from({ length: 12 }, (_, j) => ({
-        time: `${(j + 9).toString().padStart(2, '0')}:00`,
-        sales: Math.floor(Math.random() * (sales / 8)),
-      })),
+      hourly: Array.from({ length: 24 }, (_, j) => {
+        const hour = j;
+        const time = `${hour.toString().padStart(2, '0')}:00`;
+        // Generate sales only for business hours (roughly 9-21), others get 0 or very small value
+        let hourlySales = 0;
+        if (hour >= 9 && hour <= 20) {
+          hourlySales = Math.floor(Math.random() * (sales / 8));
+        } else if (hour === 8 || hour === 21) {
+          // Edge hours might have some sales
+          hourlySales = Math.floor(Math.random() * (sales / 20));
+        }
+        return { time, sales: hourlySales };
+      }),
     });
   }
   return data.reverse();
@@ -54,12 +63,14 @@ export default function Analytics() {
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
   });
-  const [activePeriod, setActivePeriod] = useState<string>("today");
+  const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [showCalendar, setShowCalendar] = useState(false);
+  const [activeTab, setActiveTab] = useState<string>("sales-trend");
 
   // State for processed chart data
   const [periodSales, setPeriodSales] = useState<any[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
+  const [xAxisDataKeyCancellation, setXAxisDataKeyCancellation] = useState<string>('date');
   const [paymentDistribution, setPaymentDistribution] = useState<any[]>([]);
   const [hourlySales, setHourlySales] = useState<any[]>([]);
   const [cancellationRate, setCancellationRate] = useState<any[]>([]);
@@ -70,7 +81,11 @@ export default function Analytics() {
 
     const filteredData = allSalesData.filter(d => {
       const date = new Date(d.date);
-      return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
+      const today = new Date();
+      const endDate = (activePeriod === 'this-week' || activePeriod === 'this-year')
+        ? endOfDay(addDays(today, -1))
+        : endOfDay(dateRange.to!);
+      return date >= startOfDay(dateRange.from!) && date <= endDate;
     });
 
     const daysDiff = differenceInCalendarDays(dateRange.to, dateRange.from);
@@ -112,21 +127,96 @@ export default function Analytics() {
       { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
     ]);
 
+    // Process hourly sales - average for period, actual for today
     const hourlyTotals: { [key: string]: number } = {};
     filteredData.forEach(d => {
       d.hourly.forEach(h => {
         hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
       });
     });
-    setHourlySales(Object.entries(hourlyTotals).map(([time, sales]) => ({ time, sales })).sort((a, b) => a.time.localeCompare(b.time)));
 
-  }, [dateRange]);
+    // Calculate average if period is more than 1 day
+    const daysInPeriod = filteredData.length;
+    const isToday = daysDiff < 1 || activePeriod === 'today';
+
+    // Find first and last hour with sales (operating hours)
+    const sortedHours = Object.entries(hourlyTotals)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .filter(([_, sales]) => sales > 0);
+
+    if (sortedHours.length > 0) {
+      const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
+      const lastHour = parseInt(sortedHours[sortedHours.length - 1][0].split(':')[0]);
+
+      // Generate all hours between first and last hour
+      const operatingHours = [];
+      for (let hour = firstHour; hour <= lastHour; hour++) {
+        const time = `${hour.toString().padStart(2, '0')}:00`;
+        const sales = hourlyTotals[time] || 0;
+
+        if (isToday) {
+          // For today, show actual hourly sales
+          operatingHours.push({ time, sales });
+        } else {
+          // For other periods, show average hourly sales
+          operatingHours.push({
+            time,
+            sales: daysInPeriod > 0 ? Math.round(sales / daysInPeriod) : sales
+          });
+        }
+      }
+      setHourlySales(operatingHours);
+    } else {
+      setHourlySales([]);
+    }
+
+    // Process cancellation rate based on period
+    if (daysDiff < 1) { // Single day - hourly
+      setXAxisDataKeyCancellation('time');
+      const hourlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
+      filteredData.forEach(d => {
+        d.hourly.forEach(h => {
+          if (!hourlyCancellations[h.time]) hourlyCancellations[h.time] = { sales: 0, cancellations: 0 };
+          hourlyCancellations[h.time].sales += h.sales;
+          hourlyCancellations[h.time].cancellations += Math.floor(Math.random() * (h.sales / 100000)); // Using random for demo
+        });
+      });
+      setCancellationRate(Object.entries(hourlyCancellations).map(([time, data]) => ({
+        time,
+        rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
+      })).sort((a, b) => a.time.localeCompare(b.time)));
+    } else if (daysDiff <= 31) { // Daily
+      setXAxisDataKeyCancellation('date');
+      setCancellationRate(filteredData.map(d => ({
+        date: format(new Date(d.date), 'MM/dd'),
+        rate: d.sales > 0 ? parseFloat(((d.cancellations / (d.sales / 100000)) * 100).toFixed(1)) : 0,
+      })));
+    } else { // Monthly
+      setXAxisDataKeyCancellation('month');
+      const monthlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
+      filteredData.forEach(d => {
+        const month = format(new Date(d.date), 'yyyy-MM');
+        if (!monthlyCancellations[month]) monthlyCancellations[month] = { sales: 0, cancellations: 0 };
+        monthlyCancellations[month].sales += d.sales;
+        monthlyCancellations[month].cancellations += d.cancellations;
+      });
+      setCancellationRate(Object.entries(monthlyCancellations).map(([month, data]) => ({
+        month: month.slice(5) + '월',
+        rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
+      })).sort((a, b) => a.month.localeCompare(b.month)));
+    }
+
+  }, [dateRange, activePeriod]);
 
   useEffect(() => {
     if (!dateRange?.from) return;
 
     const year = dateRange.from.getFullYear();
-    const yearData = allSalesData.filter(d => new Date(d.date).getFullYear() === year);
+    const today = new Date();
+    const yearData = allSalesData.filter(d => {
+      const date = new Date(d.date);
+      return date.getFullYear() === year && date < startOfDay(today);
+    });
 
     const monthlySalesVsLabor: { [key: string]: { sales: number, labor: number } } = {};
     yearData.forEach(d => {
@@ -136,23 +226,31 @@ export default function Analytics() {
       monthlySalesVsLabor[month].labor += d.labor;
     });
     setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({ month: month.slice(5) + '월', sales: data.sales, labor: data.labor })).sort((a,b) => a.month.localeCompare(b.month)));
-
-    const monthlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
-    yearData.forEach(d => {
-      const month = format(new Date(d.date), 'yyyy-MM');
-      if (!monthlyCancellations[month]) monthlyCancellations[month] = { sales: 0, cancellations: 0 };
-      monthlyCancellations[month].sales += d.sales;
-      monthlyCancellations[month].cancellations += d.cancellations;
-    });
-    setCancellationRate(Object.entries(monthlyCancellations).map(([month, data]) => ({
-      month: month.slice(5) + '월',
-      rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
-    })).sort((a,b) => a.month.localeCompare(b.month)));
   }, [dateRange]);
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
   }, []);
+
+  const handleDateSelect = (day: Date | undefined) => {
+    if (!day) return;
+
+    if (!dateRange?.from || dateRange.to) {
+      // Start new selection
+      setDateRange({ from: day, to: undefined });
+      setActivePeriod("");
+    } else {
+      // End of selection
+      if (day > dateRange.from) {
+        setDateRange({ from: dateRange.from, to: day });
+        setShowCalendar(false); // Close on valid range selection
+      } else {
+        // Clicked date is before start date, so reset and start new selection
+        setDateRange({ from: day, to: undefined });
+      }
+      setActivePeriod("");
+    }
+  };
 
   const handlePeriodChange = (value: string) => {
     if (!value) return;
@@ -161,13 +259,18 @@ export default function Analytics() {
     let from: Date, to: Date = today;
 
     switch (value) {
+      case 'yesterday':
+        const yesterday = addDays(today, -1);
+        from = startOfDay(yesterday);
+        to = endOfDay(yesterday);
+        break;
       case 'today':
         from = startOfDay(today);
         to = endOfDay(today);
         break;
       case 'this-week':
         from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
-        to = endOfWeek(today, { weekStartsOn: 1 });
+        to = endOfWeek(today, { weekStartsOn: 1 }); // Sunday (display full week)
         break;
       case 'this-month':
         from = startOfMonth(today);
@@ -175,7 +278,11 @@ export default function Analytics() {
         break;
       case 'this-year':
         from = startOfYear(today);
-        to = endOfYear(today);
+        to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
+        break;
+      case 'last-year':
+        from = startOfYear(subYears(today, 1));
+        to = endOfYear(subYears(today, 1));
         break;
       default:
         from = startOfDay(today);
@@ -198,7 +305,7 @@ export default function Analytics() {
         <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
       </div>
 
-      <Tabs defaultValue="sales-trend" className="w-full">
+      <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
             <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
@@ -213,16 +320,32 @@ export default function Analytics() {
             <div className="text-sm font-semibold text-[#333]">조회기간</div>
             <div className="flex items-center gap-2 flex-wrap">
               <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-                <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-                <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
-                <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
-                <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                {activeTab === "sales-vs-labor" ? (
+                  <>
+                    <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                    <ToggleGroupItem value="last-year" className={segmentItem}>작년</ToggleGroupItem>
+                  </>
+                ) : (
+                  <>
+                    {activeTab === "payment-method" && <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>}
+                    {activeTab === "hourly-sales" && <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>}
+                    <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
+                    <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+                    <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                  </>
+                )}
               </ToggleGroup>
               <div className="relative">
                 <Button
                   variant={"outline"}
                   className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
-                  onClick={() => setShowCalendar(!showCalendar)}
+                  onClick={() => {
+                    setShowCalendar(!showCalendar);
+                    if (!showCalendar && activePeriod) {
+                      setDateRange(undefined);
+                      setActivePeriod("");
+                    }
+                  }}
                 >
                   <CalendarIcon className="w-4 h-4" />
                   {dateRange?.from ? (
@@ -245,16 +368,12 @@ export default function Analytics() {
                       mode="range"
                       defaultMonth={dateRange?.from}
                       selected={dateRange}
-                      onSelect={(range) => {
-                        setDateRange(range);
-                        setActivePeriod("");
-                        if (range?.from && range?.to) {
-                          setShowCalendar(false);
-                        }
-                      }}
+                      onDayClick={handleDateSelect}
                       numberOfMonths={1}
+                      fixedWeeks={false}
                       components={{}}
                       locale={ko}
+                      disabled={{ after: new Date() }}
                       formatters={{
                         formatCaption: (date) =>
                           `${format(date, "yyyy년 M월", { locale: ko })}`,
@@ -266,13 +385,15 @@ export default function Analytics() {
                         head_row: "flex",
                         head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
                         row: "flex w-full mt-2",
-                        cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                         day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
                         day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                        day_today: "bg-accent text-accent-foreground",
+                        day_range_start: "rounded-l-full",
+                        day_range_end: "rounded-r-full",
+                        day_today: "bg-accent/50 text-accent-foreground rounded-full",
                         day_outside: "day-outside text-muted-foreground opacity-50",
                         day_disabled: "text-muted-foreground opacity-50",
-                        day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                        day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
                         day_hidden: "invisible",
                       }}
                     />
@@ -337,13 +458,18 @@ export default function Analytics() {
         </TabsContent>
         <TabsContent value="hourly-sales">
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">시간대별 매출</h3>
+            <h3 className="text-[#333333] mb-6">
+              {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
+            </h3>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={hourlySales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="time" stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+                />
                 <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
@@ -353,9 +479,9 @@ export default function Analytics() {
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-6">취소율 추이</h3>
             <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={cancellationRate}>
+              <LineChart data={cancellationRate} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="month" stroke="#717182" />
+                <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
                 <YAxis stroke="#717182" />
                 <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
                 <Line type="linear" dataKey="rate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />

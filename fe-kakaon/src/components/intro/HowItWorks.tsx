@@ -34,7 +34,7 @@ export default function HowItWorks() {
       </div>
       <div className="relative grid md:grid-cols-4 gap-8">
         {/* Dashed line connector for desktop */}
-        <div className="absolute top-1/2 left-0 w-full h-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
+        <div className="absolute top-[38.5%] left-0 w-full h-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
         
         {steps.map((step) => (
           <div key={step.step} className="relative flex flex-col items-center text-center">
