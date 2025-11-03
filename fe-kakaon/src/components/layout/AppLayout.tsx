@@ -66,9 +66,8 @@ export function AppLayout() {
         {/* 포스기 화면 전환 버튼 */}
         <div className="p-4">
           <Button
-            variant="outline"
             asChild
-            className="w-full h-12 text-lg"
+            className="w-full h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-800"
           >
             <Link to="/pos">
               포스기 화면으로 전환
