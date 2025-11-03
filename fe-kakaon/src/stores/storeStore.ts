@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
-type Store = { id: string; name: string };
+type Product = { id: number; name: string; price: number; category: string };
+type Store = { id: string; name: string; products: Product[] };
 
 interface AuthState {
   isLoggedIn: boolean;
@@ -38,9 +39,21 @@ export const useBoundStore = create<AuthState & StoreState>((set, get) => ({
 
   // --- Store State ---
   stores: [
-    { id: "gangnam", name: "강남점" },
-    { id: "jamsil", name: "잠실점" },
-    { id: "hongdae", name: "홍대점" }
+    { id: "gangnam", name: "강남점", products: [
+      { id: 1, name: 'HOT 아메리카노', price: 4000, category: '에스프레소' },
+      { id: 2, name: 'ICE 아메리카노', price: 4500, category: '에스프레소' },
+      { id: 3, name: '카페라떼', price: 5000, category: '에스프레소' },
+    ]},
+    { id: "jamsil", name: "잠실점", products: [
+      { id: 4, name: '바닐라라떼', price: 5000, category: '에스프레소' },
+      { id: 5, name: '검은콩스무디', price: 6000, category: '스무디' },
+      { id: 6, name: '애플스무디', price: 6000, category: '스무디' },
+    ]},
+    { id: "hongdae", name: "홍대점", products: [
+      { id: 7, name: '자몽스무디', price: 6000, category: '스무디' },
+      { id: 8, name: '카모마일티', price: 5000, category: '허브티' },
+      { id: 9, name: '카야잼 토스트', price: 4000, category: '베이커리' },
+    ]}
   ],
   selectedStoreId: "gangnam", // 초기 선택값을 첫 번째 가맹점으로 설정
   transactions: [

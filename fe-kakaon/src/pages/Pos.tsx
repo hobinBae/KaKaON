@@ -35,23 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// 임시 상품 데이터
-const initialProducts = [
-  { id: 1, name: 'HOT 아메리카노', price: 4000, category: '에스프레소' },
-  { id: 2, name: 'ICE 아메리카노', price: 4500, category: '에스프레소' },
-  { id: 3, name: '카페라떼', price: 5000, category: '에스프레소' },
-  { id: 4, name: '바닐라라떼', price: 5000, category: '에스프레소' },
-  { id: 5, name: '검은콩스무디', price: 6000, category: '스무디' },
-  { id: 6, name: '애플스무디', price: 6000, category: '스무디' },
-  { id: 7, name: '자몽스무디', price: 6000, category: '스무디' },
-  { id: 8, name: '카모마일티', price: 5000, category: '허브티' },
-  { id: 9, name: '카야잼 토스트', price: 4000, category: '베이커리' },
-];
-
 const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const { stores, selectedStoreId, setSelectedStoreId, transactions, addTransaction, cancelTransaction } = useBoundStore();
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
@@ -63,7 +51,13 @@ const Pos = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [view, setView] = useState('products'); // 'products' or 'history'
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const { stores, selectedStoreId, setSelectedStoreId, transactions, addTransaction, cancelTransaction } = useBoundStore();
+
+  useEffect(() => {
+    const currentStore = stores.find(store => store.id === selectedStoreId);
+    if (currentStore) {
+      setProducts(currentStore.products);
+    }
+  }, [selectedStoreId, stores]);
 
   const recentTransactions = useMemo(() => {
     const sevenDaysAgo = new Date();
@@ -150,46 +144,42 @@ const Pos = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-400 font-sans">
-      <div className="w-[65%] flex flex-col p-4 gap-4">
-        <header className="flex-shrink-0 h-16 bg-gray-800 text-white rounded-xl flex items-center justify-between px-6">
-          <div className="flex items-center gap-4">
-            <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
-              <SelectTrigger className="w-[220px] bg-gray-700 border-gray-600 text-white text-xl font-bold">
-                <SelectValue placeholder="가맹점 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                {stores.map((store) => (
-                  <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <div className="text-lg">
-              {time.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
-              {' '}
-              {time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true })}
-            </div>
+    <div className="flex h-screen bg-gray-200 font-sans p-10 gap-4">
+      <div className="w-[65%] flex flex-col gap-4">
+        <header className="flex-shrink-0 h-16 bg-gray-600 text-white rounded-xl flex items-center justify-between px-6">
+          <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
+            <SelectTrigger className="w-[220px] bg-gray-300 border-gray-600 text-black text-xl [&_svg]:text-white [&_svg]:opacity-100">
+              <SelectValue placeholder="가맹점 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              {stores.map((store) => (
+                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="text-lg">
+            {time.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
+            {' '}
+            {time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true })}
           </div>
         </header>
 
-        <main className="flex-1 bg-gray-50 rounded-xl p-6 flex flex-col min-h-0">
+        <main className="flex-1 rounded-xl p-6 flex flex-col min-h-0">
           {view === 'products' ? (
             <>
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <div className="grid grid-cols-6 gap-3 content-start">
-                  {paginatedProducts.map((product) => (
-                    <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-200 rounded-lg shadow-sm flex flex-col justify-between p-3 aspect-square relative">
-                      {isEditMode && (
-                        <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                          <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                          <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
-                        </div>
-                      )}
-                      <p className="font-semibold text-gray-800">{product.name}</p>
-                      <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
-                    </Card>
-                  ))}
-                </div>
+              <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 overflow-hidden">
+                {paginatedProducts.map((product) => (
+                  <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative">
+                    {isEditMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
+                      </div>
+                    )}
+                    <p className="text-gray-800">{product.name}</p>
+                    <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
+                  </Card>
+                ))}
               </div>
               <div className="flex justify-center items-center gap-2 pt-4 flex-shrink-0">
                 {[...Array(totalPages)].map((_, i) => (
@@ -255,7 +245,11 @@ const Pos = () => {
                     </DialogContent>
                   </Dialog>
                 </>
-              ) : null}
+              ) : (
+                <Button variant="outline" className="h-12 text-base px-6 font-bold" onClick={() => setView('products')}>
+                  <Package className="mr-2 h-5 w-5" /> 상품 목록으로
+                </Button>
+              )}
             </div>
             <div className="flex gap-4">
               {view === 'products' ? (
@@ -267,8 +261,8 @@ const Pos = () => {
                   <Package className="mr-2 h-5 w-5" /> 상품 목록으로
                 </Button>
               )}
-              <Link to="/">
-                <Button variant="outline" className="h-12 text-lg font-bold">
+              <Link to="/dashboard">
+                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-800">
                   매출관리 화면으로 전환
                 </Button>
               </Link>
@@ -334,7 +328,7 @@ const Pos = () => {
         </Dialog>
       )}
 
-      <div className="w-[35%] flex flex-col p-4 gap-4">
+      <div className="w-[35%] flex flex-col gap-4">
         <div className="flex-1 bg-white rounded-xl p-6 flex flex-col">
           <header className="flex justify-between items-center pb-4 border-b">
             <h2 className="text-xl font-bold">주문 내역</h2>
