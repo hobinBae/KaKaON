@@ -1,6 +1,6 @@
-package com.s310.kakaon.menu.dto;
+package com.s310.kakaon.domain.menu.dto;
 
-import com.s310.kakaon.menu.validation.MenuValidationGroups;
+import com.s310.kakaon.domain.menu.validation.MenuValidationGroups;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
