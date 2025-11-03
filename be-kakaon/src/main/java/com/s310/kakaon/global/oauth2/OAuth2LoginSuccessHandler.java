@@ -4,6 +4,7 @@ import com.s310.kakaon.domain.member.entity.Role;
 import com.s310.kakaon.global.jwt.JwtTokenProvider;
 import com.s310.kakaon.global.jwt.TokenResponseDto;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -36,14 +37,20 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         
         // JWT 토큰 생성
         TokenResponseDto tokenResponse = jwtTokenProvider.createTokenResponse(kakaoId, role.name());
-        
+
         // refreshToken 쿠키 저장
-        
-        // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+        Cookie refreshTokenCookie = new Cookie("refreshToken", tokenResponse.getRefreshToken());
+        refreshTokenCookie.setHttpOnly(true);  // JavaScript에서 접근 불가 (XSS 방지)
+        refreshTokenCookie.setSecure(true);     // HTTPS만 허용 (production 환경)
+        refreshTokenCookie.setPath("/");        // 모든 경로에서 접근 가능
+        refreshTokenCookie.setMaxAge(7 * 24 * 60 * 60);  // 7일 (초 단위)
+        response.addCookie(refreshTokenCookie);
+
+        // 프론트엔드로 리다이렉트 (accessToken만 쿼리 파라미터로 전달)
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("accessToken", tokenResponse.getAccessToken())
                 .build().toUriString();
-        
+
         getRedirectStrategy().sendRedirect(request, response, targetUrl);
     }
 }
