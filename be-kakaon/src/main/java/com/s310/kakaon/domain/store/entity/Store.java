@@ -71,9 +71,11 @@ public class Store extends BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<BusinessHour> businessHours = new ArrayList<>();
 
+    @Builder.Default
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AlertRecipient> alertRecipient = new ArrayList<>();
 

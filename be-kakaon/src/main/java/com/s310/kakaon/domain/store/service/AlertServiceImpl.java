@@ -35,7 +35,7 @@ public class AlertServiceImpl implements AlertService{
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         //소유자인지 확인
         validateStoreOwner(store, member);
@@ -54,7 +54,7 @@ public class AlertServiceImpl implements AlertService{
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         //소유자인지 확인
         validateStoreOwner(store, member);
@@ -72,7 +72,7 @@ public class AlertServiceImpl implements AlertService{
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         validateStoreOwner(store, member);
 

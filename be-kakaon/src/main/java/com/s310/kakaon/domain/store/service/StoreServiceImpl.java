@@ -35,7 +35,7 @@ public class StoreServiceImpl implements StoreService{
     public StoreResponseDto registerStore(Long memberId, StoreCreateRequestDto request) {
 
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         if(storeRepository.existsByBusinessNumber(request.getBusinessNumber())){
             throw new ApiException(ErrorCode.BUSINESS_NUMBER_ALREADY_EXISTS);
@@ -53,7 +53,7 @@ public class StoreServiceImpl implements StoreService{
     @Transactional(readOnly = true)
     public StoreResponseDto findStoreById(Long memberId, Long storeId) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
@@ -67,7 +67,7 @@ public class StoreServiceImpl implements StoreService{
     @Transactional
     public void deleteStore(Long memberId, Long storeId) {
         Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new ApiException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));

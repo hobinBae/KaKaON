@@ -31,8 +31,9 @@ public enum ErrorCode {
     STORE_NOT_FOUND("STORE_NOT_FOUND", HttpStatus.NOT_FOUND, "가맹점을 찾을 수 없습니다."),
     BUSINESS_NUMBER_ALREADY_EXISTS("BUSINESS_NUMBER_ALREADY_EXISTS", HttpStatus.CONFLICT,"이미 등록된 사업자번호입니다."),
 
-    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 내역을 찾을 수 없습니다."),
-    ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다.")
+    ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다."),
+
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 내역을 찾을 수 없습니다.")
 
     ;
 
