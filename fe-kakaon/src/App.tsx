@@ -14,6 +14,9 @@ import Settings from "@/pages/Settings";
 import Login from "@/pages/Login";
 import AdditionalInfo from "@/pages/AdditionalInfo";
 import Pos from "@/pages/Pos";
+import KioskLanding from "@/pages/KioskLanding";
+import FrontKiosk from "@/pages/FrontKiosk";
+import GeneralKiosk from "@/pages/GeneralKiosk";
 import Intro from "@/pages/Intro";
 
 
@@ -42,6 +45,18 @@ const router = createBrowserRouter([
   {
     path: "/pos",
     element: <Pos />,
+  },
+  {
+    path: "/kiosk",
+    element: <KioskLanding />,
+  },
+  {
+    path: "/kiosk/front",
+    element: <FrontKiosk />,
+  },
+  {
+    path: "/kiosk/general",
+    element: <GeneralKiosk />,
   },
   {
     element: <PrivateRoute />,
