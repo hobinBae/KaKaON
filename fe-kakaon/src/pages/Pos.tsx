@@ -27,6 +27,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useBoundStore } from '@/stores/storeStore';
+import type { CartItem } from '@/stores/storeStore';
 import {
   Select,
   SelectContent,
@@ -38,9 +39,23 @@ import {
 const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
-  const { stores, selectedStoreId, setSelectedStoreId, transactions, addTransaction, cancelTransaction } = useBoundStore();
+  const {
+    stores,
+    selectedStoreId,
+    setSelectedStoreId,
+    transactions,
+    addTransaction,
+    cancelTransaction,
+    cart,
+    addToCart,
+    removeFromCart,
+    updateQuantity,
+    clearCart,
+    addProduct,
+    updateProduct,
+    deleteProduct,
+  } = useBoundStore();
   const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
@@ -78,38 +93,16 @@ const Pos = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const addToCart = (product) => {
-    if (isEditMode) return;
-    const existingItem = cart.find((item) => item.id === product.id);
-    if (existingItem) {
-      setCart(cart.map((item) => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item));
-    } else {
-      setCart([...cart, { ...product, quantity: 1 }]);
-    }
-  };
-
-  const removeFromCart = (productId) => setCart(cart.filter((item) => item.id !== productId));
-  const clearCart = () => setCart([]);
-
-  const updateQuantity = (productId, amount) => {
-    setCart(
-      cart.map((item) => item.id === productId ? { ...item, quantity: Math.max(1, item.quantity + amount) } : item)
-          .filter(item => item.quantity > 0)
-    );
-  };
-  
   const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleAddProduct = () => {
     if (newProductName && newProductPrice) {
-      const newProduct = {
-        id: Date.now(),
+      addProduct({
         name: newProductName,
         price: parseInt(newProductPrice.replace(/,/g, ''), 10),
         category: '기타',
-      };
-      setProducts(prev => [...prev, newProduct]);
+      });
       setNewProductName('');
       setNewProductPrice('');
     }
@@ -129,16 +122,16 @@ const Pos = () => {
       paymentMethod,
       status: 'completed',
     });
-    setCart([]);
+    clearCart();
   };
 
   const handleDeleteProduct = (productId) => {
-    setProducts(products.filter(p => p.id !== productId));
+    deleteProduct(productId);
   };
 
   const handleUpdateProduct = () => {
     if (editingProduct) {
-      setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
+      updateProduct(editingProduct);
       setEditingProduct(null);
     }
   };
@@ -157,19 +150,18 @@ const Pos = () => {
               ))}
             </SelectContent>
           </Select>
-          <div className="text-lg">
-            {time.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
-            {' '}
-            {time.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true })}
+          <div className="text-lg text-right">
+            <div>{`${time.getMonth() + 1}.${time.getDate()}. (${['일', '월', '화', '수', '목', '금', '토'][time.getDay()]})`}</div>
+            <div>{time.toLocaleTimeString('ko-KR', { hour: 'numeric', minute: '2-digit', hour12: true })}</div>
           </div>
         </header>
 
         <main className="flex-1 rounded-xl p-6 flex flex-col min-h-0">
           {view === 'products' ? (
             <>
-              <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 overflow-hidden">
+              <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 p-2">
                 {paginatedProducts.map((product) => (
-                  <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative">
+                  <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative transition-transform hover:scale-105">
                     {isEditMode && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
                         <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
@@ -332,8 +324,8 @@ const Pos = () => {
         <div className="flex-1 bg-white rounded-xl p-6 flex flex-col">
           <header className="flex justify-between items-center pb-4 border-b">
             <h2 className="text-xl font-bold">주문 내역</h2>
-            <Button variant="ghost" size="icon" className="h-12 w-12" onClick={clearCart}>
-              <RotateCw className="h-8 w-8 text-gray-600" />
+            <Button variant="ghost" size="icon" className="h-12 w-12 group hover:bg-transparent" onClick={clearCart}>
+              <RotateCw className="h-8 w-8 text-gray-600 transition-transform group-hover:scale-110" />
             </Button>
           </header>
           <div className="flex-1 py-4 overflow-y-auto">
