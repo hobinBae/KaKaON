@@ -35,24 +35,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// 임시 상품 데이터
-const initialProducts = [
-  { id: 1, name: 'HOT 아메리카노', price: 4000, category: '에스프레소' },
-  { id: 2, name: 'ICE 아메리카노', price: 4500, category: '에스프레소' },
-  { id: 3, name: '카페라떼', price: 5000, category: '에스프레소' },
-  { id: 4, name: '바닐라라떼', price: 5000, category: '에스프레소' },
-  { id: 5, name: '검은콩스무디', price: 6000, category: '스무디' },
-  { id: 6, name: '애플스무디', price: 6000, category: '스무디' },
-  { id: 7, name: '자몽스무디', price: 6000, category: '스무디' },
-  { id: 8, name: '카모마일티', price: 5000, category: '허브티' },
-  { id: 9, name: '카야잼 토스트', price: 4000, category: '베이커리' },
-  ...Array.from({ length: 25 }, (_, i) => ({ id: i + 10, name: `상품 ${i + 10}`, price: (i + 1) * 1000, category: '기타' }))
-];
-
 const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
-  const [products, setProducts] = useState(initialProducts);
+  const { stores, selectedStoreId, setSelectedStoreId, transactions, addTransaction, cancelTransaction } = useBoundStore();
+  const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
@@ -64,7 +51,13 @@ const Pos = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [view, setView] = useState('products'); // 'products' or 'history'
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const { stores, selectedStoreId, setSelectedStoreId, transactions, addTransaction, cancelTransaction } = useBoundStore();
+
+  useEffect(() => {
+    const currentStore = stores.find(store => store.id === selectedStoreId);
+    if (currentStore) {
+      setProducts(currentStore.products);
+    }
+  }, [selectedStoreId, stores]);
 
   const recentTransactions = useMemo(() => {
     const sevenDaysAgo = new Date();
@@ -151,11 +144,11 @@ const Pos = () => {
   };
 
   return (
-    <div className="flex h-screen bg-gray-200 font-sans">
-      <div className="w-[65%] flex flex-col p-4 gap-4">
+    <div className="flex h-screen bg-gray-200 font-sans p-10 gap-4">
+      <div className="w-[65%] flex flex-col gap-4">
         <header className="flex-shrink-0 h-16 bg-gray-600 text-white rounded-xl flex items-center justify-between px-6">
           <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
-            <SelectTrigger className="w-[220px] bg-gray-500 border-gray-600 text-white text-xl font-bold">
+            <SelectTrigger className="w-[220px] bg-gray-300 border-gray-600 text-black text-xl [&_svg]:text-white [&_svg]:opacity-100">
               <SelectValue placeholder="가맹점 선택" />
             </SelectTrigger>
             <SelectContent>
@@ -183,7 +176,7 @@ const Pos = () => {
                         <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
                       </div>
                     )}
-                    <p className="font-semibold text-gray-800">{product.name}</p>
+                    <p className="text-gray-800">{product.name}</p>
                     <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
                   </Card>
                 ))}
@@ -268,8 +261,8 @@ const Pos = () => {
                   <Package className="mr-2 h-5 w-5" /> 상품 목록으로
                 </Button>
               )}
-              <Link to="/">
-                <Button variant="outline" className="h-12 text-lg font-bold">
+              <Link to="/dashboard">
+                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-800">
                   매출관리 화면으로 전환
                 </Button>
               </Link>
@@ -335,7 +328,7 @@ const Pos = () => {
         </Dialog>
       )}
 
-      <div className="w-[35%] flex flex-col p-4 gap-4">
+      <div className="w-[35%] flex flex-col gap-4">
         <div className="flex-1 bg-white rounded-xl p-6 flex flex-col">
           <header className="flex justify-between items-center pb-4 border-b">
             <h2 className="text-xl font-bold">주문 내역</h2>
