@@ -3,6 +3,8 @@ package com.s310.kakaon.global.config;
 import com.s310.kakaon.global.jwt.JwtAuthenticationEntryPoint;
 import com.s310.kakaon.global.jwt.JwtAuthenticationFilter;
 import com.s310.kakaon.global.oauth2.CustomOAuth2UserService;
+import com.s310.kakaon.global.oauth2.OAuth2LoginFailureHandler;
+import com.s310.kakaon.global.oauth2.OAuth2LoginSuccessHandler;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,6 +28,9 @@ public class SecurityConfig {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -44,6 +49,8 @@ public class SecurityConfig {
                         .userInfoEndpoint(userInfo -> userInfo
                                 .userService(customOAuth2UserService)
                         )
+                        .successHandler(oAuth2LoginSuccessHandler)
+                        .failureHandler(oAuth2LoginFailureHandler)
                 )
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
