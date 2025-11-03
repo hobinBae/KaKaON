@@ -29,10 +29,19 @@ const generateDailyData = () => {
         kakaopay: sales * 0.15,
         cash: sales * 0.05,
       },
-      hourly: Array.from({ length: 12 }, (_, j) => ({
-        time: `${(j + 9).toString().padStart(2, '0')}:00`,
-        sales: Math.floor(Math.random() * (sales / 8)),
-      })),
+      hourly: Array.from({ length: 24 }, (_, j) => {
+        const hour = j;
+        const time = `${hour.toString().padStart(2, '0')}:00`;
+        // Generate sales only for business hours (roughly 9-21), others get 0 or very small value
+        let hourlySales = 0;
+        if (hour >= 9 && hour <= 20) {
+          hourlySales = Math.floor(Math.random() * (sales / 8));
+        } else if (hour === 8 || hour === 21) {
+          // Edge hours might have some sales
+          hourlySales = Math.floor(Math.random() * (sales / 20));
+        }
+        return { time, sales: hourlySales };
+      }),
     });
   }
   return data.reverse();
@@ -118,13 +127,48 @@ export default function Analytics() {
       { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
     ]);
 
+    // Process hourly sales - average for period, actual for today
     const hourlyTotals: { [key: string]: number } = {};
     filteredData.forEach(d => {
       d.hourly.forEach(h => {
         hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
       });
     });
-    setHourlySales(Object.entries(hourlyTotals).map(([time, sales]) => ({ time, sales })).sort((a, b) => a.time.localeCompare(b.time)));
+
+    // Calculate average if period is more than 1 day
+    const daysInPeriod = filteredData.length;
+    const isToday = daysDiff < 1 || activePeriod === 'today';
+
+    // Find first and last hour with sales (operating hours)
+    const sortedHours = Object.entries(hourlyTotals)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .filter(([_, sales]) => sales > 0);
+
+    if (sortedHours.length > 0) {
+      const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
+      const lastHour = parseInt(sortedHours[sortedHours.length - 1][0].split(':')[0]);
+
+      // Generate all hours between first and last hour
+      const operatingHours = [];
+      for (let hour = firstHour; hour <= lastHour; hour++) {
+        const time = `${hour.toString().padStart(2, '0')}:00`;
+        const sales = hourlyTotals[time] || 0;
+
+        if (isToday) {
+          // For today, show actual hourly sales
+          operatingHours.push({ time, sales });
+        } else {
+          // For other periods, show average hourly sales
+          operatingHours.push({
+            time,
+            sales: daysInPeriod > 0 ? Math.round(sales / daysInPeriod) : sales
+          });
+        }
+      }
+      setHourlySales(operatingHours);
+    } else {
+      setHourlySales([]);
+    }
 
     // Process cancellation rate based on period
     if (daysDiff < 1) { // Single day - hourly
@@ -414,13 +458,18 @@ export default function Analytics() {
         </TabsContent>
         <TabsContent value="hourly-sales">
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">시간대별 매출</h3>
+            <h3 className="text-[#333333] mb-6">
+              {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
+            </h3>
             <ResponsiveContainer width="100%" height={400}>
               <BarChart data={hourlySales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="time" stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+                />
                 <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
