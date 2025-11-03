@@ -47,6 +47,10 @@ public class Member extends BaseEntity {
     @Builder.Default
     private boolean receiveEmail = true;
 
+    @Column(name = "admin_pin", nullable = false)
+    @Builder.Default
+    private String adminPin = "00000";
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -62,6 +66,8 @@ public class Member extends BaseEntity {
     public void setReceiveEmail(boolean receiveEmail) {
         this.receiveEmail = receiveEmail;
     }
+
+    public void updateAdminPin(String adminPin) { this.adminPin = adminPin; }
 
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
