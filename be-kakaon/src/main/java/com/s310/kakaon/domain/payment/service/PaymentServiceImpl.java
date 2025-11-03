@@ -3,6 +3,7 @@ package com.s310.kakaon.domain.payment.service;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
+import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.entity.Payment;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.ManyToAny;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -33,6 +35,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final StoreRepository storeRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
+    private final OrderRepository orderRepository;
 
     @Override
     @Transactional
@@ -43,8 +46,8 @@ public class PaymentServiceImpl implements PaymentService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-//        Orders order = orderRepository.findById(orderId)
-//                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
         validateStoreOwner(store, member);
 
@@ -57,10 +60,16 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.toEntity(store, member, order , authorizationNo ,request);
+        Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
 
         return paymentMapper.toResponseDto(payment);
     }
+
+    @Override
+    public void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId) {
+        
+    }
+
 
     @Override
     @Transactional
@@ -125,7 +134,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
-//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
 }

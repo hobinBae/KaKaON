@@ -99,7 +99,7 @@ public class AlertServiceImpl implements AlertService{
 
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
-//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
 

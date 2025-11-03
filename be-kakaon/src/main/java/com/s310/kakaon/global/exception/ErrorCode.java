@@ -33,7 +33,11 @@ public enum ErrorCode {
 
     ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다."),
 
-    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 내역을 찾을 수 없습니다.")
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 내역을 찾을 수 없습니다."),
+
+    ORDER_NOT_FOUND("ORDER_NOT_FOUND", HttpStatus.NOT_FOUND, "주문 내역을 찾을 수 없습니다."),
+
+    FORBIDDEN_ACCESS("FORBIDDEN_ACCESS", HttpStatus.FORBIDDEN, "회원 정보와 사업자 정보가 일치하지 않습니다.")
 
     ;
 
