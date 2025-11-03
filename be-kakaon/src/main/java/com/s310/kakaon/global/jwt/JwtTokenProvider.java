@@ -34,7 +34,7 @@ public class JwtTokenProvider {
     @Value("${jwt.access-token-validity-seconds}")
     private long accessTokenValiditySeconds;
 
-    @Value("${jwt.refresh-token-validity-seconds")
+    @Value("${jwt.refresh-token-validity-seconds}")
     private long refreshTokenValiditySeconds;
 
     private SecretKey secretKey;
