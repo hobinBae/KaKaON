@@ -26,20 +26,20 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final MemberService memberService;
 
-    @PostMapping("/orders/{orderId}")
-    public ResponseEntity<ApiResponse<PaymentResponseDto>> registerPayment(
-            @AuthenticationPrincipal String kakaoId,
-            @RequestBody PaymentCreateRequestDto request,
-            @PathVariable Long orderId,
-            HttpServletRequest httpRequest
-    ) {
-        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-
-        PaymentResponseDto response = paymentService.registerPayment(memberId, orderId, request);
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.of(HttpStatus.CREATED, "결제 등록 성공", response, httpRequest.getRequestURI()));
-    }
+//    @PostMapping("/orders/{orderId}")
+//    public ResponseEntity<ApiResponse<PaymentResponseDto>> registerPayment(
+//            @AuthenticationPrincipal String kakaoId,
+//            @RequestBody PaymentCreateRequestDto request,
+//            @PathVariable Long orderId,
+//            HttpServletRequest httpRequest
+//    ) {
+//        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+//
+//        PaymentResponseDto response = paymentService.registerPayment(memberId, orderId, request);
+//
+//        return ResponseEntity.status(HttpStatus.CREATED)
+//                .body(ApiResponse.of(HttpStatus.CREATED, "결제 등록 성공", response, httpRequest.getRequestURI()));
+//    }
 
 
 

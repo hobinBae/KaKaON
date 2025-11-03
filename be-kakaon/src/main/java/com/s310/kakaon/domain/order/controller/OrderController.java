@@ -3,6 +3,7 @@ package com.s310.kakaon.domain.order.controller;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.order.service.OrderService;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
@@ -25,6 +26,7 @@ public class OrderController {
     //결제 내역 등록
     private final PaymentService paymentService;
     private final MemberService memberService;
+    private final OrderService orderService;
 
     /** 장바구니 주문하기 */
     @PostMapping("/{storeId}")
@@ -35,6 +37,7 @@ public class OrderController {
             HttpServletRequest httpRequest) {
 
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
 //        // Dummy Data 생성
 //        OrderResponseDto dummy = OrderResponseDto.builder()
 //                .orderId(1001L)
