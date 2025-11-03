@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,33 @@ public class MemberController {
 
     private final MemberService memberService;
 
+    /** 내 정보 조회 */
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<MemberResponseDto>> getMyInfo(
+            @AuthenticationPrincipal String kakaoId,
+            HttpServletRequest httpRequest
+    ) {
+        MemberResponseDto member = memberService.getMemberByProviderId(kakaoId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "내 정보 조회 성공", member, httpRequest.getRequestURI()));
+    }
+
+    /** 내 정보 수정 */
+    @PatchMapping("/me")
+    public ResponseEntity<ApiResponse<MemberResponseDto>> updateMyInfo(
+            @AuthenticationPrincipal String kakaoId,
+            @Valid @RequestBody MemberUpdateRequestDto dto,
+            HttpServletRequest httpRequest
+    ) {
+        MemberResponseDto member = memberService.updateMemberByProviderId(kakaoId, dto);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "회원 정보 수정 성공", member, httpRequest.getRequestURI()));
+    }
+
+    /** 회원 탈퇴 */
+    @DeleteMapping("/me")
+    public ResponseEntity<ApiResponse<Void>> deleteMyAccount(@AuthenticationPrincipal String kakaoId, HttpServletRequest httpRequest) {
+        memberService.softDeleteMemberByProviderId(kakaoId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "회원 탈퇴 성공", null, httpRequest.getRequestURI()));
+    }
     /** 회원 단건 조회 */
     @GetMapping("/{memberId}")
     public ResponseEntity<ApiResponse<MemberResponseDto>> getMember(@PathVariable Long memberId, HttpServletRequest httpRequest) {
@@ -36,7 +64,6 @@ public class MemberController {
     @DeleteMapping("/{memberId}")
     public ResponseEntity<ApiResponse<Void>> deleteMember(@PathVariable Long memberId, HttpServletRequest httpRequest) {
         memberService.softDeleteMember(memberId);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT)
-                .body(ApiResponse.of(HttpStatus.NO_CONTENT, "회원 탈퇴 성공", null, httpRequest.getRequestURI()));
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "회원 탈퇴 성공", null, httpRequest.getRequestURI()));
     }
 }
