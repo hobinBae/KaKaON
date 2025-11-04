@@ -7,7 +7,7 @@ import generalKioskImg from '@/assets/origin_kiosk.png';
 
 const KioskLanding = () => {
   return (
-    <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8 pt-32">
+    <div className="flex flex-col items-center min-h-screen bg-gray-50 p-8 pt-40">
       <div className="text-center mb-12">
         <h1 className="text-5xl font-bold text-gray-800 mb-4">키오스크 타입 선택</h1>
         <p className="text-xl text-gray-600">사용하실 키오스크 타입을 선택해주세요.</p>

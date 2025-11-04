@@ -1,6 +1,6 @@
 import { create } from "zustand";
 
-type Product = { id: number; name: string; price: number; category: string };
+type Product = { id: number; name: string; price: number; category: string; imageUrl?: string };
 export type CartItem = Product & { quantity: number };
 type Store = { id: string; name: string; products: Product[] };
 
@@ -35,7 +35,7 @@ interface StoreState {
   updateQuantity: (productId: number, amount: number) => void;
   clearCart: () => void;
   // Product management actions
-  addProduct: (product: Omit<Product, 'id'>) => void;
+  addProduct: (product: Omit<Product, 'id' | 'imageUrl'> & { imageUrl?: string }) => void;
   updateProduct: (product: Product) => void;
   deleteProduct: (productId: number) => void;
 }
