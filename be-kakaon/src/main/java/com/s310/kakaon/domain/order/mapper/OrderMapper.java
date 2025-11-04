@@ -19,7 +19,7 @@ public class OrderMapper {
 
     private final MenuRepository menuRepository;
 
-    public OrderResponseDto toResponseDto(Orders order, OrderType orderType, PaymentMethod paymentMethod){
+    public OrderResponseDto fromEntity(Orders order, OrderType orderType, PaymentMethod paymentMethod){
         return OrderResponseDto.builder()
                 .orderId(order.getOrderId())
                 .storeId(order.getStore().getId())
@@ -31,7 +31,7 @@ public class OrderMapper {
                 .build();
     }
 
-    public Orders fromEntity(Store store, OrderRequestDto request){
+    public Orders toEntity(Store store, OrderRequestDto request){
        Orders order =  Orders.builder()
                 .store(store)
                 .totalAmount(request.getTotalAmount())

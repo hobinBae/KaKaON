@@ -41,11 +41,11 @@ public class StoreServiceImpl implements StoreService{
             throw new ApiException(ErrorCode.BUSINESS_NUMBER_ALREADY_EXISTS);
         }
 
-        Store store = storeMapper.fromEntity(request, member);
+        Store store = storeMapper.toEntity(request, member);
 
         storeRepository.save(store);
 
-        return storeMapper.toResponseDto(store);
+        return storeMapper.fromEntity(store);
 
     }
 
@@ -60,7 +60,7 @@ public class StoreServiceImpl implements StoreService{
 
         validateStoreOwner(store, member);
 
-        return storeMapper.toResponseDto(store);
+        return storeMapper.fromEntity(store);
     }
 
     @Override

@@ -60,11 +60,11 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.fromEntity(store, order, authorizationNo ,request);
+        Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
 
         paymentRepository.save(payment);
 
-        return paymentMapper.toResponseDto(payment);
+        return paymentMapper.fromEntity(payment);
     }
 
     @Override
@@ -106,7 +106,7 @@ public class PaymentServiceImpl implements PaymentService{
         List<Payment> payments = paymentRepository.findByStore(store);
 
         return payments.stream()
-                .map(paymentMapper::toResponseDto)
+                .map(paymentMapper::fromEntity)
                 .toList();
     }
 
@@ -125,7 +125,7 @@ public class PaymentServiceImpl implements PaymentService{
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        return paymentMapper.toResponseDto(payment);
+        return paymentMapper.fromEntity(payment);
     }
 
     public String generateAuthorizationNo(){

@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class AlertMapper {
 
-    public AlertRecipientResponseDto toResponseDto(AlertRecipient alert){
+    public AlertRecipientResponseDto fromEntity(AlertRecipient alert){
         return AlertRecipientResponseDto.builder()
                 .id(alert.getId())
                 .name(alert.getName())
@@ -19,7 +19,7 @@ public class AlertMapper {
                 .build();
     }
 
-    public AlertRecipient fromEntity(AlertRecipientCreateRequestDto request, Store store){
+    public AlertRecipient toEntity(AlertRecipientCreateRequestDto request, Store store){
         return AlertRecipient.builder()
                 .name(request.getName())
                 .position(request.getPosition())
