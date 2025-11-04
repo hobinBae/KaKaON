@@ -5,7 +5,6 @@ import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.menu.entity.Menu;
 import com.s310.kakaon.domain.menu.repository.MenuRepository;
 import com.s310.kakaon.domain.order.dto.OrderRequestDto;
-import com.s310.kakaon.domain.order.dto.OrderRequestDto.OrderItemDto;
 import com.s310.kakaon.domain.order.dto.OrderResponseDto;
 import com.s310.kakaon.domain.order.dto.OrderType;
 import com.s310.kakaon.domain.order.entity.OrderItem;
@@ -46,7 +45,7 @@ public class OrderServiceImpl implements OrderService{
 
         paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
 
-        return orderMapper.toResponseDto(order, request.getOrderType(), request.getPaymentMethod());
+        return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
     }
 
     @Override
@@ -58,7 +57,7 @@ public class OrderServiceImpl implements OrderService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        Orders order = orderMapper.fromEntity(store, request);
+        Orders order = orderMapper.toEntity(store, request);
 
         orderRepository.save(order);
 

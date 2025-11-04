@@ -40,11 +40,11 @@ public class AlertServiceImpl implements AlertService{
         //소유자인지 확인
         validateStoreOwner(store, member);
 
-        AlertRecipient alert = alertMapper.fromEntity(request, store);
+        AlertRecipient alert = alertMapper.toEntity(request, store);
 
         alertRepository.save(alert);
 
-        return alertMapper.toResponseDto(alert);
+        return alertMapper.fromEntity(alert);
     }
 
     @Override
@@ -93,7 +93,7 @@ public class AlertServiceImpl implements AlertService{
 //        }
         alert.updateFrom(request);
 
-        return alertMapper.toResponseDto(alert);
+        return alertMapper.fromEntity(alert);
     }
 
 

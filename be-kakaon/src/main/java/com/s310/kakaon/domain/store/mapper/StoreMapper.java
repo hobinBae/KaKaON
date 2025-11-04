@@ -17,7 +17,7 @@ import java.time.LocalTime;
 public class StoreMapper {
     private final AlertMapper alertMapper;
 
-    public StoreResponseDto toResponseDto(Store store){
+    public StoreResponseDto fromEntity(Store store){
         return StoreResponseDto.builder()
                 .storeId(store.getId())
                 .ownerName(store.getMember().getName())
@@ -40,13 +40,13 @@ public class StoreMapper {
                 )
                 .alertRecipientResponse(
                         store.getAlertRecipient().stream()
-                                .map(al -> alertMapper.toResponseDto(al)
+                                .map(al -> alertMapper.fromEntity(al)
                                         ).toList()
                 )
                 .build();
     }
 
-    public Store fromEntity(StoreCreateRequestDto dto, Member member) {
+    public Store toEntity(StoreCreateRequestDto dto, Member member) {
         Store store = Store.builder()
                 .member(member)
                 .name(dto.getName())

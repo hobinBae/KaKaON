@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Component
 public class PaymentMapper {
 
-    public PaymentResponseDto toResponseDto(Payment payment){
+    public PaymentResponseDto fromEntity(Payment payment){
         return PaymentResponseDto.builder()
                 .paymentId(payment.getId())
                 .storeId(payment.getStore().getId())
@@ -26,7 +26,7 @@ public class PaymentMapper {
                 .build();
     }
 
-    public Payment fromEntity(Store store, Orders order, String authorizationNo, PaymentCreateRequestDto request){
+    public Payment toEntity(Store store, Orders order, String authorizationNo, PaymentCreateRequestDto request){
         return Payment.builder()
                 .store(store)
                 .order(order)
