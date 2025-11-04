@@ -48,39 +48,39 @@ pipeline {
             }
         }
         
-        // stage('Git Pull') {
-        //     steps {
-        //         script {
-        //             echo '================================================='
-        //             echo '최신 코드 가져오기...'
-        //             echo '================================================='
+        stage('Git Pull') {
+            steps {
+                script {
+                    echo '================================================='
+                    echo '최신 코드 가져오기...'
+                    echo '================================================='
                     
-        //             sh """
-        //                 cd ${DEPLOY_PATH}
+                    sh """
+                        cd ${DEPLOY_PATH}
                         
-        //                 echo "현재 브랜치 확인..."
-        //                 git branch -a
+                        echo "현재 브랜치 확인..."
+                        git branch -a
                         
-        //                 echo "Git Fetch..."
-        //                 git fetch origin
+                        echo "Git Fetch..."
+                        git fetch origin
                         
-        //                 echo "브랜치 체크아웃: ${GIT_BRANCH}"
-        //                 git checkout ${GIT_BRANCH}
+                        echo "브랜치 체크아웃: ${GIT_BRANCH}"
+                        git checkout ${GIT_BRANCH}
                         
-        //                 echo "Git Pull..."
-        //                 git pull origin ${GIT_BRANCH}
+                        echo "Git Pull..."
+                        git pull origin ${GIT_BRANCH}
                         
-        //                 echo "최신 코드로 업데이트 완료!"
-        //                 echo ""
-        //                 echo "현재 커밋 정보:"
-        //                 git log -1 --oneline --decorate
-        //                 echo ""
-        //                 echo "변경된 파일:"
-        //                 git log -1 --stat
-        //             """
-        //         }
-        //     }
-        // }
+                        echo "최신 코드로 업데이트 완료!"
+                        echo ""
+                        echo "현재 커밋 정보:"
+                        git log -1 --oneline --decorate
+                        echo ""
+                        echo "변경된 파일:"
+                        git log -1 --stat
+                    """
+                }
+            }
+        }
         
         stage('기존 컨테이너 중지') {
             steps {
