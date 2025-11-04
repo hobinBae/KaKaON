@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.order.dto;
 
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -15,7 +16,7 @@ public class OrderRequestDto {
     @NotNull(message = "주문 항목은 필수입니다.")
     @Size(min = 1, message = "최소 1개 이상의 메뉴를 포함해야 합니다.")
     @Valid
-    private List<OrderItemDto> items;
+    private List<OrderItemCreateRequestDto> items;
 
     @NotNull(message = "총 결제 금액은 필수입니다.")
     @Positive(message = "총 결제 금액은 0보다 커야 합니다.")
@@ -25,15 +26,14 @@ public class OrderRequestDto {
     private OrderType  orderType;
 
     @NotNull(message = "결제 수단은 필수입니다.")
-    private PaymentMethod  paymentMethod;
+    private PaymentMethod paymentMethod;
 
     // 내부 OrderItemDto 클래스
     @Getter
-    @Setter
     @NoArgsConstructor
     @AllArgsConstructor
     @Builder
-    public static class OrderItemDto {
+    public static class OrderItemCreateRequestDto {
         @NotNull(message = "메뉴 ID는 필수입니다.")
         private Long menuId;
 

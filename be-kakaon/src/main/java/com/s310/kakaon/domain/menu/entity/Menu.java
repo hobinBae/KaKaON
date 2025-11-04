@@ -1,5 +1,7 @@
 package com.s310.kakaon.domain.menu.entity;
 
+import com.s310.kakaon.domain.store.entity.Store;
+import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -10,36 +12,30 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "menu")
 @Getter
-@Setter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Builder
-public class Menu {
+public class Menu extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "menu_id")
     private Long menuId;
 
-    @Column(name = "store_id", nullable = false)
-    private Long storeId;
+    //    @Column(name = "store_id", nullable = false)
+//    private Long storeId;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "store_id", nullable = false)
+    private Store store;
 
-    @Column(name = "menu", nullable = false, length = 80)
-    private String menu;
+    @Column(name = "name", nullable = false, length = 80)
+    private String name;
 
     @Column(name = "price", nullable = false)
     private Integer price;
 
     @Column(name = "img_url", length = 255)
     private String imgUrl;
-
-    @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

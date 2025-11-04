@@ -31,9 +31,18 @@ public enum ErrorCode {
     STORE_NOT_FOUND("STORE_NOT_FOUND", HttpStatus.NOT_FOUND, "가맹점을 찾을 수 없습니다."),
     BUSINESS_NUMBER_ALREADY_EXISTS("BUSINESS_NUMBER_ALREADY_EXISTS", HttpStatus.CONFLICT,"이미 등록된 사업자번호입니다."),
 
-    ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다.")
+    ALERT_RECIPIENT_NOT_FOUND("ALERT_RECIPIENT_NOT_FOUND", HttpStatus.NOT_FOUND, "알림 수신자를 찾을 수 없습니다."),
+
+    PAYMENT_NOT_FOUND("PAYMENT_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 내역을 찾을 수 없습니다."),
+
+    ORDER_NOT_FOUND("ORDER_NOT_FOUND", HttpStatus.NOT_FOUND, "주문 내역을 찾을 수 없습니다."),
+
+    FORBIDDEN_ACCESS("FORBIDDEN_ACCESS", HttpStatus.FORBIDDEN, "회원 정보와 사업자 정보가 일치하지 않습니다."),
+
+    MENU_NOT_FOUND("MENU_NOT_FOUND", HttpStatus.NOT_FOUND, "메뉴를 찾을 수 없습니다.")
 
     ;
+
     //
     // 필요한 에러 코드 계속 추가
 

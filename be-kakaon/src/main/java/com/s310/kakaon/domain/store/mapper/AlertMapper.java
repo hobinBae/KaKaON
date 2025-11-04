@@ -19,7 +19,7 @@ public class AlertMapper {
                 .build();
     }
 
-    public AlertRecipient toEntity(AlertRecipientCreateRequestDto request, Store store){
+    public AlertRecipient fromEntity(AlertRecipientCreateRequestDto request, Store store){
         return AlertRecipient.builder()
                 .name(request.getName())
                 .position(request.getPosition())

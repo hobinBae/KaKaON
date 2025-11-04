@@ -41,7 +41,7 @@ public class StoreServiceImpl implements StoreService{
             throw new ApiException(ErrorCode.BUSINESS_NUMBER_ALREADY_EXISTS);
         }
 
-        Store store = storeMapper.toEntity(request, member);
+        Store store = storeMapper.fromEntity(request, member);
 
         storeRepository.save(store);
 
@@ -85,7 +85,7 @@ public class StoreServiceImpl implements StoreService{
 
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
-//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
 }

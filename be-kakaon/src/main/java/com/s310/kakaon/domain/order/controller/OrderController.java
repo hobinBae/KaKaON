@@ -1,14 +1,20 @@
 package com.s310.kakaon.domain.order.controller;
 
+import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.order.service.OrderService;
+import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
+import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -17,32 +23,25 @@ import java.util.List;
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
 public class OrderController {
+    //결제 내역 등록
+    private final PaymentService paymentService;
+    private final MemberService memberService;
+    private final OrderService orderService;
 
     /** 장바구니 주문하기 */
-    @PostMapping
+    @PostMapping("/{storeId}")
     public ResponseEntity<ApiResponse<OrderResponseDto>> createOrder(
-            @RequestParam(name = "storeId") Long storeId,
-            @Valid @RequestBody OrderRequestDto req,
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            @Valid @RequestBody OrderRequestDto request,
             HttpServletRequest httpRequest) {
 
-        // Dummy Data 생성
-        OrderResponseDto dummy = OrderResponseDto.builder()
-                .orderId(1001L)
-                .storeId(storeId)
-                .totalAmount(req.getTotalAmount())
-                .orderType(req.getOrderType())
-                .paymentMethod(req.getPaymentMethod())
-                .status(OrderStatus.CREATED)
-                .createdAt(OffsetDateTime.now().toString())
-                .build();
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        OrderResponseDto response = orderService.createOrderAndPayment(memberId, storeId, request);
 
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.of(
-                        HttpStatus.CREATED,
-                        "주문 생성을 성공적으로 완료했습니다.",
-                        dummy,
-                        httpRequest.getRequestURI()
-                ));
+                .body(ApiResponse.of(HttpStatus.CREATED, "주문 성공", response, httpRequest.getRequestURI()));
+
     }
 
     /** 주문 상세 조회 */
@@ -52,8 +51,8 @@ public class OrderController {
             HttpServletRequest httpRequest) {
 
         // Dummy Data 생성
-        List<OrderDetailResponseDto.OrderItemDto> items = List.of(
-                OrderDetailResponseDto.OrderItemDto.builder()
+        List<OrderItemResponseDto> items = List.of(
+                OrderItemResponseDto.builder()
                         .orderItemId(10101L)
                         .menuId(501L)
                         .menuName("아메리카노")
@@ -65,7 +64,7 @@ public class OrderController {
                         .updatedAt("2025-10-20T03:02:00+09:00")
                         .deletedAt(null)
                         .build(),
-                OrderDetailResponseDto.OrderItemDto.builder()
+                OrderItemResponseDto.builder()
                         .orderItemId(10102L)
                         .menuId(502L)
                         .menuName("라떼")
@@ -143,8 +142,8 @@ public class OrderController {
     ) {
 
         // Dummy data 생성
-        List<OrderListResponseDto.OrderItem> itemList = List.of(
-                OrderListResponseDto.OrderItem.builder()
+        List<OrderItemResponseDto> itemList = List.of(
+                OrderItemResponseDto.builder()
                         .orderItemId(1L)
                         .menuId(501L)
                         .menuName("아메리카노")
@@ -156,7 +155,7 @@ public class OrderController {
                         .updatedAt("2025-10-20T03:02:00+09:00")
                         .deletedAt(null)
                         .build(),
-                OrderListResponseDto.OrderItem.builder()
+                OrderItemResponseDto.builder()
                         .orderItemId(2L)
                         .menuId(502L)
                         .menuName("카페라떼")

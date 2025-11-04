@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.order.dto;
 
 import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import lombok.*;
 
 import java.util.List;
@@ -36,24 +37,7 @@ public class OrderListResponseDto {
         private String updatedAt;
         private String deletedAt;
         private int itemsCount;
-        private List<OrderItem> items;
+        private List<OrderItemResponseDto> items;
     }
 
-    @Getter
-    @Setter
-    @NoArgsConstructor
-    @AllArgsConstructor
-    @Builder
-    public static class OrderItem {
-        private Long orderItemId;
-        private Long menuId;
-        private String menuName;
-        private Integer price;
-        private String imgUrl;
-        private Integer quantity;
-        private Integer totalPrice;
-        private String createdAt;
-        private String updatedAt;
-        private String deletedAt;
-    }
 }

@@ -40,7 +40,7 @@ public class AlertServiceImpl implements AlertService{
         //소유자인지 확인
         validateStoreOwner(store, member);
 
-        AlertRecipient alert = alertMapper.toEntity(request, store);
+        AlertRecipient alert = alertMapper.fromEntity(request, store);
 
         alertRepository.save(alert);
 
@@ -99,7 +99,7 @@ public class AlertServiceImpl implements AlertService{
 
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
-//            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
 
