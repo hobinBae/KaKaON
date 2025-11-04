@@ -1,4 +1,4 @@
-package com.c102.picky.global.util;
+package com.s310.kakaon.global.util;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -103,6 +103,6 @@ public class CookieUtil {
     }
 
     public Optional<String> getRefreshTokenFromCookie(HttpServletRequest request) {
-        return getCookie(request, "refreshToken");
+        return getCookie(request, cookieName);
     }
 }
