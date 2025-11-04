@@ -7,6 +7,10 @@ pipeline {
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
+
+        GIT_USER = 'Jenkins'
+        GIT_TOKEN = 'P78_s_grysyZV4yWnPMr'
+
     }
     
     stages {
@@ -50,13 +54,25 @@ pipeline {
         
         stage('Git Pull') {
             steps {
-                script {
+                withCredentials([usernamePassword(
+                credentialsId: 'gitlab-clone',   // ← Jenkins에 등록한 GitLab 크리덴셜 ID
+                usernameVariable: ${GIT_USER},
+                passwordVariable: ${GIT_TOKEN}
+                )]) {
                     echo '================================================='
                     echo '최신 코드 가져오기...'
                     echo '================================================='
-                    
+
                     sh """
                         cd ${DEPLOY_PATH}
+
+                        # 워킹디렉터리 안전 등록 (루트권한/컨테이너에서 퍼미션 경고 회피)
+                        git config --global --add safe.directory ${DEPLOY_PATH} || true
+
+                        # 원격 URL에 토큰 주입 (HTTPS)
+                        git remote set-url origin \
+                        https://${GIT_USER}:${GIT_TOKEN}@lab.ssafy.com/s13-final/S13P31S310.git
+
                         
                         echo "현재 브랜치 확인..."
                         git branch -a
