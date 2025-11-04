@@ -12,11 +12,11 @@ public interface PaymentService {
 
     void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId);
 
-    void deletePayment(Long memberId, Long storeId, Long id);
+    void deletePayment(Long memberId, Long id);
 
     List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId);
 
-    PaymentResponseDto getPaymentById(Long memberId, Long storeId, Long id);
+    PaymentResponseDto getPaymentById(Long memberId, Long id);
 
 
 

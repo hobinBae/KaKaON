@@ -12,11 +12,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -26,22 +24,45 @@ public class PaymentController {
     private final PaymentService paymentService;
     private final MemberService memberService;
 
-//    @PostMapping("/orders/{orderId}")
-//    public ResponseEntity<ApiResponse<PaymentResponseDto>> registerPayment(
-//            @AuthenticationPrincipal String kakaoId,
-//            @RequestBody PaymentCreateRequestDto request,
-//            @PathVariable Long orderId,
-//            HttpServletRequest httpRequest
-//    ) {
-//        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-//
-//        PaymentResponseDto response = paymentService.registerPayment(memberId, orderId, request);
-//
-//        return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(ApiResponse.of(HttpStatus.CREATED, "결제 등록 성공", response, httpRequest.getRequestURI()));
-//    }
+    @DeleteMapping("/{paymentId}")
+    public ResponseEntity<ApiResponse<Void>> deletePayment(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long paymentId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
+        paymentService.deletePayment(memberId, paymentId);
 
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 제거 성공", null, httpRequest.getRequestURI()));
+    }
 
+    @GetMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
+        List<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 결제내역 조회 성공", response, httpRequest.getRequestURI()));
+    }
+
+    @GetMapping("/{paymentId}")
+    public ResponseEntity<ApiResponse<PaymentResponseDto>> getPaymentById(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long paymentId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        PaymentResponseDto response = paymentService.getPaymentById(memberId, paymentId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 조회 성공", response, httpRequest.getRequestURI()));
+    }
 }

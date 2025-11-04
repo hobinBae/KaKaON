@@ -75,14 +75,9 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional
-    public void deletePayment(Long memberId, Long storeId, Long id) {
-        Member member = memberRepository.findById(memberId)
+    public void deletePayment(Long memberId, Long id) {
+       memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
-
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
-
-        validateStoreOwner(store, member);
 
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
@@ -112,20 +107,15 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional(readOnly = true)
-    public PaymentResponseDto getPaymentById(Long memberId, Long storeId, Long id) {
+    public PaymentResponseDto getPaymentById(Long memberId, Long id) {
 
-        Member member = memberRepository.findById(memberId)
+        memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
-
-        Store store = storeRepository.findById(storeId)
-                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
-
-        validateStoreOwner(store, member);
 
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        return paymentMapper.fromEntity(payment);
+        return paymentMapper.fromEntity (payment);
     }
 
     public String generateAuthorizationNo(){

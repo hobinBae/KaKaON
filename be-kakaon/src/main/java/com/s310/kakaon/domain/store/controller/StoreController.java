@@ -1,13 +1,7 @@
 package com.s310.kakaon.domain.store.controller;
 
 import com.s310.kakaon.domain.member.service.MemberService;
-import com.s310.kakaon.domain.store.dto.AlertRecipientCreateRequestDto;
-import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
-import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
-import com.s310.kakaon.domain.store.dto.BusinessType;
-import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
-import com.s310.kakaon.domain.store.dto.StoreResponseDto;
-import com.s310.kakaon.domain.store.dto.StoreStatus;
+import com.s310.kakaon.domain.store.dto.*;
 import com.s310.kakaon.domain.store.service.AlertService;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.domain.store.service.StoreServiceImpl;
@@ -39,23 +33,51 @@ public class StoreController {
             @AuthenticationPrincipal String kakaoId,
             @RequestBody StoreCreateRequestDto request,
             HttpServletRequest httpRequest
-    ){
+    ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         StoreResponseDto response = storeService.registerStore(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "가맹점 등록 성공", response, httpRequest.getRequestURI()));
     }
 
+    @PostMapping("/open/{storeId}")
+    public ResponseEntity<ApiResponse<Void>> openStore(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        storeService.updateOperationStatus(memberId, storeId, OperationStatus.OPEN);
+
+        return
+    }
+
+    @PostMapping("/close/{storeId}")
+    public ResponseEntity<ApiResponse<Void>> closeStore(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        storeService.updateOperationStatus(memberId, storeId, OperationStatus.CLOSED);
+
+        return
+    }
+
+
     @DeleteMapping("/{storeId}")
     public ResponseEntity<ApiResponse<Void>> deleteStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
-    ){
+    ) {
+
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         storeService.deleteStore(memberId, storeId);
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "가맹점 삭제 성공", null , httpRequest.getRequestURI()));
+                .body(ApiResponse.of(HttpStatus.OK, "가맹점 삭제 성공", null, httpRequest.getRequestURI()));
     }
 
 
@@ -64,7 +86,7 @@ public class StoreController {
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
-    ){
+    ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         StoreResponseDto response = storeService.findStoreById(memberId, storeId);
         return ResponseEntity.status(HttpStatus.OK)
@@ -121,7 +143,7 @@ public class StoreController {
             @PathVariable Long storeId,
             @RequestBody AlertRecipientCreateRequestDto request,
             HttpServletRequest httpRequest
-    ){
+    ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         AlertRecipientResponseDto response = alertService.registerAlert(storeId, memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -152,7 +174,7 @@ public class StoreController {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         alertService.deleteAlert(storeId, memberId, alertId);
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "알림 수신자 삭제 성공", null , httpRequest.getRequestURI()));
+                .body(ApiResponse.of(HttpStatus.OK, "알림 수신자 삭제 성공", null, httpRequest.getRequestURI()));
     }
 
 }

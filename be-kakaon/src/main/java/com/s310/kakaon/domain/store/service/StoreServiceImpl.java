@@ -3,6 +3,7 @@ package com.s310.kakaon.domain.store.service;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.store.dto.BusinessHourDto;
+import com.s310.kakaon.domain.store.dto.OperationStatus;
 import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 
@@ -61,6 +62,28 @@ public class StoreServiceImpl implements StoreService{
         validateStoreOwner(store, member);
 
         return storeMapper.fromEntity(store);
+    }
+
+    @Override
+    @Transactional
+    public void updateOperationStatus(Long memberId, Long storeId, OperationStatus newStatus){
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
+
+
+        store.updateOperationStatus(newStatus);
+
+        if (newStatus.equals(OperationStatus.CLOSED)) {
+            //여기 배치 실행 메서드 넣으면 될듯
+        }else{
+            //여기는 redis 관련 로직 넣으면 될듯
+        }
+
     }
 
     @Override
