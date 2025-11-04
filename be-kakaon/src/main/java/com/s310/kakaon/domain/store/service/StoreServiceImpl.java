@@ -41,7 +41,7 @@ public class StoreServiceImpl implements StoreService{
             throw new ApiException(ErrorCode.BUSINESS_NUMBER_ALREADY_EXISTS);
         }
 
-        Store store = storeMapper.toEntity(request, member);
+        Store store = storeMapper.fromEntity(request, member);
 
         storeRepository.save(store);
 

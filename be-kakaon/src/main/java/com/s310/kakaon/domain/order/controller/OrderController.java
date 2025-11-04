@@ -32,38 +32,16 @@ public class OrderController {
     @PostMapping("/{storeId}")
     public ResponseEntity<ApiResponse<OrderResponseDto>> createOrder(
             @AuthenticationPrincipal String kakaoId,
-            @RequestBody Long storeId,
+            @PathVariable Long storeId,
             @Valid @RequestBody OrderRequestDto request,
             HttpServletRequest httpRequest) {
 
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        OrderResponseDto response = orderService.createOrderAndPayment(memberId, storeId, request);
 
-//        // Dummy Data 생성
-//        OrderResponseDto dummy = OrderResponseDto.builder()
-//                .orderId(1001L)
-//                .storeId(storeId)
-//                .totalAmount(req.getTotalAmount())
-//                .orderType(req.getOrderType())
-//                .paymentMethod(req.getPaymentMethod())
-//                .status(OrderStatus.CREATED)
-//                .createdAt(OffsetDateTime.now().toString())
-//                .build();
-//
-//        //여기는 내일 수정해야할 거 같다.
-//        //결제는 오더가 되고 해야하기 때문에 오더에 옮김
-//        PaymentCreateRequestDto pay = PaymentCreateRequestDto.builder()
-//                .amount(dummy.getTotalAmount())
-//                .paymentMethod(dummy.getPaymentMethod())
-//                .delivery()
-////        paymentService.registerPayment(memberId, storeId, dummy.getOrderId(), );
-//
-//        return ResponseEntity.status(HttpStatus.CREATED)
-//                .body(ApiResponse.of(
-//                        HttpStatus.CREATED,
-//                        "주문 생성을 성공적으로 완료했습니다.",
-//                        dummy,
-//                        httpRequest.getRequestURI()
-//                ));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.of(HttpStatus.CREATED, "주문 성공", response, httpRequest.getRequestURI()));
+
     }
 
     /** 주문 상세 조회 */
@@ -73,8 +51,8 @@ public class OrderController {
             HttpServletRequest httpRequest) {
 
         // Dummy Data 생성
-        List<OrderDetailResponseDto.OrderItemDto> items = List.of(
-                OrderDetailResponseDto.OrderItemDto.builder()
+        List<OrderItemResponseDto> items = List.of(
+                OrderItemResponseDto.builder()
                         .orderItemId(10101L)
                         .menuId(501L)
                         .menuName("아메리카노")
@@ -86,7 +64,7 @@ public class OrderController {
                         .updatedAt("2025-10-20T03:02:00+09:00")
                         .deletedAt(null)
                         .build(),
-                OrderDetailResponseDto.OrderItemDto.builder()
+                OrderItemResponseDto.builder()
                         .orderItemId(10102L)
                         .menuId(502L)
                         .menuName("라떼")
@@ -164,8 +142,8 @@ public class OrderController {
     ) {
 
         // Dummy data 생성
-        List<OrderListResponseDto.OrderItem> itemList = List.of(
-                OrderListResponseDto.OrderItem.builder()
+        List<OrderItemResponseDto> itemList = List.of(
+                OrderItemResponseDto.builder()
                         .orderItemId(1L)
                         .menuId(501L)
                         .menuName("아메리카노")
@@ -177,7 +155,7 @@ public class OrderController {
                         .updatedAt("2025-10-20T03:02:00+09:00")
                         .deletedAt(null)
                         .build(),
-                OrderListResponseDto.OrderItem.builder()
+                OrderItemResponseDto.builder()
                         .orderItemId(2L)
                         .menuId(502L)
                         .menuName("카페라떼")

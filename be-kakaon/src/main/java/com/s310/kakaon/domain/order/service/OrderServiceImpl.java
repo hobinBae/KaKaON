@@ -7,9 +7,12 @@ import com.s310.kakaon.domain.menu.repository.MenuRepository;
 import com.s310.kakaon.domain.order.dto.OrderRequestDto;
 import com.s310.kakaon.domain.order.dto.OrderRequestDto.OrderItemDto;
 import com.s310.kakaon.domain.order.dto.OrderResponseDto;
+import com.s310.kakaon.domain.order.dto.OrderType;
 import com.s310.kakaon.domain.order.entity.OrderItem;
 import com.s310.kakaon.domain.order.entity.Orders;
+import com.s310.kakaon.domain.order.mapper.OrderMapper;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
+import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
@@ -28,45 +31,37 @@ public class OrderServiceImpl implements OrderService{
     private final StoreRepository storeRepository;
     private final MenuRepository menuRepository;
     private final PaymentService paymentService;
+    private final OrderMapper orderMapper;
 
     @Override
     @Transactional
-    public OrderResponseDto createOrder(Long memberId, Long storeId, OrderRequestDto request) {
-        Member member = memberRepository.findById(memberId)
+    public OrderResponseDto createOrderAndPayment(Long memberId, Long storeId, OrderRequestDto request) {
+        Orders order = createOrder(memberId, storeId, request);
+
+        PaymentCreateRequestDto payRequest = PaymentCreateRequestDto.builder()
+                .amount(request.getTotalAmount())
+                .paymentMethod(request.getPaymentMethod())
+                .delivery(request.getOrderType() == OrderType.DELIVERY)
+                .build();
+
+        paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
+
+        return orderMapper.toResponseDto(order, request.getOrderType(), request.getPaymentMethod());
+    }
+
+    @Override
+    @Transactional
+    public Orders createOrder(Long memberId, Long storeId, OrderRequestDto request) {
+        memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-
-        Orders order = Orders.builder()
-                .store(store)
-                .totalAmount(request.getTotalAmount())
-                .paidAmount(request.getTotalAmount())
-                .build();
-
-
-        for ( OrderItemDto dto: request.getItems()) {
-            Menu menu = menuRepository.findById(dto.getMenuId())
-                    .orElseThrow(() -> new ApiException(ErrorCode.MENU_NOT_FOUND));
-
-            OrderItem orderItem = OrderItem.builder()
-                    .order(order)
-                    .menu(menu)
-                    .quantity(dto.getQuantity())
-                    .totalPrice(dto.getPrice() * dto.getQuantity())
-                    .build();
-            order.addOrderItem(orderItem);
-        }
+        Orders order = orderMapper.fromEntity(store, request);
 
         orderRepository.save(order);
 
-        
-
-        paymentService.registerPayment(memberId, storeId, order.getOrderId(), )
-
-
-
-        return null;
+        return order;
     }
 }

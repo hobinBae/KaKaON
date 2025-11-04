@@ -60,7 +60,7 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
+        Payment payment = paymentMapper.fromEntity(store, order, authorizationNo ,request);
 
         paymentRepository.save(payment);
 

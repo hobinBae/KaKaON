@@ -1,5 +1,7 @@
 package com.s310.kakaon.domain.order.entity;
 
+import com.s310.kakaon.domain.menu.entity.Menu;
+import com.s310.kakaon.domain.order.dto.OrderType;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -24,8 +26,6 @@ public class Orders extends BaseEntity {
     @Column(name = "order_id")
     private Long orderId;
 
-    //    @Column(name = "store_id", nullable = false)
-//    private Long storeId;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
@@ -53,7 +53,12 @@ public class Orders extends BaseEntity {
     @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> orderItems = new ArrayList<>();
 
-    public void addOrderItem(OrderItem orderItem){
+    public void addOrderItem(Menu menu, int price, int quantity){
+        OrderItem orderItem = OrderItem.builder()
+                .menu(menu)
+                .quantity(quantity)
+                .totalPrice(price * quantity)
+                .build();
         this.orderItems.add(orderItem);
         orderItem.setOrder(this);
     }

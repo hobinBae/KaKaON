@@ -2,7 +2,9 @@ package com.s310.kakaon.domain.order.service;
 
 import com.s310.kakaon.domain.order.dto.OrderRequestDto;
 import com.s310.kakaon.domain.order.dto.OrderResponseDto;
+import com.s310.kakaon.domain.order.entity.Orders;
 
 public interface OrderService {
-    OrderResponseDto createOrder(Long memberId, Long storeId, OrderRequestDto request);
+    OrderResponseDto createOrderAndPayment(Long memberId, Long storeId, OrderRequestDto request);
+    Orders createOrder(Long memberId, Long storeId, OrderRequestDto request);
 }
