@@ -26,7 +26,7 @@ public class JwtTokenProvider {
     private static final String BEARER_PREFIX = "Bearer ";
     private static final String ROLE_KEY = "role";
 
-//    private final TokenBlacklistService tokenBlacklistService;
+    private final TokenBlacklistService tokenBlacklistService;
 
     @Value("${jwt.secret}")
     private String secret;
@@ -86,7 +86,9 @@ public class JwtTokenProvider {
     public boolean validateToken(String token) {
         try {
             // 블랙리스트 체크
-
+            if (tokenBlacklistService.isBlackListed(token)) {
+                return false;
+            }
             parseClaims(token);
             return true;
         } catch (ExpiredJwtException e) {
@@ -128,7 +130,7 @@ public class JwtTokenProvider {
             Duration ttl = Duration.between(Instant.now(), expiration.toInstant());
 
             if(!ttl.isNegative() && !ttl.isZero()) {
-//                tokenBlacklistService.addToBlackList(token, ttl);
+                tokenBlacklistService.addToBlackList(token, ttl);
             }
         } catch (JwtException e) {
             log.warn("블랙리스트 추가 실패 - 이미 만료된 토큰: {}", e.getMessage());
