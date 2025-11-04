@@ -2,18 +2,14 @@ package com.s310.kakaon.domain.auth.controller;
 
 import com.s310.kakaon.domain.auth.dto.RefreshTokenRequestDto;
 import com.s310.kakaon.domain.auth.service.AuthService;
-import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.global.jwt.TokenResponseDto;
 import com.s310.kakaon.global.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -33,8 +29,8 @@ public class AuthController {
     public ResponseEntity<ApiResponse<Void>> logout(
             HttpServletRequest httpRequest, HttpServletResponse httpResponse
     ) {
-        // access, refresh token Redis-blacklist에 저장
-
+        // refresh token Redis-blacklist에 저장
+        authService.logout(httpRequest);
 
         // refreshtoken 쿠키 삭제
         cookieUtil.deleteRefreshTokenCookie(httpResponse);
