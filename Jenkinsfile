@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         // ===== 배포 경로 =====
-        DEPLOY_PATH = "${WORKSPACE}"
+        DEPLOY_PATH = '/home/ubuntu/app'
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
