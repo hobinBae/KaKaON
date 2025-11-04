@@ -3,6 +3,7 @@ package com.s310.kakaon.global.oauth2;
 import com.s310.kakaon.domain.member.entity.Role;
 import com.s310.kakaon.global.jwt.JwtTokenProvider;
 import com.s310.kakaon.global.jwt.TokenResponseDto;
+import com.s310.kakaon.global.util.CookieUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,7 +25,7 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     @Value("${oauth2.redirect-uri}")
     private String redirectUri;
 
-//    private final CookieUtil cookieUtil;
+    private final CookieUtil cookieUtil;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException, ServletException {
@@ -38,7 +39,8 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
         TokenResponseDto tokenResponse = jwtTokenProvider.createTokenResponse(kakaoId, role.name());
         
         // refreshToken 쿠키 저장
-        
+        cookieUtil.addRefreshTokenCookie(response, tokenResponse.getRefreshToken());
+
         // 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
         String targetUrl = UriComponentsBuilder.fromUriString(redirectUri)
                 .queryParam("accessToken", tokenResponse.getAccessToken())
