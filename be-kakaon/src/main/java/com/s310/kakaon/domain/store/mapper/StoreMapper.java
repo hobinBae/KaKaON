@@ -46,7 +46,7 @@ public class StoreMapper {
                 .build();
     }
 
-    public Store toEntity(StoreCreateRequestDto dto, Member member) {
+    public Store fromEntity(StoreCreateRequestDto dto, Member member) {
         Store store = Store.builder()
                 .member(member)
                 .name(dto.getName())
