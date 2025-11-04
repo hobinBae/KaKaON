@@ -55,6 +55,7 @@ ehthumbs.db
 *.war
 *.ear
 *.zip
+!gradle/wrapper/gradle-wrapper.jar
 
 # Java Crash Dumps / Heap Dump
 hs_err_pid*
