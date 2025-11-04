@@ -1,5 +1,7 @@
 package com.s310.kakaon.domain.menu.controller;
 
+import com.s310.kakaon.domain.member.service.MemberService;
+import com.s310.kakaon.domain.menu.service.MenuService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.domain.menu.dto.MenuRequestDto;
 import com.s310.kakaon.domain.menu.dto.MenuSummaryResponseDto;
@@ -9,6 +11,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -20,6 +23,9 @@ import java.util.List;
 @RequestMapping("/api/v1/menus")
 @RequiredArgsConstructor
 public class MenuController {
+
+    private final MemberService memberService;
+    private final MenuService menuService;
 
     /** 메뉴 리스트 조회 */
     @GetMapping()
@@ -45,21 +51,13 @@ public class MenuController {
     /** 메뉴 생성 */
     @PostMapping()
     public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> createMenu(
+            @AuthenticationPrincipal String kakaoId,
             @RequestParam(name = "storeId") Long storeId,
             @Validated(MenuValidationGroups.Create.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
-
-        // Dummy Data
-        MenuSummaryResponseDto dummy = MenuSummaryResponseDto.builder()
-                .menuId(1L)
-                .storeId(11L)
-                .menu(req.getMenu())
-                .price(req.getPrice())
-                .imgUrl(req.getImgUrl())
-                .createdAt(OffsetDateTime.now().toString())
-                .updatedAt(OffsetDateTime.now().toString())
-                .build();
-        return ResponseEntity.ok(ApiResponse.of(HttpStatus.CREATED, "메뉴 생성이 성공적으로 완료 되었습니다.", dummy, httpRequest.getRequestURI()));
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        MenuSummaryResponseDto responseDto = menuService.create(memberId, req, storeId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.CREATED, "메뉴 생성이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
     }
 
     /** 메뉴 수정 */
