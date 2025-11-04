@@ -136,6 +136,7 @@ const Pos = () => {
     }
   };
 
+
   return (
     <div className="flex h-screen bg-gray-200 font-sans p-10 gap-4">
       <div className="w-[65%] flex flex-col gap-4">
@@ -163,7 +164,7 @@ const Pos = () => {
                 {paginatedProducts.map((product) => (
                   <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative transition-transform hover:scale-105">
                     {isEditMode && (
-                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
                         <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
                         <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
                       </div>
@@ -226,10 +227,7 @@ const Pos = () => {
                         <Label htmlFor="name">상품명</Label>
                         <Input id="name" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} />
                         <Label htmlFor="price">가격</Label>
-                        <div className="relative flex-1">
-                          <Input id="price" type="text" value={newProductPrice} onChange={handlePriceChange} className="pr-12 text-right" placeholder="0" />
-                          <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">원</span>
-                        </div>
+                        <Input id="price" type="text" value={newProductPrice} onChange={handlePriceChange} placeholder="0" />
                       </div>
                       <DialogFooter>
                         <DialogClose asChild><Button onClick={handleAddProduct}>추가하기</Button></DialogClose>

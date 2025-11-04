@@ -31,9 +31,9 @@ export function AppLayout() {
       {/* --- Sidebar --- */}
       <aside className="w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col">
         {/* 로고 */}
-        <div className="h-16 flex items-center justify-center p-4">
+        <div className="h-18 flex items-center justify-center p-4">
           <Link to="/" className="flex items-center gap-2">
-            <img src={logoImg} alt="KaKaON Logo" className="h-8" />
+            <img src={logoImg} alt="KaKaON Logo" className="h-12" />
           </Link>
         </div>
 
