@@ -1,16 +1,114 @@
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
-import { Calendar as CalendarIcon, RotateCw } from "lucide-react";
+import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart } from "recharts";
+import { Calendar as CalendarIcon, RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears } from "date-fns";
+import { addDays, addMonths, format, differenceInCalendarDays, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, parse, startOfWeek, endOfWeek, startOfYear, endOfYear, subYears, isValid, setMonth, setYear } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // --- Helper Functions & Dummy Data ---
+
+// 커스텀 달력 캡션 컴포넌트
+function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
+  const today = new Date();
+  const currentYear = today.getFullYear();
+  const currentMonth = today.getMonth();
+  const years = Array.from({ length: 10 }, (_, i) => currentYear - 9 + i);
+  const months = Array.from({ length: 12 }, (_, i) => i);
+
+  // 현재 표시된 월이 오늘의 월과 같거나 이후인지 확인
+  const isCurrentOrFutureMonth = displayMonth.getFullYear() > currentYear ||
+    (displayMonth.getFullYear() === currentYear && displayMonth.getMonth() >= currentMonth);
+
+  // 선택된 년도가 현재 년도인지 확인
+  const isCurrentYear = displayMonth.getFullYear() === currentYear;
+
+  return (
+    <div className="flex justify-center items-center gap-2 py-2">
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-7 w-7"
+        onClick={() => onMonthChange(subMonths(displayMonth, 1))}
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </Button>
+
+      <div className="flex gap-1">
+        <Select
+          value={displayMonth.getFullYear().toString()}
+          onValueChange={(value) => {
+            onMonthChange(setYear(displayMonth, parseInt(value)));
+          }}
+        >
+          <SelectTrigger className="h-7 w-20 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {years.map((year) => (
+              <SelectItem key={year} value={year.toString()}>
+                {year}년
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={displayMonth.getMonth().toString()}
+          onValueChange={(value) => {
+            onMonthChange(setMonth(displayMonth, parseInt(value)));
+          }}
+        >
+          <SelectTrigger className="h-7 w-16 text-sm">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {months.map((month) => (
+              <SelectItem
+                key={month}
+                value={month.toString()}
+                disabled={isCurrentYear && month > currentMonth}
+              >
+                {month + 1}월
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <Button
+        variant="outline"
+        size="icon"
+        className="h-7 w-7"
+        onClick={() => onMonthChange(addMonths(displayMonth, 1))}
+        disabled={isCurrentOrFutureMonth}
+      >
+        <ChevronRight className="h-4 w-4" />
+      </Button>
+    </div>
+  );
+}
 
 const generateDailyData = () => {
   const data = [];
@@ -18,11 +116,14 @@ const generateDailyData = () => {
   for (let i = 0; i < 365; i++) {
     const date = addDays(endDate, -i);
     const sales = Math.floor(Math.random() * 1500000) + 500000;
+    const deliveryRatio = Math.random() * 0.4 + 0.3; // 30-70%
     data.push({
       date: format(date, 'yyyy-MM-dd'),
       sales: sales,
       cancellations: Math.floor(Math.random() * (sales / 100000)),
       labor: sales * (Math.random() * 0.1 + 0.2),
+      deliverySales: sales * deliveryRatio,
+      storeSales: sales * (1 - deliveryRatio),
       paymentMethods: {
         card: sales * 0.6,
         account: sales * 0.2,
@@ -66,12 +167,18 @@ export default function Analytics() {
   const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [showCalendar, setShowCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("sales-trend");
+  const [startDateInput, setStartDateInput] = useState<string>("");
+  const [endDateInput, setEndDateInput] = useState<string>("");
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<React.ReactNode>("");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   // State for processed chart data
   const [periodSales, setPeriodSales] = useState<any[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
   const [xAxisDataKeyCancellation, setXAxisDataKeyCancellation] = useState<string>('date');
   const [paymentDistribution, setPaymentDistribution] = useState<any[]>([]);
+  const [salesTypeDistribution, setSalesTypeDistribution] = useState<any[]>([]);
   const [hourlySales, setHourlySales] = useState<any[]>([]);
   const [cancellationRate, setCancellationRate] = useState<any[]>([]);
   const [salesVsLabor, setSalesVsLabor] = useState<any[]>([]);
@@ -125,6 +232,17 @@ export default function Analytics() {
       { name: '계좌이체', value: totalPayments.account, color: '#FFB800' },
       { name: '카카오페이', value: totalPayments.kakaopay, color: '#3C1E1E' },
       { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
+    ]);
+
+    // Process sales type distribution (delivery vs store)
+    const totalSalesType = { delivery: 0, store: 0 };
+    filteredData.forEach(d => {
+      totalSalesType.delivery += d.deliverySales;
+      totalSalesType.store += d.storeSales;
+    });
+    setSalesTypeDistribution([
+      { name: '배달', value: totalSalesType.delivery, color: '#FEE500' },
+      { name: '가게', value: totalSalesType.store, color: '#3C1E1E' },
     ]);
 
     // Process hourly sales - average for period, actual for today
@@ -225,12 +343,169 @@ export default function Analytics() {
       monthlySalesVsLabor[month].sales += d.sales;
       monthlySalesVsLabor[month].labor += d.labor;
     });
-    setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({ month: month.slice(5) + '월', sales: data.sales, labor: data.labor })).sort((a,b) => a.month.localeCompare(b.month)));
+    setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({
+      month: month.slice(5) + '월',
+      sales: data.sales,
+      labor: data.labor,
+      laborRatio: data.sales > 0 ? parseFloat(((data.labor / data.sales) * 100).toFixed(1)) : 0
+    })).sort((a,b) => a.month.localeCompare(b.month)));
   }, [dateRange]);
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
   }, []);
+
+  // dateRange가 변경될 때 input 필드도 업데이트 (activePeriod가 없을 때만)
+  useEffect(() => {
+    // 기간 버튼(이번주, 이번달 등)을 클릭한 경우에는 input 필드 비우기
+    if (activePeriod) {
+      setStartDateInput("");
+      setEndDateInput("");
+      return;
+    }
+
+    // 직접 입력이나 달력 선택의 경우에만 input 필드 업데이트
+    if (dateRange?.from) {
+      setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
+    } else {
+      setStartDateInput("");
+    }
+    if (dateRange?.to) {
+      setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
+    } else {
+      setEndDateInput("");
+    }
+  }, [dateRange, activePeriod]);
+
+  const showAlert = (message: React.ReactNode) => {
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
+
+  const handleDateInputChange = (type: 'start' | 'end', value: string) => {
+    // 숫자만 추출
+    const digitsOnly = value.replace(/[^\d]/g, '');
+
+    // 최대 8자리까지만 허용
+    const truncated = digitsOnly.slice(0, 8);
+
+    // 자동으로 점 추가 (yyyy.MM.dd 형식)
+    let formatted = truncated;
+    if (truncated.length > 4) {
+      formatted = truncated.slice(0, 4) + '.' + truncated.slice(4);
+    }
+    if (truncated.length > 6) {
+      formatted = truncated.slice(0, 4) + '.' + truncated.slice(4, 6) + '.' + truncated.slice(6);
+    }
+
+    if (type === 'start') {
+      setStartDateInput(formatted);
+    } else {
+      setEndDateInput(formatted);
+    }
+  };
+
+  const handleDateInputBlur = (type: 'start' | 'end') => {
+    const value = type === 'start' ? startDateInput : endDateInput;
+
+    // 빈 값이면 초기화
+    if (!value) {
+      if (type === 'start') {
+        setDateRange({ from: undefined, to: dateRange?.to });
+      } else {
+        setDateRange({ from: dateRange?.from, to: undefined });
+      }
+      return;
+    }
+
+    // 날짜 파싱 시도 (yyyy.MM.dd 형식)
+    const parsedDate = parse(value, 'yyyy.MM.dd', new Date());
+
+    if (!isValid(parsedDate)) {
+      // 유효하지 않은 날짜면 이전 값으로 복원
+      if (type === 'start' && dateRange?.from) {
+        setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
+      } else if (type === 'end' && dateRange?.to) {
+        setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
+      } else {
+        if (type === 'start') setStartDateInput("");
+        else setEndDateInput("");
+      }
+      return;
+    }
+
+    // 오늘 이후 날짜 체크
+    if (parsedDate > new Date()) {
+      showAlert('오늘 이후의 날짜는 선택할 수 없습니다.');
+      if (type === 'start' && dateRange?.from) {
+        setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
+      } else if (type === 'end' && dateRange?.to) {
+        setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
+      } else {
+        if (type === 'start') setStartDateInput("");
+        else setEndDateInput("");
+      }
+      return;
+    }
+
+    if (type === 'start') {
+      // 시작일 설정
+      if (dateRange?.to && parsedDate > dateRange.to) {
+        showAlert('시작일은 종료일보다 이전이어야 합니다.');
+        if (dateRange?.from) {
+          setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
+        } else {
+          setStartDateInput("");
+        }
+        return;
+      }
+
+      // 시작일 변경 시에도 종료일과의 1년 제한 체크
+      if (dateRange?.to) {
+        const maxDate = addDays(parsedDate, 365);
+        if (dateRange.to > maxDate) {
+          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          if (dateRange?.from) {
+            setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
+          } else {
+            setStartDateInput("");
+          }
+          return;
+        }
+      }
+
+      setDateRange({ from: parsedDate, to: dateRange?.to });
+      setActivePeriod("");
+    } else {
+      // 종료일 설정
+      if (dateRange?.from && parsedDate < dateRange.from) {
+        showAlert('종료일은 시작일보다 이후여야 합니다.');
+        if (dateRange?.to) {
+          setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
+        } else {
+          setEndDateInput("");
+        }
+        return;
+      }
+
+      // 1년 제한 체크
+      if (dateRange?.from) {
+        const maxDate = addDays(dateRange.from, 365);
+        if (parsedDate > maxDate) {
+          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          if (dateRange?.to) {
+            setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
+          } else {
+            setEndDateInput("");
+          }
+          return;
+        }
+      }
+
+      setDateRange({ from: dateRange?.from, to: parsedDate });
+      setActivePeriod("");
+    }
+  };
 
   const handleDateSelect = (day: Date | undefined) => {
     if (!day) return;
@@ -241,14 +516,20 @@ export default function Analytics() {
       setActivePeriod("");
     } else {
       // End of selection
-      if (day > dateRange.from) {
+      // 같은 날짜를 두 번 클릭한 경우 (당일 조회)
+      if (format(day, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd')) {
+        setDateRange({ from: day, to: day });
+        setShowCalendar(false);
+        setActivePeriod("");
+      } else if (day > dateRange.from) {
         setDateRange({ from: dateRange.from, to: day });
         setShowCalendar(false); // Close on valid range selection
+        setActivePeriod("");
       } else {
         // Clicked date is before start date, so reset and start new selection
         setDateRange({ from: day, to: undefined });
+        setActivePeriod("");
       }
-      setActivePeriod("");
     }
   };
 
@@ -274,7 +555,7 @@ export default function Analytics() {
         break;
       case 'this-month':
         from = startOfMonth(today);
-        to = endOfMonth(today);
+        to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
         break;
       case 'this-year':
         from = startOfYear(today);
@@ -335,48 +616,76 @@ export default function Analytics() {
                   </>
                 )}
               </ToggleGroup>
-              <div className="relative">
+              <div className="relative flex items-center gap-1">
+                <Input
+                  type="text"
+                  placeholder="yyyy.mm.dd"
+                  value={startDateInput}
+                  onChange={(e) => handleDateInputChange('start', e.target.value)}
+                  onBlur={() => handleDateInputBlur('start')}
+                  className="h-8 w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                />
+                <span className="text-sm text-gray-500">~</span>
+                <Input
+                  type="text"
+                  placeholder="yyyy.mm.dd"
+                  value={endDateInput}
+                  onChange={(e) => handleDateInputChange('end', e.target.value)}
+                  onBlur={() => handleDateInputBlur('end')}
+                  className="h-8 w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                />
                 <Button
                   variant={"outline"}
-                  className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
+                  size={"icon"}
+                  className="h-8 w-8 rounded-lg border border-gray-300 bg-white"
                   onClick={() => {
-                    setShowCalendar(!showCalendar);
-                    if (!showCalendar && activePeriod) {
-                      setDateRange(undefined);
-                      setActivePeriod("");
+                    if (!showCalendar && dateRange?.from) {
+                      setCalendarMonth(dateRange.from);
                     }
+                    setShowCalendar(!showCalendar);
                   }}
                 >
                   <CalendarIcon className="w-4 h-4" />
-                  {dateRange?.from ? (
-                    dateRange.to ? (
-                      <>
-                        {format(dateRange.from, "yyyy.MM.dd")} ~{" "}
-                        {format(dateRange.to, "yyyy.MM.dd")}
-                      </>
-                    ) : (
-                      format(dateRange.from, "yyyy.MM.dd")
-                    )
-                  ) : (
-                    <span>날짜를 선택하세요</span>
-                  )}
                 </Button>
                 {showCalendar && (
                   <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
                     <Calendar
                       initialFocus
                       mode="range"
-                      defaultMonth={dateRange?.from}
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
                       selected={dateRange}
                       onDayClick={handleDateSelect}
                       numberOfMonths={1}
                       fixedWeeks={false}
-                      components={{}}
+                      components={{
+                        Caption: ({ displayMonth }) => (
+                          <CustomCaption displayMonth={displayMonth} onMonthChange={setCalendarMonth} />
+                        ),
+                      }}
                       locale={ko}
-                      disabled={{ after: new Date() }}
+                      modifiers={{
+                        sunday: (date) => date.getDay() === 0, // 일요일
+                        saturday: (date) => date.getDay() === 6, // 토요일
+                      }}
+                      modifiersClassNames={{
+                        sunday: "rounded-l-full",
+                        saturday: "rounded-r-full",
+                      }}
+                      disabled={(date) => {
+                        // 오늘 이후 날짜는 선택 불가
+                        if (date > new Date()) return true;
+
+                        // 시작일이 선택되고 종료일이 선택되지 않은 경우
+                        if (dateRange?.from && !dateRange?.to) {
+                          // 시작일로부터 365일(1년) 이후 날짜는 선택 불가
+                          const maxDate = addDays(dateRange.from, 365);
+                          if (date > maxDate) return true;
+                        }
+
+                        return false;
+                      }}
                       formatters={{
-                        formatCaption: (date) =>
-                          `${format(date, "yyyy년 M월", { locale: ko })}`,
                         formatWeekdayName: (day) =>
                           format(day, "eee", { locale: ko }),
                       }}
@@ -390,7 +699,7 @@ export default function Analytics() {
                         day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
                         day_range_start: "rounded-l-full",
                         day_range_end: "rounded-r-full",
-                        day_today: "bg-accent/50 text-accent-foreground rounded-full",
+                        day_today: "bg-accent/50 text-accent-foreground ring-2 ring-primary ring-inset",
                         day_outside: "day-outside text-muted-foreground opacity-50",
                         day_disabled: "text-muted-foreground opacity-50",
                         day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
@@ -405,17 +714,31 @@ export default function Analytics() {
 
           {/* 하단 요약/버튼 */}
           <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
-            <div className="text-sm text-[#333]">
-              {dateRange?.from && dateRange?.to && (
-                <>
-                  {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
-                  <span className="text-[#007AFF] ml-1">
-                    ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
-                  </span>
-                </>
-              )}
+            <div>
+              <div className="text-sm text-[#333]">
+                {dateRange?.from && dateRange?.to && (
+                  <>
+                    {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
+                    <span className="text-[#007AFF] ml-1">
+                      ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
+                    </span>
+                  </>
+                )}
+              </div>
+              <div className="text-xs text-red-500 mt-1">
+                * 오늘 매출은 영업 종료 후 반영됩니다.
+              </div>
             </div>
-            <div className="flex gap-2">
+            {activeTab === "sales-trend" && (
+              <div className="border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center gap-3">
+                <div className="text-xs font-medium text-[#717182]">기간 누적 매출</div>
+                <div className="text-2xl font-bold text-[#333333]">
+                  {periodSales.reduce((sum, item) => sum + (item.sales || 0), 0).toLocaleString()}
+                  <span className="text-base ml-1">원</span>
+                </div>
+              </div>
+            )}
+            {/* <div className="flex gap-2">
               <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
                 <RotateCw className="w-4 h-4 mr-1" />
                 초기화
@@ -423,7 +746,7 @@ export default function Analytics() {
               <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
                 조회하기
               </Button>
-            </div>
+            </div> */}
           </div>
         </Card>
 
@@ -442,19 +765,34 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         <TabsContent value="payment-method">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">결제수단별 비중</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <PieChart>
-                <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={150} fill="#8884d8" dataKey="value">
-                  {paymentDistribution.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </Card>
+          <div className="grid grid-cols-2 gap-6">
+            <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+              <h3 className="text-[#333333] mb-6">결제수단별 비중</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <PieChart>
+                  <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
+                    {paymentDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+            <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+              <h3 className="text-[#333333] mb-6">배달/가게 매출 비중</h3>
+              <ResponsiveContainer width="100%" height={400}>
+                <PieChart>
+                  <Pie data={salesTypeDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
+                    {salesTypeDistribution.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip />
+                </PieChart>
+              </ResponsiveContainer>
+            </Card>
+          </div>
         </TabsContent>
         <TabsContent value="hourly-sales">
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
@@ -493,19 +831,58 @@ export default function Analytics() {
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-6">인건비 대비 매출 비율</h3>
             <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={salesVsLabor} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 50, left: 10, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="month" stroke="#717182" />
-                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
+                <YAxis yAxisId="right" orientation="right" stroke="#FF4D4D" unit="%" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number, name: string) => {
+                    if (name === '인건비 비율') return [`${value}%`, name];
+                    return [`${value.toLocaleString()}원`, name];
+                  }}
+                />
                 <Legend />
-                <Bar dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
-                <Bar dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
-              </BarChart>
+                <Bar yAxisId="left" dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
+                <Bar yAxisId="left" dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="laborRatio" stroke="#FF4D4D" strokeWidth={2} name="인건비 비율" dot={{ fill: '#FF4D4D', r: 4 }} />
+              </ComposedChart>
             </ResponsiveContainer>
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* 카카오 스타일 경고 다이얼로그 */}
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent className="sm:max-w-[280px] rounded-xl border-0 shadow-xl p-5 gap-3">
+          <AlertDialogHeader className="text-center pb-0 gap-2">
+            <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE500]">
+              <svg
+                className="h-6 w-6 text-[#3C1E1E]"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <AlertDialogDescription className="text-sm text-[#333] font-medium text-center">
+              {alertMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center pt-1">
+            <AlertDialogAction
+              className="w-full h-9 bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FFD700] font-semibold rounded-lg border-0 shadow-sm transition-all text-sm"
+            >
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
