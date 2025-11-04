@@ -7,10 +7,6 @@ pipeline {
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
-
-        GIT_USER = 'Jenkins'
-        GIT_TOKEN = 'P78_s_grysyZV4yWnPMr'
-
     }
     
     stages {
@@ -55,9 +51,9 @@ pipeline {
         stage('Git Pull') {
             steps {
                 withCredentials([usernamePassword(
-                credentialsId: 'gitlab-clone',   // ← Jenkins에 등록한 GitLab 크리덴셜 ID
-                usernameVariable: ${GIT_USER},
-                passwordVariable: ${GIT_TOKEN}
+                credentialsId: 'gitlab-clone',
+                usernameVariable: 'GIT_USER',
+                passwordVariable: 'GIT_TOKEN'
                 )]) {
                     echo '================================================='
                     echo '최신 코드 가져오기...'
