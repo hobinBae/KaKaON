@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         // ===== 배포 경로 =====
-        DEPLOY_PATH = '/home/ubuntu/app'
+        DEPLOY_PATH = "${WORKSPACE}"
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
@@ -48,39 +48,39 @@ pipeline {
             }
         }
         
-        stage('Git Pull') {
-            steps {
-                script {
-                    echo '================================================='
-                    echo '최신 코드 가져오기...'
-                    echo '================================================='
+        // stage('Git Pull') {
+        //     steps {
+        //         script {
+        //             echo '================================================='
+        //             echo '최신 코드 가져오기...'
+        //             echo '================================================='
                     
-                    sh """
-                        cd ${DEPLOY_PATH}
+        //             sh """
+        //                 cd ${DEPLOY_PATH}
                         
-                        echo "현재 브랜치 확인..."
-                        git branch -a
+        //                 echo "현재 브랜치 확인..."
+        //                 git branch -a
                         
-                        echo "Git Fetch..."
-                        git fetch origin
+        //                 echo "Git Fetch..."
+        //                 git fetch origin
                         
-                        echo "브랜치 체크아웃: ${GIT_BRANCH}"
-                        git checkout ${GIT_BRANCH}
+        //                 echo "브랜치 체크아웃: ${GIT_BRANCH}"
+        //                 git checkout ${GIT_BRANCH}
                         
-                        echo "Git Pull..."
-                        git pull origin ${GIT_BRANCH}
+        //                 echo "Git Pull..."
+        //                 git pull origin ${GIT_BRANCH}
                         
-                        echo "최신 코드로 업데이트 완료!"
-                        echo ""
-                        echo "현재 커밋 정보:"
-                        git log -1 --oneline --decorate
-                        echo ""
-                        echo "변경된 파일:"
-                        git log -1 --stat
-                    """
-                }
-            }
-        }
+        //                 echo "최신 코드로 업데이트 완료!"
+        //                 echo ""
+        //                 echo "현재 커밋 정보:"
+        //                 git log -1 --oneline --decorate
+        //                 echo ""
+        //                 echo "변경된 파일:"
+        //                 git log -1 --stat
+        //             """
+        //         }
+        //     }
+        // }
         
         stage('기존 컨테이너 중지') {
             steps {
@@ -97,7 +97,7 @@ pipeline {
                         
                         echo ""
                         echo "Docker Compose Down..."
-                        docker-compose down || echo "실행 중인 컨테이너 없음"
+                        docker compose down || echo "실행 중인 컨테이너 없음"
                         
                         echo "컨테이너 중지 완료!"
                     """
@@ -116,11 +116,11 @@ pipeline {
                         cd ${DEPLOY_PATH}
                         
                         echo "Backend 이미지 빌드..."
-                        docker-compose build --no-cache be-kakaon
+                        docker compose build --no-cache be-kakaon
                         
                         echo ""
                         echo "Frontend 이미지 빌드..."
-                        docker-compose build --no-cache fe-kakaon
+                        docker compose build --no-cache fe-kakaon
                         
                         echo ""
                         echo "이미지 빌드 완료!"
@@ -143,7 +143,7 @@ pipeline {
                         cd ${DEPLOY_PATH}
                         
                         echo "Docker Compose Up..."
-                        docker-compose up -d
+                        docker compose up -d
                         
                         echo ""
                         echo "컨테이너 시작 대기 (15초)..."
@@ -153,7 +153,7 @@ pipeline {
                         echo "컨테이너 시작 완료!"
                         echo ""
                         echo "컨테이너 상태:"
-                        docker-compose ps
+                        docker compose ps
                     """
                 }
             }
@@ -270,7 +270,7 @@ pipeline {
                     
                     sh """
                         echo "==== Docker Compose 상태 ===="
-                        docker-compose ps
+                        docker compose ps
                         
                         echo ""
                         echo "==== 리소스 사용량 ===="
@@ -303,9 +303,9 @@ pipeline {
                 echo "  - Jenkins: http://k13s310.p.ssafy.io:9090"
                 echo ''
                 echo '유용한 명령어:'
-                echo "  - 로그 확인: docker-compose logs -f"
-                echo "  - 상태 확인: docker-compose ps"
-                echo "  - 재시작: docker-compose restart"
+                echo "  - 로그 확인: docker compose logs -f"
+                echo "  - 상태 확인: docker compose ps"
+                echo "  - 재시작: docker compose restart"
                 echo '===================================================='
             }
         }
@@ -320,25 +320,20 @@ pipeline {
                 echo ''
                 echo '문제 해결 방법:'
                 echo '1. Jenkins 콘솔 로그 확인'
-                echo '2. 컨테이너 로그 확인: docker-compose logs'
+                echo '2. 컨테이너 로그 확인: docker compose logs'
                 echo '3. 컨테이너 상태 확인: docker ps -a'
                 echo '===================================================='
                 
                 // 실패 시 로그 수집
-                sh """
+                sh '''
                     echo "에러 로그 수집 중..."
-                    
                     echo "==== Backend 로그 ===="
-                    docker logs be-kakaon --tail 100 2>&1 || echo "Backend 로그 없음"
-                    
-                    echo ""
+                    docker logs be-kakaon --tail 100 2>&1 || true
                     echo "==== Frontend 로그 ===="
-                    docker logs fe-kakaon --tail 50 2>&1 || echo "Frontend 로그 없음"
-                    
-                    echo ""
-                    echo "==== Docker Compose 상태 ===="
-                    docker-compose ps
-                """ || true
+                    docker logs fe-kakaon --tail 50 2>&1 || true
+                    echo "==== Compose 상태 ===="
+                    docker compose ps || true
+                '''
             }
         }
         
