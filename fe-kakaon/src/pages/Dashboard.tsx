@@ -26,15 +26,6 @@ const monthlySalesData: { [key: string]: { store: number; delivery: number } } =
   "2025-11-05": { store: 230000, delivery: 140000 },
 };
 
-const salesData = [
-  { date: '10/9', amount: 2450000 },
-  { date: '10/10', amount: 2100000 },
-  { date: '10/11', amount: 2800000 },
-  { date: '10/12', amount: 2200000 },
-  { date: '10/13', amount: 3100000 },
-  { date: '10/14', amount: 2900000 },
-  { date: '10/15', amount: 3350000 },
-];
 
 // 날짜를 'YYYY-MM-DD' 형식으로 변환하는 헬퍼 함수
 const formatDate = (date: Date) => {
@@ -167,6 +158,21 @@ export default function Dashboard() {
   }
   const isPositiveChange = percentageChange >= 0;
 
+  // 최근 7일 매출 데이터 생성 (오늘 포함)
+  const salesData = [];
+  for (let i = 6; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(date.getDate() - i);
+    const dateString = formatDate(date);
+    const data = monthlySalesData[dateString];
+    const amount = data ? data.store + data.delivery : 0;
+
+    salesData.push({
+      date: `${date.getMonth() + 1}/${date.getDate()}`,
+      amount: amount,
+    });
+  }
+
   return (
     <div className="flex flex-col space-y-6">
       {/* Header */}
@@ -282,10 +288,16 @@ export default function Dashboard() {
                 border: '1px solid rgba(0,0,0,0.08)',
                 borderRadius: '8px',
               }}
+              itemStyle={{
+                color: '#000000',
+                fontWeight: 'bold',
+              }}
+              formatter={(value: number) => `${value.toLocaleString()}원`}
             />
             <Line
               type="linear"
               dataKey="amount"
+              name="총액"
               stroke="#FEE500"
               strokeWidth={3}
               dot={{ fill: '#FEE500', r: 4 }}
