@@ -1,4 +1,4 @@
-package com.s310.kakaon.domain.statistics.entity;
+package com.s310.kakaon.domain.paymentstats.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

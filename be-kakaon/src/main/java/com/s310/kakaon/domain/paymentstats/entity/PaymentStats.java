@@ -1,4 +1,4 @@
-package com.s310.kakaon.domain.statistics.entity;
+package com.s310.kakaon.domain.paymentstats.entity;
 
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.global.entity.BaseEntity;

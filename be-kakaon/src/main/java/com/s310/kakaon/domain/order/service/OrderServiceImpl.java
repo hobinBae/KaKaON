@@ -43,6 +43,7 @@ public class OrderServiceImpl implements OrderService{
                 .delivery(request.getOrderType() == OrderType.DELIVERY)
                 .build();
 
+
         paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
 
         return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
