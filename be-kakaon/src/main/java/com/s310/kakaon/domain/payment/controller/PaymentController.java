@@ -7,9 +7,11 @@ import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
+import com.s310.kakaon.global.dto.PageResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -49,16 +51,17 @@ public class PaymentController {
     //결제 상태 : 전체, 완료, 취소
     //주문 구분 : 전체, 배달 주문, 가게 주문
     //승인번호 검색
-    @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
+    @GetMapping("/stores/{storeId}")
+    public ResponseEntity<ApiResponse<PageResponse<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
-            @RequestBody PaymentSearchRequestDto request,
+            @ModelAttribute PaymentSearchRequestDto request,
+            Pageable pageable,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        List<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request);
+        PageResponse<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request, pageable);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 결제내역 조회 성공", response, httpRequest.getRequestURI()));
@@ -81,11 +84,12 @@ public class PaymentController {
     @GetMapping("/stores/{storeId}/export")
     public ResponseEntity<byte[]> downloadPaymentsCsv(
             @AuthenticationPrincipal String kakaoId,
+            @ModelAttribute PaymentSearchRequestDto request,
             @PathVariable Long storeId
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        byte[] csvData = paymentService.downloadPaymentsCsv(memberId, storeId);
+        byte[] csvData = paymentService.downloadPaymentsCsv(memberId, storeId, request);
 
         // 파일명 생성 (현재 시간 포함)
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));

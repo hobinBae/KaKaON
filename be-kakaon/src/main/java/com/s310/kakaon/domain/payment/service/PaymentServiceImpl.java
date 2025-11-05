@@ -16,11 +16,14 @@ import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
+import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.ManyToAny;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,6 +37,7 @@ import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -107,7 +111,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request) {
+    public PageResponse<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request, Pageable pageable) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
@@ -117,13 +121,11 @@ public class PaymentServiceImpl implements PaymentService{
 
         validateStoreOwner(store, member);
 
-        // 누나가 해줭
+        Page<Payment> payments = paymentRepository.searchPayments(store, request, pageable);
 
-        List<Payment> payments = paymentRepository.findByStore(store);
+        Page<PaymentResponseDto> responsePage = payments.map(paymentMapper::fromEntity);
 
-        return payments.stream()
-                .map(paymentMapper::fromEntity)
-                .toList();
+        return PageResponse.from(responsePage);
     }
 
     @Override
@@ -147,7 +149,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional(readOnly = true)
-    public byte[] downloadPaymentsCsv(Long memberId, Long storeId) {
+    public byte[] downloadPaymentsCsv(Long memberId, Long storeId, PaymentSearchRequestDto request) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
@@ -156,7 +158,9 @@ public class PaymentServiceImpl implements PaymentService{
 
         validateStoreOwner(store, member);
 
-        List<Payment> payments = paymentRepository.findByStore(store);
+        List<Payment> payments = paymentRepository.searchPaymentsForExport(store, request);
+
+        List<PaymentResponseDto> paymentDtos = payments.stream().map(paymentMapper::fromEntity).collect(Collectors.toList());
 
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
              OutputStreamWriter osw = new OutputStreamWriter(baos, StandardCharsets.UTF_8);
@@ -172,20 +176,19 @@ public class PaymentServiceImpl implements PaymentService{
 
             // CSV 데이터
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            for (Payment payment : payments) {
+            for (PaymentResponseDto payment : paymentDtos) {
                 writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s%n",
-                        payment.getId(),
+                        payment.getPaymentId(),
                         escapeCsvField(store.getName()),
-                        payment.getOrder().getOrderId(),
-                        escapeCsvField(payment.getAuthorizationNo()),
+                        payment.getOrderId(),
+                        escapeCsvField(payment.getAuthorizationCode()),
                         payment.getAmount(),
                         payment.getPaymentMethod().name(),
                         payment.getStatus().name(),
                         payment.getDelivery() ? "배달" : "포장",
-                        payment.getApprovedAt().format(formatter),
-                        payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : "",
-                        payment.getCreatedDateTime().format(formatter),
-                        payment.getLastModifiedDateTime().format(formatter)
+                        payment.getApprovedAt() != null ? payment.getApprovedAt().format(formatter) : "",
+                        payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : ""
+
                 );
             }
 
