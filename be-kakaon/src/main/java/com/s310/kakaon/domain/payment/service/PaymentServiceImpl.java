@@ -4,6 +4,7 @@ import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
+import com.s310.kakaon.domain.payment.dto.CancelRateAnomalyDto;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
@@ -196,6 +197,13 @@ public class PaymentServiceImpl implements PaymentService{
             log.error("CSV 생성 중 오류 발생", e);
             throw new ApiException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CancelRateAnomalyDto> findCancelRateAnomalies() {
+
+        return List.of();
     }
 
     private String escapeCsvField(String field) {
