@@ -15,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.PathMatcher;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,6 +27,7 @@ public class StoreController {
     private final StoreService storeService;
     private final AlertService alertService;
     private final MemberService memberService;
+    private final PathMatcher pathMatcher;
 
     //jwt 구현 이후 작업
     @PostMapping
@@ -40,30 +42,46 @@ public class StoreController {
                 .body(ApiResponse.of(HttpStatus.CREATED, "가맹점 등록 성공", response, httpRequest.getRequestURI()));
     }
 
-    @PostMapping("/open/{storeId}")
-    public ResponseEntity<ApiResponse<Void>> openStore(
+    @GetMapping("/{storeId}/operation-status")
+    public ResponseEntity<ApiResponse<OperationStatusUpdateResponseDto>> getOperationStatus(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-
-        storeService.updateOperationStatus(memberId, storeId, OperationStatus.OPEN);
-
-        return
+        OperationStatusUpdateResponseDto response = storeService.getOperationStatus(memberId, storeId);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "영업 상태 조회 성공", response, httpRequest.getRequestURI()));
     }
 
-    @PostMapping("/close/{storeId}")
-    public ResponseEntity<ApiResponse<Void>> closeStore(
+    @PostMapping("/{storeId}/open")
+    public ResponseEntity<ApiResponse<OperationStatusUpdateResponseDto>> openStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
+            @RequestBody OperationStatusUpdateRequestDto request,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        storeService.updateOperationStatus(memberId, storeId, OperationStatus.CLOSED);
+        OperationStatusUpdateResponseDto response = storeService.updateOperationStatus(memberId, storeId, request);
 
-        return
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "영업 시작 성공", response, httpRequest.getRequestURI()));
+    }
+
+    @PostMapping("/{storeId}/close")
+    public ResponseEntity<ApiResponse<OperationStatusUpdateResponseDto>> closeStore(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            @RequestBody OperationStatusUpdateRequestDto request,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        OperationStatusUpdateResponseDto response = storeService.updateOperationStatus(memberId, storeId, request);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "영업 종료 성공", response, httpRequest.getRequestURI()));
     }
 
 
