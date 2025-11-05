@@ -573,10 +573,10 @@ export default function Analytics() {
     setDateRange({ from, to });
   };
 
-  const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
+  const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1 w-full";
   const segmentItem =
     "rounded-lg px-4 h-8 text-sm data-[state=on]:bg-white data-[state=on]:shadow-sm " +
-    "data-[state=on]:text-[#111] data-[state=off]:text-[#50505f] hover:bg-white transition";
+    "data-[state=on]:text-[#111] data-[state=off]:text-[#50505f] hover:bg-white transition flex-1 justify-center";
 
   return (
     <div className="space-y-6">
@@ -586,8 +586,24 @@ export default function Analytics() {
         <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
       </div>
 
-      <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
+      <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab} value={activeTab}>
+        {/* Mobile Dropdown */}
+        <div className="tablet:hidden mb-4">
+          <Select value={activeTab} onValueChange={setActiveTab}>
+            <SelectTrigger className="w-full">
+              <SelectValue placeholder="차트 종류 선택" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="sales-trend">기간별 매출</SelectItem>
+              <SelectItem value="payment-method">결제수단별 비중</SelectItem>
+              <SelectItem value="hourly-sales">시간대별 매출</SelectItem>
+              <SelectItem value="cancellation-rate">취소율 추이</SelectItem>
+              <SelectItem value="sales-vs-labor">인건비 대비 매출</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        {/* Desktop Tabs */}
+        <TabsList className="hidden tablet:grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
             <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
             <TabsTrigger value="hourly-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">시간대별 매출</TabsTrigger>
@@ -596,11 +612,11 @@ export default function Analytics() {
         </TabsList>
 
         {/* Filters */}
-        <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-6">
-          <div className="grid grid-cols-[72px_1fr] items-center gap-3">
-            <div className="text-sm font-semibold text-[#333]">조회기간</div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
+        <Card className="p-4 tablet:p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-start gap-4">
+            <div className="text-sm font-semibold text-[#333] tablet:pt-2">조회기간</div>
+            <div className="flex flex-col tablet:flex-row items-center gap-2">
+              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} tablet:flex-1`}>
                 {activeTab === "sales-vs-labor" ? (
                   <>
                     <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
@@ -616,24 +632,26 @@ export default function Analytics() {
                   </>
                 )}
               </ToggleGroup>
-              <div className="relative flex items-center gap-1">
-                <Input
-                  type="text"
-                  placeholder="yyyy.mm.dd"
-                  value={startDateInput}
-                  onChange={(e) => handleDateInputChange('start', e.target.value)}
-                  onBlur={() => handleDateInputBlur('start')}
-                  className="h-8 w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
-                />
-                <span className="text-sm text-gray-500">~</span>
-                <Input
-                  type="text"
-                  placeholder="yyyy.mm.dd"
-                  value={endDateInput}
-                  onChange={(e) => handleDateInputChange('end', e.target.value)}
-                  onBlur={() => handleDateInputBlur('end')}
-                  className="h-8 w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
-                />
+              <div className="relative flex items-center gap-2 w-full tablet:w-auto">
+                <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
+                  <Input
+                    type="text"
+                    placeholder="yyyy.mm.dd"
+                    value={startDateInput}
+                    onChange={(e) => handleDateInputChange('start', e.target.value)}
+                    onBlur={() => handleDateInputBlur('start')}
+                    className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                  />
+                  <span className="text-sm text-gray-500 text-center">~</span>
+                  <Input
+                    type="text"
+                    placeholder="yyyy.mm.dd"
+                    value={endDateInput}
+                    onChange={(e) => handleDateInputChange('end', e.target.value)}
+                    onBlur={() => handleDateInputBlur('end')}
+                    className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                  />
+                </div>
                 <Button
                   variant={"outline"}
                   size={"icon"}
@@ -713,8 +731,8 @@ export default function Analytics() {
           </div>
 
           {/* 하단 요약/버튼 */}
-          <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
-            <div>
+          <div className="flex flex-col tablet:flex-row justify-between items-start tablet:items-center pt-4 border-t border-gray-200 mt-4 gap-3">
+            <div className="w-full tablet:w-auto">
               <div className="text-sm text-[#333]">
                 {dateRange?.from && dateRange?.to && (
                   <>
@@ -730,9 +748,9 @@ export default function Analytics() {
               </div>
             </div>
             {activeTab === "sales-trend" && (
-              <div className="border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center gap-3">
+              <div className="w-full tablet:w-auto border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center justify-between gap-3">
                 <div className="text-xs font-medium text-[#717182]">기간 누적 매출</div>
-                <div className="text-2xl font-bold text-[#333333]">
+                <div className="text-2xl font-bold text-[#333333] text-right">
                   {periodSales.reduce((sum, item) => sum + (item.sales || 0), 0).toLocaleString()}
                   <span className="text-base ml-1">원</span>
                 </div>
@@ -751,10 +769,10 @@ export default function Analytics() {
         </Card>
 
         <TabsContent value="sales-trend">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">기간별 매출 추이</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={periodSales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">기간별 매출 추이</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey={xAxisDataKey} stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
@@ -765,12 +783,12 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         <TabsContent value="payment-method">
-          <div className="grid grid-cols-2 gap-6">
-            <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-              <h3 className="text-[#333333] mb-6">결제수단별 비중</h3>
-              <ResponsiveContainer width="100%" height={400}>
+          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
+            <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">결제수단별 비중</h3>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
+                  <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
                     {paymentDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -779,11 +797,11 @@ export default function Analytics() {
                 </PieChart>
               </ResponsiveContainer>
             </Card>
-            <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-              <h3 className="text-[#333333] mb-6">배달/가게 매출 비중</h3>
-              <ResponsiveContainer width="100%" height={400}>
+            <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">배달/가게 매출 비중</h3>
+              <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={salesTypeDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
+                  <Pie data={salesTypeDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
                     {salesTypeDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -795,12 +813,12 @@ export default function Analytics() {
           </div>
         </TabsContent>
         <TabsContent value="hourly-sales">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">
               {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
             </h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <BarChart data={hourlySales} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="time" stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
@@ -814,10 +832,10 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         <TabsContent value="cancellation-rate">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">취소율 추이</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={cancellationRate} margin={{ top: 5, right: 20, left: 10, bottom: 5 }}>
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">취소율 추이</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
                 <YAxis stroke="#717182" />
@@ -828,10 +846,10 @@ export default function Analytics() {
           </Card>
         </TabsContent>
         <TabsContent value="sales-vs-labor">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-6">인건비 대비 매출 비율</h3>
-            <ResponsiveContainer width="100%" height={400}>
-              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 50, left: 10, bottom: 5 }}>
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">인건비 대비 매출 비율</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="month" stroke="#717182" />
                 <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
