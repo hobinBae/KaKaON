@@ -5,8 +5,10 @@ import com.s310.kakaon.domain.store.entity.Store;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Boolean existsByAuthorizationNo(String authorizationNo);
     List<Payment> findByStore(Store store);
+    Optional<Payment> findByOrder_OrderId(Long orderId);
 }
