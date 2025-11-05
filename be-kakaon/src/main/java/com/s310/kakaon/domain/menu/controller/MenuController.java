@@ -77,10 +77,12 @@ public class MenuController {
     /** 메뉴 삭제 */
     @DeleteMapping("/{menuId}")
     public ResponseEntity<ApiResponse<String>> deleteMenu(
+            @AuthenticationPrincipal String kakaoId,
             @PathVariable(name = "menuId") Long menuId,
             @RequestParam(name = "storeId") Long storeId,
             HttpServletRequest httpRequest) {
-
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        menuService.delete(memberId, menuId, storeId);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.NO_CONTENT, "메뉴 삭제가 성공적으로 완료 되었습니다.", null, httpRequest.getRequestURI()));
     }
 }

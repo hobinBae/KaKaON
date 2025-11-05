@@ -30,7 +30,7 @@ public class MenuServiceImpl implements MenuService{
 
         // 2) 접근 권한 확인
         if(!store.getMember().getId().equals(userId)){
-            new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
         // 3) 저장
@@ -65,11 +65,11 @@ public class MenuServiceImpl implements MenuService{
 
         // 3) 접근 권한 확인
         if(!store.getMember().getId().equals(userId)){
-            new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
         if(!menu.getStore().getId().equals(store.getId())){
-            new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
 
         // 4) 수정
@@ -85,6 +85,30 @@ public class MenuServiceImpl implements MenuService{
                 toIso(saved.getCreatedDateTime()),
                 toIso(saved.getLastModifiedDateTime())
         );
+    }
+
+    @Transactional
+    public void delete(Long userId, Long menuId, Long storeId) {
+
+        // 1) 매장 존재 확인
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        // 2) 메뉴 존재 확인
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MENU_NOT_FOUND));
+
+        // 3) 접근 권한 확인
+        if(!store.getMember().getId().equals(userId)){
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        if(!menu.getStore().getId().equals(store.getId())){
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 4) 수정
+        menu.softDelete();
     }
 
     private String toIso(LocalDateTime dt) {
