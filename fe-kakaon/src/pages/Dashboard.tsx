@@ -11,6 +11,7 @@ const monthlySalesData: { [key: string]: { store: number; delivery: number } } =
   "2025-10-02": { store: 150000, delivery: 90000 },
   "2025-10-03": { store: 200000, delivery: 120000 },
   "2025-10-04": { store: 180000, delivery: 110000 },
+  "2025-10-05": { store: 190000, delivery: 115000 },
   "2025-10-07": { store: 220000, delivery: 130000 },
   "2025-10-08": { store: 250000, delivery: 150000 },
   "2025-10-09": { store: 210000, delivery: 140000 },
@@ -18,6 +19,11 @@ const monthlySalesData: { [key: string]: { store: number; delivery: number } } =
   "2025-10-11": { store: 280000, delivery: 170000 },
   "2025-10-14": { store: 320000, delivery: 190000 },
   "2025-10-15": { store: 350000, delivery: 210000 },
+  "2025-11-01": { store: 130000, delivery: 70000 },
+  "2025-11-02": { store: 160000, delivery: 85000 },
+  "2025-11-03": { store: 210000, delivery: 125000 },
+  "2025-11-04": { store: 190000, delivery: 115000 },
+  "2025-11-05": { store: 230000, delivery: 140000 },
 };
 
 const salesData = [
@@ -91,6 +97,76 @@ export default function Dashboard() {
   const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
   const todayString = `${year}년 ${month}월 ${day}일 (${dayOfWeek})`;
 
+  // 오늘 매출 계산
+  const todayDateString = formatDate(today);
+  const todaySales = monthlySalesData[todayDateString]
+    ? monthlySalesData[todayDateString].store + monthlySalesData[todayDateString].delivery
+    : 0;
+
+  // 어제 매출 계산
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const yesterdayDateString = formatDate(yesterday);
+  const yesterdaySales = monthlySalesData[yesterdayDateString]
+    ? monthlySalesData[yesterdayDateString].store + monthlySalesData[yesterdayDateString].delivery
+    : 0;
+
+  // 어제 대비 계산
+  let yesterdayChangePercent = 0;
+  if (yesterdaySales > 0) {
+    yesterdayChangePercent = ((todaySales - yesterdaySales) / yesterdaySales) * 100;
+  }
+  const isYesterdayPositive = yesterdayChangePercent >= 0;
+
+  // 지난주 동일 요일 매출 계산
+  const lastWeek = new Date(today);
+  lastWeek.setDate(lastWeek.getDate() - 7);
+  const lastWeekDateString = formatDate(lastWeek);
+  const lastWeekSales = monthlySalesData[lastWeekDateString]
+    ? monthlySalesData[lastWeekDateString].store + monthlySalesData[lastWeekDateString].delivery
+    : 0;
+
+  // 지난주 대비 계산
+  let lastWeekChangePercent = 0;
+  if (lastWeekSales > 0) {
+    lastWeekChangePercent = ((todaySales - lastWeekSales) / lastWeekSales) * 100;
+  }
+  const isLastWeekPositive = lastWeekChangePercent >= 0;
+
+  // 이번 달 누적 매출 및 지난달 동일 일 수 대비 계산
+  const currentDayOfMonth = today.getDate();
+  const currentMonth = today.getMonth();
+  const currentYear = today.getFullYear();
+
+  let currentMonthCumulativeSales = 0;
+  for (let i = 1; i <= currentDayOfMonth; i++) {
+    const date = new Date(currentYear, currentMonth, i);
+    const dateString = formatDate(date);
+    if (monthlySalesData[dateString]) {
+      currentMonthCumulativeSales += monthlySalesData[dateString].store + monthlySalesData[dateString].delivery;
+    }
+  }
+
+  const prevMonthDate = new Date(today);
+  prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
+  const prevMonth = prevMonthDate.getMonth();
+  const prevMonthYear = prevMonthDate.getFullYear();
+
+  let prevMonthCumulativeSales = 0;
+  for (let i = 1; i <= currentDayOfMonth; i++) {
+    const date = new Date(prevMonthYear, prevMonth, i);
+    const dateString = formatDate(date);
+    if (monthlySalesData[dateString]) {
+      prevMonthCumulativeSales += monthlySalesData[dateString].store + monthlySalesData[dateString].delivery;
+    }
+  }
+
+  let percentageChange = 0;
+  if (prevMonthCumulativeSales > 0) {
+    percentageChange = ((currentMonthCumulativeSales - prevMonthCumulativeSales) / prevMonthCumulativeSales) * 100;
+  }
+  const isPositiveChange = percentageChange >= 0;
+
   return (
     <div className="flex flex-col space-y-6">
       {/* Header */}
@@ -144,10 +220,10 @@ export default function Dashboard() {
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
             </div>
-            <div className="text-2xl text-[#333333] mb-2">3,350,000원</div>
-            <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
-              <TrendingUp className="w-4 h-4" />
-              <span>15.4% 어제 대비</span>
+            <div className="text-2xl text-[#333333] mb-2">{todaySales.toLocaleString()}원</div>
+            <div className={`flex items-center gap-1 text-sm ${isYesterdayPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+              {isYesterdayPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span>{Math.abs(yesterdayChangePercent).toFixed(1)}% 어제 대비</span>
             </div>
           </Card>
 
@@ -158,10 +234,10 @@ export default function Dashboard() {
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
             </div>
-            <div className="text-2xl text-[#333333] mb-2">3,200,000원</div>
-            <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
-              <TrendingUp className="w-4 h-4" />
-              <span>4.5% 지난주 대비</span>
+            <div className="text-2xl text-[#333333] mb-2">{lastWeekSales.toLocaleString()}원</div>
+            <div className={`flex items-center gap-1 text-sm ${isLastWeekPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+              {isLastWeekPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span>{Math.abs(lastWeekChangePercent).toFixed(1)}% 지난주 대비</span>
             </div>
           </Card>
 
@@ -172,10 +248,10 @@ export default function Dashboard() {
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
             </div>
-            <div className="text-2xl text-[#333333] mb-2">45,500,000원</div>
-            <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
-              <TrendingUp className="w-4 h-4" />
-              <span>12.0% 지난달 동일 일 수 대비</span>
+            <div className="text-2xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
+            <div className={`flex items-center gap-1 text-sm ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+              {isPositiveChange ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
+              <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
             </div>
           </Card>
 
