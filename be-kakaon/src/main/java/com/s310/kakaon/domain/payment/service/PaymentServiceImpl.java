@@ -80,6 +80,9 @@ public class PaymentServiceImpl implements PaymentService{
 
         paymentRepository.save(payment);
 
+        // ✅ Redis 통계 즉시 반영
+        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
+
         return paymentMapper.fromEntity(payment);
     }
 
@@ -245,6 +248,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
+        salesCacheService.updateCancelStats(storeId, payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
     }
