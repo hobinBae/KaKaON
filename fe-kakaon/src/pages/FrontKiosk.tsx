@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, ArrowLeft, Trash2, Edit, Minus, Plus, ChevronUp, ChevronDown, Delete } from "lucide-react";
@@ -17,64 +18,7 @@ import { Label } from "@/components/ui/label";
 import { useBoundStore } from '@/stores/storeStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const AdminPinModal = ({ onPinVerified }) => {
-  const [pin, setPin] = useState('');
-  const correctPin = '1234';
-
-  const handlePinSubmit = () => {
-    if (pin === correctPin) {
-      onPinVerified();
-    } else {
-      alert('PIN 번호가 올바르지 않습니다.');
-    }
-    setPin('');
-  };
-
-  const handleKeyPress = (key: string) => {
-    if (key === 'backspace') {
-      setPin(pin.slice(0, -1));
-    } else if (pin.length < 4) {
-      setPin(pin + key);
-    }
-  };
-
-  const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'backspace'];
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>관리자 PIN 입력</DialogTitle>
-      </DialogHeader>
-      <div className="py-4">
-        <div className="flex justify-center items-center h-12 mb-4 border rounded-md">
-          <p className="text-2xl tracking-[1rem]">{'*'.repeat(pin.length)}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {keypad.map((key) =>
-            key === '' ? (
-              <div key="empty" />
-            ) : (
-              <Button
-                key={key}
-                variant="outline"
-                className="h-16 text-2xl"
-                onClick={() => handleKeyPress(key)}
-              >
-                {key === 'backspace' ? <Delete /> : key}
-              </Button>
-            )
-          )}
-        </div>
-        <DialogClose asChild>
-          <Button onClick={handlePinSubmit} className="w-full mt-4">
-            확인
-          </Button>
-        </DialogClose>
-      </div>
-    </DialogContent>
-  );
-};
+import AdminPinModal from '@/components/AdminPinModal';
 
 const FrontKiosk = () => {
   const {
@@ -193,9 +137,9 @@ const FrontKiosk = () => {
   return (
     <div className="flex flex-col h-screen bg-gray-50">
       {!orderType ? (
-        <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-8">
+        <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
           <img src={logoImg} alt="KaKaON Logo" className="h-24 mb-12" />
-          <h1 className="text-6xl font-bold mb-14 text-center text-gray-800">주문 유형을<br/>선택해주세요</h1>
+          <h1 className="text-6xl font-bold mb-14 text-center text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</h1>
           <div className="flex flex-col gap-10 w-full items-stretch">
             <Card onClick={() => setOrderType('dine-in')} className="cursor-pointer bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
               <CardContent className="flex items-center justify-center p-16">
@@ -220,12 +164,12 @@ const FrontKiosk = () => {
           <header className="flex items-center justify-between p-6 border-b max-w-4xl w-full mx-auto">
             {isAdminMode ? (
                <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
-                <SelectTrigger className="w-[180px]">
+                <SelectTrigger className="w-[220px] text-xl" style={{ height: '3rem' }}>
                   <SelectValue placeholder="가맹점 선택" />
                 </SelectTrigger>
                 <SelectContent>
                   {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                    <SelectItem key={store.id} value={store.id} className="text-lg">{store.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -237,10 +181,10 @@ const FrontKiosk = () => {
             <div className="text-xl font-semibold">
               {isAdminMode ? (
                 <div className="flex items-center gap-2">
-                  <Button onClick={() => setIsAdminMode(false)} size="sm" variant="destructive">관리자 모드 종료</Button>
+                  <Button onClick={() => setIsAdminMode(false)} className="h-12 px-6 text-lg" variant="destructive">설정 완료</Button>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button size="sm" variant="outline"><Plus className="mr-1 h-4 w-4" />상품 추가</Button>
+                      <Button className="h-12 px-6 text-lg" variant="outline"><Plus className="mr-2 h-5 w-5" />상품 추가</Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader><DialogTitle>새 상품 추가</DialogTitle></DialogHeader>
@@ -263,17 +207,23 @@ const FrontKiosk = () => {
                 <img src={logoImg} alt="KaKaON Kiosk" className="h-16" />
               )}
             </div>
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="ghost" className="w-16 h-16">
-                  <Settings className="size-12" />
-                </Button>
-              </DialogTrigger>
-              <AdminPinModal onPinVerified={handleAdminLogin} />
-            </Dialog>
+            {isAdminMode ? (
+              <Button asChild className="h-12 px-6 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl">
+                <Link to="/dashboard">매출관리 화면 전환</Link>
+              </Button>
+            ) : (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" className="w-16 h-16">
+                    <Settings className="size-12" />
+                  </Button>
+                </DialogTrigger>
+                <AdminPinModal onPinVerified={handleAdminLogin} />
+              </Dialog>
+            )}
           </header>
           <main className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-4 max-w-4xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
               {products.map((product) => (
                 <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
                   {isAdminMode && (
