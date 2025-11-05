@@ -12,8 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -42,18 +42,52 @@ public class MenuServiceImpl implements MenuService{
                 .build();
         Menu saved = menuRepository.save(menu);
 
-        String created = saved.getCreatedDateTime() == null ? null : saved.getCreatedDateTime().toInstant(ZoneOffset.UTC).toString();
-        String updated = saved.getLastModifiedDateTime() == null ? null : saved.getLastModifiedDateTime().toInstant(ZoneOffset.UTC).toString();
-
         return new MenuSummaryResponseDto(
                 saved.getMenuId(),
                 store.getId(),
                 saved.getName(),
                 saved.getPrice(),
                 saved.getImgUrl(),
-                created,
-                updated
+                toIso(saved.getCreatedDateTime()),
+                toIso(saved.getLastModifiedDateTime())
         );
     }
 
+    @Transactional
+    public MenuSummaryResponseDto update(Long userId, MenuRequestDto req, Long storeId, Long menuId) {
+        // 1) 매장 존재 확인
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        // 2) 메뉴 존재 확인
+        Menu menu = menuRepository.findById(menuId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MENU_NOT_FOUND));
+
+        // 3) 접근 권한 확인
+        if(!store.getMember().getId().equals(userId)){
+            new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        if(!menu.getStore().getId().equals(store.getId())){
+            new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 4) 수정
+        menu.updatePartial(req.getMenu(), req.getPrice(), req.getImgUrl());
+        Menu saved = menuRepository.save(menu);
+
+        return new MenuSummaryResponseDto(
+                saved.getMenuId(),
+                storeId,
+                saved.getName(),
+                saved.getPrice(),
+                saved.getImgUrl(),
+                toIso(saved.getCreatedDateTime()),
+                toIso(saved.getLastModifiedDateTime())
+        );
+    }
+
+    private String toIso(LocalDateTime dt) {
+        return (dt == null) ? null : dt.atOffset(ZoneOffset.UTC).toInstant().toString();
+    }
 }

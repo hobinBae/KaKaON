@@ -44,4 +44,16 @@ public class Menu extends BaseEntity {
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public void updatePartial(String name, Integer price, String imgUrl) {
+        if (name != null && !name.isBlank()) {
+            this.name = name.trim();
+        }
+        if (price != null) {
+            this.price = price;
+        }
+        if (imgUrl != null) {
+            this.imgUrl = imgUrl.isBlank() ? null : imgUrl.trim();
+        }
+    }
 }

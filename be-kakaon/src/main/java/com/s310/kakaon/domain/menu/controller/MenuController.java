@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.menu.controller;
 
+import com.s310.kakaon.domain.member.dto.MemberUpdateRequestDto;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.menu.service.MenuService;
 import com.s310.kakaon.global.dto.ApiResponse;
@@ -63,21 +64,14 @@ public class MenuController {
     /** 메뉴 수정 */
     @PatchMapping("/{menuId}")
     public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> updateMenu(
+            @AuthenticationPrincipal String kakaoId,
             @PathVariable(name = "menuId") Long menuId,
             @RequestParam(name = "storeId") Long storeId,
             @Validated(MenuValidationGroups.Update.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
-
-        // Dummy Data
-        MenuSummaryResponseDto dummy = MenuSummaryResponseDto.builder()
-                .menuId(1L)
-                .storeId(11L)
-                .menu(req.getMenu()==null ? "아메리카노" : req.getMenu())
-                .price(req.getPrice()==null ? 1000 : req.getPrice())
-                .imgUrl(req.getImgUrl()==null ? "www.dummy.com" : req.getImgUrl())
-                .updatedAt(OffsetDateTime.now().toString())
-                .build();
-        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 수정이 성공적으로 완료 되었습니다.", dummy, httpRequest.getRequestURI()));
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        MenuSummaryResponseDto responseDto = menuService.update(memberId, req, storeId, menuId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 수정이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
     }
 
     /** 메뉴 삭제 */
