@@ -26,4 +26,6 @@ public class PaymentSearchRequestDto {
 
     private Boolean isDelivery;
 
+    private String authorizationNo;
+
 }
