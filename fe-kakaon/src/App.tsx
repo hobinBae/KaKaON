@@ -18,6 +18,7 @@ import KioskLanding from "@/pages/KioskLanding";
 import FrontKiosk from "@/pages/FrontKiosk";
 import GeneralKiosk from "@/pages/GeneralKiosk";
 import Intro from "@/pages/Intro";
+import BusinessHours from "@/pages/BusinessHours";
 
 
 const queryClient = new QueryClient();
@@ -70,6 +71,7 @@ const router = createBrowserRouter([
           { path: "/alerts", element: <Alerts /> },
           { path: "/stores", element: <StoreManage /> },
           { path: "/settings", element: <Settings /> },
+          { path: "/business-hours", element: <BusinessHours /> },
         ],
       },
     ],

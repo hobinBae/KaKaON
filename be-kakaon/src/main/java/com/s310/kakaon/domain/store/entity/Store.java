@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.store.entity;
 
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.store.dto.BusinessType;
+import com.s310.kakaon.domain.store.dto.OperationStatus;
 import com.s310.kakaon.domain.store.dto.StoreStatus;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
@@ -18,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
-@EqualsAndHashCode(of = "storeId", callSuper = false)
+@EqualsAndHashCode(of = "id", callSuper = false)
 @ToString(exclude = "member")
 
 public class Store extends BaseEntity {
@@ -68,6 +69,10 @@ public class Store extends BaseEntity {
     @Column(name = "status", nullable = false)
     private StoreStatus status = StoreStatus.OPEN;
 
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    private OperationStatus operationStatus = OperationStatus.CLOSED;
+
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
@@ -78,6 +83,10 @@ public class Store extends BaseEntity {
     @Builder.Default
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AlertRecipient> alertRecipient = new ArrayList<>();
+
+    public void updateOperationStatus(OperationStatus status) {
+        this.operationStatus = status;
+    }
 
     public void addBusinessHour(BusinessHour businessHour) {
         businessHours.add(businessHour);

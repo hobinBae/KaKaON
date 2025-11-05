@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
 import {
@@ -23,6 +23,7 @@ export function AppLayout() {
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
     { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
     { id: 'stores', icon: Store, label: '가맹점 관리', path: '/stores' },
+    { id: 'business-hours', icon: Lock, label: '영업 시작/마감', path: '/business-hours' },
     { id: 'settings', icon: Settings, label: '설정', path: '/settings' },
   ];
 
@@ -64,10 +65,10 @@ export function AppLayout() {
         </nav>
 
         {/* 포스기/키오스크 화면 전환 버튼 */}
-        <div className="p-4 space-y-2">
+        <div className="p-4 px-6 space-y-3">
           <Button
             asChild
-            className="w-full h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700"
+            className="w-full h-11 text-base bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl"
           >
             <Link to="/kiosk">
               키오스크 화면으로 전환
@@ -75,7 +76,7 @@ export function AppLayout() {
           </Button>
           <Button
             asChild
-            className="w-full h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700"
+            className="w-full h-11 text-base bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl"
           >
             <Link to="/pos">
               포스기 화면으로 전환
@@ -85,15 +86,6 @@ export function AppLayout() {
 
         {/* 사용자 프로필 및 로그아웃 */}
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
-              <span className="text-[#3C1E1E] font-bold">김</span>
-            </div>
-            <div className="flex-1">
-              <div className="text-sm text-[#333333] font-medium">김사장님</div>
-              <div className="text-xs text-[#717182]">사장님 카페</div>
-            </div>
-          </div>
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-[#717182] hover:text-[#333333] hover:bg-[#F5F5F5]"
@@ -130,14 +122,11 @@ export function AppLayout() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-4">
             <Button variant="ghost" size="icon" className="relative rounded-lg">
               <Bell className="w-5 h-5 text-[#717182]" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF4D4D] rounded-full border-2 border-white"></span>
             </Button>
-            <div className="w-8 h-8 rounded-full bg-[#FEE500] flex items-center justify-center">
-              <User className="w-4 h-4 text-[#3C1E1E]" />
-            </div>
           </div>
         </header>
 

@@ -2,9 +2,7 @@ package com.s310.kakaon.domain.store.service;
 
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.store.dto.BusinessHourDto;
-import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
-import com.s310.kakaon.domain.store.dto.StoreResponseDto;
+import com.s310.kakaon.domain.store.dto.*;
 
 import com.s310.kakaon.domain.store.entity.BusinessHour;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -14,10 +12,13 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
 import java.time.DayOfWeek;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +30,10 @@ public class StoreServiceImpl implements StoreService{
     private final MemberRepository memberRepository;
     private final StoreRepository storeRepository;
     private final StoreMapper storeMapper;
+
+    private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
+
+    private final StringRedisTemplate stringRedisTemplate;
 
     @Override
     @Transactional
@@ -61,6 +66,72 @@ public class StoreServiceImpl implements StoreService{
         validateStoreOwner(store, member);
 
         return storeMapper.fromEntity(store);
+    }
+
+    @Override
+    @Transactional
+    public OperationStatusUpdateResponseDto updateOperationStatus(Long memberId, Long storeId, OperationStatusUpdateRequestDto request){
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
+
+        OperationStatus newStatus = request.getStatus();
+        store.updateOperationStatus(newStatus);
+
+        String redisKey = REDIS_KEY_PREFIX + storeId;
+
+        //레디스에 영업 시작 시간을 저장
+        //영업종료를 누르면 레디스에 시작 시간 삭제
+        if (request.getStatus().equals(OperationStatus.CLOSED)) {
+            stringRedisTemplate.delete(redisKey);
+            //여기 배치 실행 메서드 넣으면 될듯
+        }else if(request.getStatus().equals(OperationStatus.OPEN)){
+            stringRedisTemplate.opsForValue().set(redisKey, LocalDateTime.now().toString());
+
+            //여기는 redis 관련 로직 넣으면 될듯
+        }
+
+        return OperationStatusUpdateResponseDto.builder()
+                .updatedAt(LocalDateTime.now())
+                .status(store.getOperationStatus())
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public OperationStatusUpdateResponseDto getOperationStatus(Long memberId, Long storeId) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        if(store.getOperationStatus().equals(OperationStatus.CLOSED)){
+            return OperationStatusUpdateResponseDto.builder()
+                    .updatedAt(null)
+                    .status(store.getOperationStatus())
+                    .build();
+        }else{
+            String redisKey = REDIS_KEY_PREFIX + storeId;
+            String startTimeStr = stringRedisTemplate.opsForValue().get(redisKey);
+
+            LocalDateTime updatedAt;
+            try {
+                // Redis 값이 있으면 파싱
+                updatedAt = (startTimeStr != null) ? LocalDateTime.parse(startTimeStr) : store.getLastModifiedDateTime();
+            } catch (DateTimeParseException e) {
+                // 혹시 Redis 값이 깨져 있으면 DB 변경시간으로 처리
+                log.warn("[STORE {}] Redis 영업 시작 시각 파싱 실패, DB updatedDateTime으로 대체", storeId);
+                updatedAt = store.getLastModifiedDateTime();
+            }
+
+            return OperationStatusUpdateResponseDto.builder()
+                    .updatedAt(updatedAt)
+                    .status(store.getOperationStatus())
+                    .build();
+        }
+
     }
 
     @Override
