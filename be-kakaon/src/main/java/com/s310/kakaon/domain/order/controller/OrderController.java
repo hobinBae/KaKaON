@@ -7,6 +7,8 @@ import com.s310.kakaon.domain.order.service.OrderService;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import java.time.OffsetDateTime;
 import java.util.List;
 
+@Tag(name = "Order", description = "주문 생성 / 조회 / 취소 관련 API")
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
@@ -29,6 +32,15 @@ public class OrderController {
     private final OrderService orderService;
 
     /** 장바구니 주문하기 */
+    @Operation(
+            summary = "주문 생성 (장바구니 주문)",
+            description = """
+                    사용자의 장바구니 데이터를 기반으로 새로운 주문을 생성하고, 
+                    결제 정보를 함께 등록합니다.  
+                    - PathVariable: storeId  
+                    - RequestBody: 주문 메뉴 목록, 결제 방법, 주문 유형 등  
+                    """
+    )
     @PostMapping("/{storeId}")
     public ResponseEntity<ApiResponse<OrderResponseDto>> createOrder(
             @AuthenticationPrincipal String kakaoId,
@@ -45,6 +57,13 @@ public class OrderController {
     }
 
     /** 주문 상세 조회 */
+    @Operation(
+            summary = "주문 상세 조회",
+            description = """
+                    특정 주문(orderId)의 상세 정보를 조회합니다.  
+                    주문 항목, 결제 정보, 가맹점 정보 등이 함께 반환됩니다.  
+                    """
+    )
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderDetailResponseDto>> getOrderDetail(
             @PathVariable(name = "orderId") Long orderId,
@@ -103,6 +122,15 @@ public class OrderController {
     }
 
     /** 주문 취소 */
+    @Operation(
+            summary = "주문 취소",
+            description = """
+                    결제가 완료된 주문을 취소합니다.  
+                    - PathVariable: orderId  
+                    - QueryParam: storeId  
+                    - 취소 시 결제 금액이 환불 처리됩니다.  
+                    """
+    )
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponseDto>> cancelOrder(
             @AuthenticationPrincipal String kakaoId,
@@ -121,6 +149,17 @@ public class OrderController {
     }
 
     /** 주문 목록 조회 (최근 7일) */
+    @Operation(
+            summary = "주문 목록 조회 (최근 7일)",
+            description = """
+                    특정 가맹점(storeId)의 주문 목록을 조회합니다.  
+                    - Query Parameters:  
+                      • today: 기준일  
+                      • status: 주문 상태 (PAID, CANCELLED 등)  
+                      • paymentMethod: 결제 수단  
+                      • orderType: 주문 유형 (배달/매장 등)  
+                    """
+    )
     @GetMapping
     public ResponseEntity<ApiResponse<OrderListResponseDto>> getOrders(
             @RequestParam(name = "storeId") Long storeId,
