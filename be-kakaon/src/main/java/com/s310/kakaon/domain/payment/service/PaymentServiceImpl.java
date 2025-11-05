@@ -21,6 +21,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -132,6 +137,70 @@ public class PaymentServiceImpl implements PaymentService{
         String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yymmdd"));
         int randomPart = new SecureRandom().nextInt(100_000);
         return datePart + String.format("%05d", randomPart);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public byte[] downloadPaymentsCsv(Long memberId, Long storeId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
+
+        List<Payment> payments = paymentRepository.findByStore(store);
+
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             OutputStreamWriter osw = new OutputStreamWriter(baos, StandardCharsets.UTF_8);
+             PrintWriter writer = new PrintWriter(osw)) {
+
+            // UTF-8 BOM 추가 (엑셀에서 한글 깨짐 방지)
+            baos.write(0xEF);
+            baos.write(0xBB);
+            baos.write(0xBF);
+
+            // CSV 헤더
+            writer.println("결제ID,매장명,주문ID,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시,생성일시,수정일시");
+
+            // CSV 데이터
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            for (Payment payment : payments) {
+                writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s%n",
+                        payment.getId(),
+                        escapeCsvField(store.getName()),
+                        payment.getOrder().getId(),
+                        escapeCsvField(payment.getAuthorizationNo()),
+                        payment.getAmount(),
+                        payment.getPaymentMethod().name(),
+                        payment.getStatus().name(),
+                        payment.getDelivery() ? "배달" : "포장",
+                        payment.getApprovedAt().format(formatter),
+                        payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : "",
+                        payment.getCreatedDateTime().format(formatter),
+                        payment.getLastModifiedDateTime().format(formatter)
+                );
+            }
+
+            writer.flush();
+            return baos.toByteArray();
+
+        } catch (IOException e) {
+            log.error("CSV 생성 중 오류 발생", e);
+            throw new ApiException(ErrorCode.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private String escapeCsvField(String field) {
+        if (field == null) {
+            return "";
+        }
+        // CSV 필드에 쉼표, 따옴표, 개행이 있으면 따옴표로 감싸고 내부 따옴표는 이스케이프
+        if (field.contains(",") || field.contains("\"") || field.contains("\n")) {
+            return "\"" + field.replace("\"", "\"\"") + "\"";
+        }
+        return field;
     }
 
     private void validateStoreOwner(Store store, Member member) {
