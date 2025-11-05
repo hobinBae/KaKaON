@@ -4,6 +4,7 @@ package com.s310.kakaon.domain.payment.controller;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
+import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,11 +53,12 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
+            @RequestBody PaymentSearchRequestDto request,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        List<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId);
+        List<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 결제내역 조회 성공", response, httpRequest.getRequestURI()));
@@ -101,4 +103,3 @@ public class PaymentController {
 
 }
 
-}

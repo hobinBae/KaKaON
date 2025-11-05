@@ -6,6 +6,7 @@ import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
+import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
@@ -93,7 +94,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional(readOnly = true)
-    public List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId) {
+    public List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request) {
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
@@ -102,6 +103,8 @@ public class PaymentServiceImpl implements PaymentService{
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         validateStoreOwner(store, member);
+
+        // 누나가 해줭
 
         List<Payment> payments = paymentRepository.findByStore(store);
 

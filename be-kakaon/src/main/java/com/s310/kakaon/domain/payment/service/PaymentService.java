@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.payment.service;
 
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
+import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -14,7 +15,7 @@ public interface PaymentService {
 
     void deletePayment(Long memberId, Long id);
 
-    List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId);
+    List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request);
 
     PaymentResponseDto getPaymentById(Long memberId, Long id);
 
