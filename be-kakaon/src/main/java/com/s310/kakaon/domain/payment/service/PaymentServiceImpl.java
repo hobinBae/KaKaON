@@ -7,8 +7,11 @@ import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
+import com.s310.kakaon.domain.payment.dto.PaymentStatus;
 import com.s310.kakaon.domain.payment.entity.Payment;
+import com.s310.kakaon.domain.payment.entity.PaymentCancel;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
+import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -42,6 +45,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final OrderRepository orderRepository;
+    private final PaymentCancelRepository paymentCancelRepository;
 
     @Override
     @Transactional
@@ -81,15 +85,24 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional
-    public void deletePayment(Long memberId, Long id) {
+    public PaymentResponseDto deletePayment(Long memberId, Long id) {
        memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
+        PaymentCancel cancel = PaymentCancel.builder()
+                .payment(payment)
+                .canceledAmount(payment.getAmount())
+                .responseCode(payment.getAuthorizationNo())
+                .build();
+
+        paymentCancelRepository.save(cancel);
+
         payment.cancel();
 
+        return paymentMapper.fromEntity(payment);
     }
 
     @Override
