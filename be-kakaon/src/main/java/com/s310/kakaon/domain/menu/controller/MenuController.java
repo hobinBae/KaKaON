@@ -1,7 +1,7 @@
 package com.s310.kakaon.domain.menu.controller;
 
-import com.s310.kakaon.domain.member.dto.MemberUpdateRequestDto;
 import com.s310.kakaon.domain.member.service.MemberService;
+import com.s310.kakaon.domain.menu.dto.PageResponseDto;
 import com.s310.kakaon.domain.menu.service.MenuService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.domain.menu.dto.MenuRequestDto;
@@ -10,15 +10,15 @@ import com.s310.kakaon.domain.menu.validation.MenuValidationGroups;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/menus")
@@ -30,23 +30,17 @@ public class MenuController {
 
     /** 메뉴 리스트 조회 */
     @GetMapping()
-    public ResponseEntity<ApiResponse<List<MenuSummaryResponseDto>>> getMenus(
+    public ResponseEntity<ApiResponse<PageResponseDto<MenuSummaryResponseDto>>> getMenus(
+            @AuthenticationPrincipal String kakaoId,
             @RequestParam(name = "storeId") Long storeId,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "24") int size,
             HttpServletRequest httpRequest) {
-
-        // Dummy Data
-        List<MenuSummaryResponseDto> dummyList = new ArrayList<>();
-        for(Long i=0L;i<3;i++){
-            dummyList.add(MenuSummaryResponseDto.builder()
-                    .menuId(i)
-                    .storeId(i+10)
-                    .menu("아메리카노"+i)
-                    .price(3000)
-                    .createdAt(OffsetDateTime.now().toString())
-                    .updatedAt(OffsetDateTime.now().toString())
-                    .build());
-        }
-        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 조회가 성공적으로 완료 되었습니다.", dummyList, httpRequest.getRequestURI()));
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDateTime"));
+        var paged = menuService.getMenus(memberId, storeId, pageable);
+        var response = PageResponseDto.of(paged);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 조회가 성공적으로 완료 되었습니다.", response, httpRequest.getRequestURI()));
     }
 
     /** 메뉴 생성 */

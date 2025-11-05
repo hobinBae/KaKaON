@@ -9,6 +9,8 @@ import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,6 +111,31 @@ public class MenuServiceImpl implements MenuService{
 
         // 4) 수정
         menu.softDelete();
+    }
+
+    public Page<MenuSummaryResponseDto> getMenus(Long memberId, Long storeId, Pageable pageable) {
+        // 1) 매장 존재 확인
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        // 2) 접근 권한 확인
+        if (!store.getMember().getId().equals(memberId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 3) 페이지 조회
+        Page<Menu> page = menuRepository.findByStore_IdAndDeletedAtIsNull(store.getId(), pageable);
+
+        // 4) 매핑
+        return page.map(m -> new MenuSummaryResponseDto(
+                m.getMenuId(),
+                store.getId(),
+                m.getName(),
+                m.getPrice(),
+                m.getImgUrl(),
+                toIso(m.getCreatedDateTime()),
+                toIso(m.getLastModifiedDateTime())
+        ));
     }
 
     private String toIso(LocalDateTime dt) {
