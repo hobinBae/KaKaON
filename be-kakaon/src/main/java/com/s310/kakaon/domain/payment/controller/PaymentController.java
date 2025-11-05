@@ -9,14 +9,15 @@ import com.s310.kakaon.global.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @RestController
 @RequestMapping("/api/v1/payments")
@@ -41,7 +42,27 @@ public class PaymentController {
 //                .body(ApiResponse.of(HttpStatus.CREATED, "결제 등록 성공", response, httpRequest.getRequestURI()));
 //    }
 
+    @GetMapping("/stores/{storeId}/export")
+    public ResponseEntity<byte[]> downloadPaymentsCsv(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
+        byte[] csvData = paymentService.downloadPaymentsCsv(memberId, storeId);
 
+        // 파일명 생성 (현재 시간 포함)
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String filename = "payments_" + timestamp + ".csv";
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv; charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", filename);
+        headers.setContentLength(csvData.length);
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(csvData);
+    }
 
 }
