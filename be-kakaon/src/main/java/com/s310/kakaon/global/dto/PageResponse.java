@@ -1,5 +1,6 @@
 package com.s310.kakaon.global.dto;
 
+import com.s310.kakaon.domain.order.dto.OrderListResponseDto;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
