@@ -19,7 +19,7 @@ import java.util.List;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
-@EqualsAndHashCode(of = "storeId", callSuper = false)
+@EqualsAndHashCode(of = "id", callSuper = false)
 @ToString(exclude = "member")
 
 public class Store extends BaseEntity {
