@@ -57,6 +57,10 @@ public class OrderServiceImpl implements OrderService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
+        if(!store.getMember().getId().equals(memberId)){
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
         Orders order = orderMapper.toEntity(store, request);
 
         orderRepository.save(order);
