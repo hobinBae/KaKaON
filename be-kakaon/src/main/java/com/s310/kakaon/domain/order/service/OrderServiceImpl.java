@@ -15,6 +15,8 @@ import com.s310.kakaon.domain.order.mapper.OrderMapper;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.entity.Payment;
+import com.s310.kakaon.domain.payment.entity.PaymentCancel;
+import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -39,6 +41,7 @@ public class OrderServiceImpl implements OrderService{
     private final PaymentService paymentService;
     private final OrderMapper orderMapper;
     private final PaymentRepository paymentRepository;
+    private final PaymentCancelRepository paymentCancelRepository;
 
     @Override
     @Transactional
@@ -109,7 +112,7 @@ public class OrderServiceImpl implements OrderService{
         Long paymentId = payment.getId();
 
         // payment 삭제하기
-        paymentService.deletePayment(memberId, storeId, paymentId);
+        paymentService.deletePayment(memberId, paymentId);
 
         // 주문 상태 및 금액, 시간 갱신
         int totalAmount = order.getTotalAmount();
@@ -122,17 +125,15 @@ public class OrderServiceImpl implements OrderService{
             }
         }
 
-//        // TODO: payment_cancel 테이블에서 responseCode 받아오기
-//        PaymentCancel paymentCancel = paymentCancelRepository
-//                .findTopByPayment_PaymentIdOrderByCreatedAtDesc(paymentId)
-//                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_CANCEL_NOT_FOUND));
-//
-//        String responseCode = paymentCancel.getResponseCode();
+        PaymentCancel paymentCancel = paymentCancelRepository
+                .findByPaymentId(paymentId)
+                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_CANCEL_NOT_FOUND));
+        String responseCode = paymentCancel.getResponseCode();
 
         // 6) 응답 DTO 구성
         return OrderCancelResponseDto.builder()
                 .orderId(order.getOrderId())
-//                .responseCode(paymentRespCode)
+                .responseCode(responseCode)
                 .status(OrderStatus.CANCELED)
                 .totalAmount(totalAmount)
                 .paidAmount(0)              // 전액 환불 후 0
