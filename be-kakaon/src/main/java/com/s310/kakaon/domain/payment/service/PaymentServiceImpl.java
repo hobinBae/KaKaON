@@ -170,7 +170,7 @@ public class PaymentServiceImpl implements PaymentService{
                 writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s%n",
                         payment.getId(),
                         escapeCsvField(store.getName()),
-                        payment.getOrder().getId(),
+                        payment.getOrder().getOrderId(),
                         escapeCsvField(payment.getAuthorizationNo()),
                         payment.getAmount(),
                         payment.getPaymentMethod().name(),
