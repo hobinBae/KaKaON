@@ -31,17 +31,17 @@ public class PaymentController {
     private final MemberService memberService;
 
     @DeleteMapping("/{paymentId}")
-    public ResponseEntity<ApiResponse<Void>> deletePayment(
+    public ResponseEntity<ApiResponse<PaymentResponseDto>> deletePayment(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long paymentId,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        paymentService.deletePayment(memberId, paymentId);
+        PaymentResponseDto response = paymentService.deletePayment(memberId, paymentId);
 
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 제거 성공", null, httpRequest.getRequestURI()));
+                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 제거 성공", response, httpRequest.getRequestURI()));
     }
 
     //검색 requestParam 받을 것들 오늘, 이번주, 이번달, 올해 + 기간 정보
