@@ -4,7 +4,7 @@ import * as React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { DayPicker } from "react-day-picker";
 import { format } from "date-fns";
-
+import { ko } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "./variants";
 
@@ -40,7 +40,7 @@ function Calendar({
         
         // 헤더 (월, 이전/다음 버튼)
         caption: "flex justify-center pt-1 relative items-center mb-4",
-        caption_label: "text-lg font-medium",
+        caption_label: "text-lg",
         nav: "flex items-center gap-1",
         nav_button: cn(
           buttonVariants({ variant: "outline" }),
@@ -80,7 +80,16 @@ function Calendar({
       numberOfMonths={1}
       fixedWeeks
       formatters={{
-        formatWeekdayName: (day) => format(day, "E"),
+        formatWeekdayName: (day) => format(day, "EEEE", { locale: ko }),
+        formatCaption: (date) => {
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          return (
+            <>
+              <span className="font-bold text-xl">{year}년 {month}월</span>
+            </>
+          );
+        },
       }}
       {...props}
     />
