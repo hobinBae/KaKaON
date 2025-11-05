@@ -38,11 +38,15 @@ public enum ErrorCode {
 
     ORDER_NOT_FOUND("ORDER_NOT_FOUND", HttpStatus.NOT_FOUND, "주문 내역을 찾을 수 없습니다."),
 
+    ORDER_ALREADY_CANCELED("ORDER_ALREADY_CANCELED", HttpStatus.BAD_REQUEST, "이미 취소된 주문입니다."),
+
     FORBIDDEN_ACCESS("FORBIDDEN_ACCESS", HttpStatus.FORBIDDEN, "회원 정보와 사업자 정보가 일치하지 않습니다."),
 
-    MENU_NOT_FOUND("MENU_NOT_FOUND", HttpStatus.NOT_FOUND, "메뉴를 찾을 수 없습니다.")
+    MENU_NOT_FOUND("MENU_NOT_FOUND", HttpStatus.NOT_FOUND, "메뉴를 찾을 수 없습니다."),
 
-    ;
+    PAYMENT_CANCEL_NOT_FOUND("PAYMENT_CANCEL_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 취소 내역을 찾을 수 없습니다.")
+
+            ;
 
     //
     // 필요한 에러 코드 계속 추가

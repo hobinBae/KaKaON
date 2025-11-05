@@ -105,25 +105,17 @@ public class OrderController {
     /** 주문 취소 */
     @PostMapping("/{orderId}/cancel")
     public ResponseEntity<ApiResponse<OrderCancelResponseDto>> cancelOrder(
+            @AuthenticationPrincipal String kakaoId,
             @PathVariable(name = "orderId") Long orderId,
             @RequestParam(name = "storeId") Long storeId,
             HttpServletRequest httpRequest) {
-
-        // Dummy data 생성
-        OrderCancelResponseDto dummy = OrderCancelResponseDto.builder()
-                .orderId(orderId)
-                .responseCode("C0000000001")
-                .status(OrderStatus.CANCELED)
-                .totalAmount(10500)
-                .paidAmount(0)
-                .refundAmount(10500)
-                .deletedAt("2025-10-20T03:05:00+09:00")
-                .build();
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        OrderCancelResponseDto res = orderService.cancelOrder(memberId, storeId, orderId);
 
         return ResponseEntity.ok(ApiResponse.of(
                 HttpStatus.OK,
                 "주문 취소를 성공적으로 완료했습니다.",
-                dummy,
+                res,
                 httpRequest.getRequestURI()
         ));
     }

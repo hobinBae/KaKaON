@@ -68,4 +68,19 @@ public class Orders extends BaseEntity {
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
     }
+
+    public void cancel(int refundAmount) {
+        this.status = OrderStatus.CANCELED;
+        this.paidAmount = 0;
+        this.refundedAmount = refundAmount;
+        this.deletedAt = LocalDateTime.now();
+        this.lastModifiedDateTime = LocalDateTime.now();
+
+        if (this.orderItems != null) {
+            for (OrderItem item : this.orderItems) {
+                item.delete();
+            }
+        }
+    }
+
 }
