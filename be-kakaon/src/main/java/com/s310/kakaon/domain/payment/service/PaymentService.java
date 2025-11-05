@@ -18,7 +18,6 @@ public interface PaymentService {
 
     PaymentResponseDto getPaymentById(Long memberId, Long id);
 
-
-
+    byte[] downloadPaymentsCsv(Long memberId, Long storeId);
 
 }
