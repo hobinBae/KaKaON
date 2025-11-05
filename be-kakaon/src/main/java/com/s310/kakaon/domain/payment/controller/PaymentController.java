@@ -38,6 +38,11 @@ public class PaymentController {
                 .body(ApiResponse.of(HttpStatus.OK, "결제 내역 제거 성공", null, httpRequest.getRequestURI()));
     }
 
+    //검색 requestParam 받을 것들 오늘, 이번주, 이번달, 올해 + 기간 정보
+    //결제 수단 : 전체, 카드, 계좌, 카카오페이, 현금
+    //결제 상태 : 전체, 완료, 취소
+    //주문 구분 : 전체, 배달 주문, 가게 주문
+    //승인번호 검색
     @GetMapping("/{storeId}")
     public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
