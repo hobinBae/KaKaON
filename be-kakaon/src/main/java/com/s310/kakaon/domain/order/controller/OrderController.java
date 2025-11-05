@@ -4,7 +4,6 @@ import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
 import com.s310.kakaon.domain.order.service.OrderService;
-import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
@@ -47,57 +46,15 @@ public class OrderController {
     /** 주문 상세 조회 */
     @GetMapping("/{orderId}")
     public ResponseEntity<ApiResponse<OrderDetailResponseDto>> getOrderDetail(
+            @AuthenticationPrincipal String kakaoId,
             @PathVariable(name = "orderId") Long orderId,
             HttpServletRequest httpRequest) {
-
-        // Dummy Data 생성
-        List<OrderItemResponseDto> items = List.of(
-                OrderItemResponseDto.builder()
-                        .orderItemId(10101L)
-                        .menuId(501L)
-                        .menuName("아메리카노")
-                        .price(3000)
-                        .imgUrl("https://cdn.example.com/menu/ame.jpg")
-                        .quantity(2)
-                        .totalPrice(6000)
-                        .createdAt("2025-10-20T03:00:00+09:00")
-                        .updatedAt("2025-10-20T03:02:00+09:00")
-                        .deletedAt(null)
-                        .build(),
-                OrderItemResponseDto.builder()
-                        .orderItemId(10102L)
-                        .menuId(502L)
-                        .menuName("라떼")
-                        .price(4000)
-                        .imgUrl("https://cdn.example.com/menu/latte.jpg")
-                        .quantity(1)
-                        .totalPrice(4000)
-                        .createdAt("2025-10-20T03:00:00+09:00")
-                        .updatedAt("2025-10-20T03:02:00+09:00")
-                        .deletedAt(null)
-                        .build()
-        );
-
-        OrderDetailResponseDto dummy = OrderDetailResponseDto.builder()
-                .orderId(orderId)
-                .storeId(11L)
-                .storeName("강남점")
-                .status(OrderStatus.PAID)
-                .orderType(OrderType.STORE)
-                .paymentMethod(PaymentMethod.CARD)
-                .totalAmount(10000)
-                .paidAmount(10000)
-                .refundedAmount(0)
-                .createdAt("2025-10-20T03:00:00+09:00")
-                .updatedAt("2025-10-20T03:02:00+09:00")
-                .deletedAt(null)
-                .items(items)
-                .build();
-
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        OrderDetailResponseDto response = orderService.getOrderDetail(memberId, orderId);
         return ResponseEntity.ok(ApiResponse.of(
                 HttpStatus.OK,
                 "주문 상세 조회를 성공적으로 완료했습니다.",
-                dummy,
+                response,
                 httpRequest.getRequestURI()
         ));
     }

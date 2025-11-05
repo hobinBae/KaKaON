@@ -1,13 +1,8 @@
 package com.s310.kakaon.domain.order.service;
 
-import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.menu.entity.Menu;
 import com.s310.kakaon.domain.menu.repository.MenuRepository;
-import com.s310.kakaon.domain.order.dto.OrderCancelResponseDto;
-import com.s310.kakaon.domain.order.dto.OrderRequestDto;
-import com.s310.kakaon.domain.order.dto.OrderResponseDto;
-import com.s310.kakaon.domain.order.dto.OrderType;
+import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderItem;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
 import com.s310.kakaon.domain.order.entity.Orders;
@@ -139,6 +134,57 @@ public class OrderServiceImpl implements OrderService{
                 .paidAmount(0)              // 전액 환불 후 0
                 .refundAmount(totalAmount)  // 전액 환불
                 .deletedAt(toIso(order.getDeletedAt()))
+                .build();
+    }
+
+    @Transactional
+    public OrderDetailResponseDto getOrderDetail(Long memberId, Long orderId) {
+        // 1) 주문 + 매장 + 품목(+메뉴)까지 한 번에
+        Orders order = orderRepository.findByIdWithStoreItemsAndMenu(orderId)
+                .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
+
+        // 2) 권한(해당 매장 점주만)
+        if (!order.getStore().getMember().getId().equals(memberId)) {
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        // 3) 결제 조회 (없을 수도 있음: CREATED 상태)
+        Payment payment = paymentRepository.findByOrder_OrderId(orderId).orElse(null);
+        String orderType = (payment != null && Boolean.TRUE.equals(payment.getDelivery()))
+                ? "DELIVERY" : "STORE";
+        String paymentMethod = (payment != null) ? payment.getPaymentMethod().name() : null;
+
+        // 4) 아이템 매핑
+        var items = order.getOrderItems().stream()
+                .map(oi -> OrderItemResponseDto.builder()
+                        .orderItemId(oi.getId())
+                        .menuId(oi.getMenu().getMenuId())
+                        .menuName(oi.getMenu().getName())
+                        .price(oi.getMenu().getPrice())        // 단가는 메뉴의 가격
+                        .imgUrl(oi.getMenu().getImgUrl())
+                        .quantity(oi.getQuantity())
+                        .totalPrice(oi.getTotalPrice())
+                        .createdAt(toIso(oi.getCreatedDateTime()))
+                        .updatedAt(toIso(oi.getLastModifiedDateTime()))
+                        .deletedAt(toIso(oi.getDeletedAt()))
+                        .build())
+                .toList();
+
+        // 5) 본문 DTO
+        return OrderDetailResponseDto.builder()
+                .orderId(order.getOrderId())
+                .storeId(order.getStore().getId())
+                .storeName(order.getStore().getName())
+                .status(order.getStatus().name())
+                .orderType(orderType)                  // payment 기준
+                .paymentMethod(paymentMethod)          // payment 기준
+                .totalAmount(order.getTotalAmount())
+                .paidAmount(order.getPaidAmount())
+                .refundedAmount(order.getRefundedAmount())
+                .createdAt(toIso(order.getCreatedDateTime()))
+                .updatedAt(toIso(order.getLastModifiedDateTime()))
+                .deletedAt(toIso(order.getDeletedAt()))
+                .items(items)
                 .build();
     }
 

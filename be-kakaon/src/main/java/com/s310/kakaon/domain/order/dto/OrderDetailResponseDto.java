@@ -1,7 +1,5 @@
 package com.s310.kakaon.domain.order.dto;
 
-import com.s310.kakaon.domain.order.entity.OrderStatus;
-import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import lombok.*;
 
 import java.util.List;
@@ -15,9 +13,9 @@ public class OrderDetailResponseDto {
     private Long orderId;
     private Long storeId;
     private String storeName;
-    private OrderStatus status;
-    private OrderType orderType;
-    private PaymentMethod paymentMethod;
+    private String status;
+    private String orderType;
+    private String paymentMethod;
     private Integer totalAmount;
     private Integer paidAmount;
     private Integer refundedAmount;
