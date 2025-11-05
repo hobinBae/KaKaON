@@ -42,7 +42,7 @@ public class PaymentController {
 //                .body(ApiResponse.of(HttpStatus.CREATED, "결제 등록 성공", response, httpRequest.getRequestURI()));
 //    }
 
-    @GetMapping("/stores/{storeId}/csv")
+    @GetMapping("/stores/{storeId}/export")
     public ResponseEntity<byte[]> downloadPaymentsCsv(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId
