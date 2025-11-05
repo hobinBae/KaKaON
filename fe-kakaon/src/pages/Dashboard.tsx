@@ -83,6 +83,14 @@ const formatYAxis = (tick: number) => {
 export default function Dashboard() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
 
+  // 오늘 날짜를 "YYYY년 MM월 DD일 (요일)" 형식으로 생성
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
+  const todayString = `${year}년 ${month}월 ${day}일 (${dayOfWeek})`;
+
   return (
     <div className="flex flex-col space-y-6">
       {/* Header */}
@@ -92,7 +100,7 @@ export default function Dashboard() {
           <p className="text-sm text-[#717182]">오늘의 매출 현황을 확인하세요</p>
         </div>
         <div className="text-sm text-[#717182]">
-          2025년 10월 15일 (수)
+          {todayString}
         </div>
       </div>
 
@@ -145,7 +153,7 @@ export default function Dashboard() {
 
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">저번주 동일 요일 매출</span>
+              <span className="text-sm text-[#717182]">지난주 동일 요일 매출</span>
               <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
@@ -153,13 +161,13 @@ export default function Dashboard() {
             <div className="text-2xl text-[#333333] mb-2">3,200,000원</div>
             <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
               <TrendingUp className="w-4 h-4" />
-              <span>4.5% 저번주 대비</span>
+              <span>4.5% 지난주 대비</span>
             </div>
           </Card>
 
           <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">이번달 누적 매출</span>
+              <span className="text-sm text-[#717182]">이번 달 누적 매출</span>
               <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
                 <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
               </div>
@@ -167,7 +175,7 @@ export default function Dashboard() {
             <div className="text-2xl text-[#333333] mb-2">45,500,000원</div>
             <div className="flex items-center gap-1 text-sm text-[#4CAF50]">
               <TrendingUp className="w-4 h-4" />
-              <span>12.0% 지난달 대비</span>
+              <span>12.0% 지난달 동일 일 수 대비</span>
             </div>
           </Card>
 
