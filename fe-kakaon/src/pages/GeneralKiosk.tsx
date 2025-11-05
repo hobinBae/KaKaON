@@ -17,64 +17,8 @@ import { Label } from "@/components/ui/label";
 import { useBoundStore } from '@/stores/storeStore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const AdminPinModal = ({ onPinVerified }) => {
-  const [pin, setPin] = useState('');
-  const correctPin = '1234';
-
-  const handlePinSubmit = () => {
-    if (pin === correctPin) {
-      onPinVerified();
-    } else {
-      alert('PIN 번호가 올바르지 않습니다.');
-    }
-    setPin('');
-  };
-
-  const handleKeyPress = (key: string) => {
-    if (key === 'backspace') {
-      setPin(pin.slice(0, -1));
-    } else if (pin.length < 4) {
-      setPin(pin + key);
-    }
-  };
-
-  const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'backspace'];
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>관리자 PIN 입력</DialogTitle>
-      </DialogHeader>
-      <div className="py-4">
-        <div className="flex justify-center items-center h-12 mb-4 border rounded-md">
-          <p className="text-2xl tracking-[1rem]">{'*'.repeat(pin.length)}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {keypad.map((key) =>
-            key === '' ? (
-              <div key="empty" />
-            ) : (
-              <Button
-                key={key}
-                variant="outline"
-                className="h-16 text-2xl"
-                onClick={() => handleKeyPress(key)}
-              >
-                {key === 'backspace' ? <Delete /> : key}
-              </Button>
-            )
-          )}
-        </div>
-        <DialogClose asChild>
-          <Button onClick={handlePinSubmit} className="w-full mt-4">
-            확인
-          </Button>
-        </DialogClose>
-      </div>
-    </DialogContent>
-  );
-};
+import AdminPinModal from '@/components/AdminPinModal';
+import { Link } from 'react-router-dom';
 
 const GeneralKiosk = () => {
   const {
@@ -195,14 +139,14 @@ const GeneralKiosk = () => {
         <div className="flex flex-col items-center justify-center w-full h-full bg-gray-50 p-8">
           <div className="text-center mb-12">
             <img src={logoImg} alt="KaKaON Logo" className="h-24 mx-auto mb-6" />
-            <p className="text-6xl font-bold text-gray-800">주문 유형을<br/>선택해주세요</p>
+            <p className="text-6xl font-bold text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-10 w-full max-w-md sm:max-w-4xl">
             <Card onClick={() => setOrderType('dine-in')} className="cursor-pointer flex-1 bg-white rounded-3xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-lg">
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
                   <span className="text-9xl mb-12 inline-block">🛒</span>
-                  <h2 className="text-5xl font-bold text-gray-700">매장 주문</h2>
+                  <h2 className="text-4xl font-bold text-gray-700">매장 주문</h2>
                 </div>
               </CardContent>
             </Card>
@@ -210,7 +154,7 @@ const GeneralKiosk = () => {
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
                   <span className="text-9xl mb-12 inline-block">🛍️</span>
-                  <h2 className="text-5xl font-bold text-gray-700">포장 주문</h2>
+                  <h2 className="text-4xl font-bold text-gray-700">포장 주문</h2>
                 </div>
               </CardContent>
             </Card>
@@ -258,6 +202,9 @@ const GeneralKiosk = () => {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                  <Button asChild className="h-12 px-6 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl ml-2">
+                    <Link to="/dashboard">매출관리 화면 전환</Link>
+                  </Button>
                 </>
               )}
               {!isAdminMode && (
@@ -316,7 +263,7 @@ const GeneralKiosk = () => {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <div className="font-bold text-4xl">
+              <div className="font-bold text-3xl">
                 <span>{orderType === 'dine-in' ? '[매장]' : '[포장]'}</span>
                 <span> 총 {totalAmount.toLocaleString()}원</span>
               </div>

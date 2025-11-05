@@ -252,7 +252,7 @@ const Pos = () => {
                 </Button>
               )}
               <Link to="/dashboard">
-                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-800">
+                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl">
                   매출관리 화면으로 전환
                 </Button>
               </Link>
