@@ -249,7 +249,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
-        salesCacheService.updateCancelStats(payment.getId(), payment.getAmount(), LocalDateTime.now());
+        salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
     }
