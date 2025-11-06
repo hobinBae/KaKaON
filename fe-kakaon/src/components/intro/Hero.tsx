@@ -69,6 +69,16 @@ export default function Hero() {
   const subtitleLine1 = "흩어져 있는 매출 데이터를 한눈에 확인하고, 이상 거래는 실시간으로 감지하세요.";
   const subtitleLine2 = "사장님은 비즈니스 성장에만 집중할 수 있도록 카카온이 돕겠습니다.";
 
+  const handleLogin = () => {
+    const backendUrl = (import.meta.env.VITE_API_BASE_URL || '').replace('/api/v1', '');
+    const url = `${backendUrl}/oauth2/authorization/kakao`;
+    const width = 500;
+    const height = 700;
+    const left = window.screen.width / 2 - width / 2;
+    const top = window.screen.height / 2 - height / 2;
+    window.open(url, 'kakaoLogin', `width=${width},height=${height},top=${top},left=${left}`);
+  };
+
   return (
     <section id="hero" className="relative w-full text-center overflow-hidden">
       {/* Full-width background */}
@@ -106,10 +116,8 @@ export default function Hero() {
           {subtitleLine2}
         </p>
           <div className="flex flex-col sm:flex-row gap-4">
-            <Button asChild size="lg" className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base">
-              <Link to="/login" data-analytics="hero-cta-primary">
-                무료로 시작하기
-              </Link>
+            <Button size="lg" className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
+              무료로 시작하기
             </Button>
             <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
               <Link to="/dashboard" data-analytics="hero-cta-secondary">

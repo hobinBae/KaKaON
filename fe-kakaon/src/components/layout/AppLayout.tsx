@@ -1,5 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, User } from "lucide-react";
+import { useState } from "react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
 import {
@@ -10,11 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBoundStore } from "@/stores/storeStore";
+import { useMyStores } from "@/lib/hooks/useStores";
+import { useLogout } from "@/lib/hooks/useAuth";
 
 // figma_mockup의 레이아웃을 기반으로 새로운 AppLayout을 정의합니다.
 export function AppLayout() {
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const { selectedStoreId, stores, setSelectedStoreId, logout } = useBoundStore();
+  const { selectedStoreId, setSelectedStoreId } = useBoundStore();
+  const { mutate: logout } = useLogout();
+
+  // useMyStores 훅을 사용하여 API로부터 매장 목록을 가져옴
+  const { data: stores, isLoading, isError } = useMyStores();
 
   // 메뉴 아이템 배열: 아이디, 아이콘, 라벨, 경로를 포함합니다.
   const menuItems = [
@@ -23,13 +31,18 @@ export function AppLayout() {
     { id: 'analytics', icon: TrendingUp, label: '매출분석', path: '/analytics' },
     { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
     { id: 'stores', icon: Store, label: '가맹점 관리', path: '/stores' },
+    { id: 'business-hours', icon: Lock, label: '영업 시작/마감', path: '/business-hours' },
     { id: 'settings', icon: Settings, label: '설정', path: '/settings' },
   ];
 
   return (
     <div className="flex h-screen w-full bg-white">
       {/* --- Sidebar --- */}
-      <aside className="w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col">
+      <aside
+        className={`fixed top-0 left-0 z-20 h-full w-64 bg-[#FAFAFA] border-r border-[rgba(0,0,0,0.06)] flex flex-col transition-transform duration-300 ease-in-out lg:translate-x-0 ${
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
         {/* 로고 */}
         <div className="h-18 flex items-center justify-center p-4">
           <Link to="/" className="flex items-center gap-2">
@@ -54,7 +67,7 @@ export function AppLayout() {
                     : 'text-[#333333] hover:bg-[#F5F5F5]'
                 }`}
               >
-                <Link to={item.path}>
+                <Link to={item.path} onClick={() => setIsSidebarOpen(false)}>
                   <Icon className="w-5 h-5" />
                   <span>{item.label}</span>
                 </Link>
@@ -64,20 +77,20 @@ export function AppLayout() {
         </nav>
 
         {/* 포스기/키오스크 화면 전환 버튼 */}
-        <div className="p-4 space-y-2">
+        <div className="p-4 px-6 space-y-3">
           <Button
             asChild
-            className="w-full h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700"
+            className="w-full h-11 text-base bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl"
           >
-            <Link to="/kiosk">
+            <Link to="/kiosk" onClick={() => setIsSidebarOpen(false)}>
               키오스크 화면으로 전환
             </Link>
           </Button>
           <Button
             asChild
-            className="w-full h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700"
+            className="w-full h-11 text-base bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl"
           >
-            <Link to="/pos">
+            <Link to="/pos" onClick={() => setIsSidebarOpen(false)}>
               포스기 화면으로 전환
             </Link>
           </Button>
@@ -97,7 +110,7 @@ export function AppLayout() {
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-[#717182] hover:text-[#333333] hover:bg-[#F5F5F5]"
-            onClick={logout}
+            onClick={() => logout()}
           >
             <LogOut className="w-4 h-4" />
             로그아웃
@@ -105,11 +118,27 @@ export function AppLayout() {
         </div>
       </aside>
 
+      {/* Overlay for mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 z-10 bg-black/50 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        ></div>
+      )}
+
       {/* --- Main Content --- */}
-      <main className="flex-1 flex flex-col overflow-hidden">
+      <main className="flex-1 flex flex-col overflow-hidden lg:ml-64">
         {/* 헤더 */}
         <header className="h-16 bg-white border-b border-[rgba(0,0,0,0.06)] flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-4">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="lg:hidden"
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            >
+              <Menu className="w-6 h-6" />
+            </Button>
             {/* 가맹점 관리 페이지가 아닐 때만 필터를 보여줍니다. */}
             {location.pathname !== '/stores' && (
               <Select
@@ -117,11 +146,12 @@ export function AppLayout() {
                 onValueChange={(val) => setSelectedStoreId(val)}
               >
                 <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
-                  <SelectValue />
+                  <SelectValue placeholder={isLoading ? "로딩 중..." : "매장 선택"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>
+                  {isError && <SelectItem value="error" disabled>매장 목록을 불러올 수 없습니다.</SelectItem>}
+                  {stores && stores.map((store) => (
+                    <SelectItem key={store.storeId} value={String(store.storeId)}>
                       {store.name}
                     </SelectItem>
                   ))}

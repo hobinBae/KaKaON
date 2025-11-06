@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, X, Minus, Trash2, Edit, Settings, RotateCw, History, Package } from "lucide-react";
+import { Plus, Minus, Trash2, Edit, RotateCw, History, Package } from "lucide-react";
 import { Link } from 'react-router-dom';
 import {
   Dialog,
@@ -27,7 +27,8 @@ import {
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useBoundStore } from '@/stores/storeStore';
-import type { CartItem } from '@/stores/storeStore';
+import { useMyStores } from '@/lib/hooks/useStores';
+import { useMenus } from '@/lib/hooks/useMenus';
 import {
   Select,
   SelectContent,
@@ -40,9 +41,6 @@ const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
   const {
-    stores,
-    selectedStoreId,
-    setSelectedStoreId,
     transactions,
     addTransaction,
     cancelTransaction,
@@ -51,11 +49,12 @@ const Pos = () => {
     removeFromCart,
     updateQuantity,
     clearCart,
-    addProduct,
-    updateProduct,
-    deleteProduct,
   } = useBoundStore();
-  const [products, setProducts] = useState([]);
+
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
+  const { selectedStoreId, setSelectedStoreId } = useBoundStore();
+  const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
@@ -68,13 +67,13 @@ const Pos = () => {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
 
   useEffect(() => {
-    const currentStore = stores.find(store => store.id === selectedStoreId);
-    if (currentStore) {
-      setProducts(currentStore.products);
+    if (!selectedStoreId && stores && stores.length > 0) {
+      setSelectedStoreId(String(stores[0].storeId));
     }
-  }, [selectedStoreId, stores]);
+  }, [stores, selectedStoreId, setSelectedStoreId]);
 
   const recentTransactions = useMemo(() => {
+    // TODO: 주문 내역 API 연동 후 필터링 로직 수정 필요
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     return transactions
@@ -82,8 +81,9 @@ const Pos = () => {
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }, [transactions, selectedStoreId]);
 
-  const totalPages = Math.ceil(products.length / ITEMS_PER_PAGE);
+  const totalPages = Math.ceil((products?.length || 0) / ITEMS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
+    if (!products) return [];
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
     return products.slice(startIndex, startIndex + ITEMS_PER_PAGE);
   }, [products, currentPage]);
@@ -97,8 +97,9 @@ const Pos = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleAddProduct = () => {
+    // TODO: addProduct API 연동 필요
     if (newProductName && newProductPrice) {
-      addProduct({
+      console.log('Adding product:', {
         name: newProductName,
         price: parseInt(newProductPrice.replace(/,/g, ''), 10),
         category: '기타',
@@ -115,6 +116,14 @@ const Pos = () => {
   };
 
   const handlePayment = () => {
+    // TODO: addTransaction API 연동 필요
+    console.log('Payment processing:', {
+      items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
+      total: totalAmount,
+      orderType,
+      paymentMethod,
+      status: 'completed',
+    });
     addTransaction({
       items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
       total: totalAmount,
@@ -126,12 +135,14 @@ const Pos = () => {
   };
 
   const handleDeleteProduct = (productId) => {
-    deleteProduct(productId);
+    // TODO: deleteProduct API 연동 필요
+    console.log('Deleting product:', productId);
   };
 
   const handleUpdateProduct = () => {
+    // TODO: updateProduct API 연동 필요
     if (editingProduct) {
-      updateProduct(editingProduct);
+      console.log('Updating product:', editingProduct);
       setEditingProduct(null);
     }
   };
@@ -143,11 +154,11 @@ const Pos = () => {
         <header className="flex-shrink-0 h-16 bg-gray-600 text-white rounded-xl flex items-center justify-between px-6">
           <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
             <SelectTrigger className="w-[220px] bg-gray-300 border-gray-600 text-black text-xl [&_svg]:text-white [&_svg]:opacity-100">
-              <SelectValue placeholder="가맹점 선택" />
+              <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "가맹점 선택"} />
             </SelectTrigger>
             <SelectContent>
-              {stores.map((store) => (
-                <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+              {stores?.map((store) => (
+                <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
               ))}
             </SelectContent>
           </Select>
@@ -161,18 +172,24 @@ const Pos = () => {
           {view === 'products' ? (
             <>
               <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 p-2">
-                {paginatedProducts.map((product) => (
-                  <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative transition-transform hover:scale-105">
-                    {isEditMode && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                        <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
-                      </div>
-                    )}
-                    <p className="text-gray-800">{product.name}</p>
-                    <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
-                  </Card>
-                ))}
+                {isLoadingProducts ? (
+                  <p>메뉴를 불러오는 중입니다...</p>
+                ) : paginatedProducts.length > 0 ? (
+                  paginatedProducts.map((product) => (
+                    <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative transition-transform hover:scale-105">
+                      {isEditMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                          <Button variant="destructive" size="icon" onClick={(e) => { e.stopPropagation(); handleDeleteProduct(product.id); }}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="secondary" size="icon" onClick={(e) => { e.stopPropagation(); setEditingProduct(product); }}><Edit className="h-4 w-4" /></Button>
+                        </div>
+                      )}
+                      <p className="text-gray-800">{product.name}</p>
+                      <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
+                    </Card>
+                  ))
+                ) : (
+                  <p>등록된 메뉴가 없습니다.</p>
+                )}
               </div>
               <div className="flex justify-center items-center gap-2 pt-4 flex-shrink-0">
                 {[...Array(totalPages)].map((_, i) => (
@@ -252,7 +269,7 @@ const Pos = () => {
                 </Button>
               )}
               <Link to="/dashboard">
-                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-800">
+                <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl">
                   매출관리 화면으로 전환
                 </Button>
               </Link>
@@ -305,6 +322,8 @@ const Pos = () => {
                     <AlertDialogFooter>
                       <AlertDialogCancel>닫기</AlertDialogCancel>
                       <AlertDialogAction onClick={() => {
+                        // TODO: cancelTransaction API 연동 필요
+                        console.log('Cancelling transaction:', selectedTransaction.id);
                         cancelTransaction(selectedTransaction.id);
                         setSelectedTransaction(null);
                       }}>확인</AlertDialogAction>

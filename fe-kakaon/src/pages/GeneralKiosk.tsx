@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, Plus, Minus, Trash2, Edit, Delete } from "lucide-react";
@@ -15,85 +16,27 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBoundStore } from '@/stores/storeStore';
+import { useMyStores } from '@/lib/hooks/useStores';
+import { useMenus } from '@/lib/hooks/useMenus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-
-const AdminPinModal = ({ onPinVerified }) => {
-  const [pin, setPin] = useState('');
-  const correctPin = '1234';
-
-  const handlePinSubmit = () => {
-    if (pin === correctPin) {
-      onPinVerified();
-    } else {
-      alert('PIN 번호가 올바르지 않습니다.');
-    }
-    setPin('');
-  };
-
-  const handleKeyPress = (key: string) => {
-    if (key === 'backspace') {
-      setPin(pin.slice(0, -1));
-    } else if (pin.length < 4) {
-      setPin(pin + key);
-    }
-  };
-
-  const keypad = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'backspace'];
-
-  return (
-    <DialogContent>
-      <DialogHeader>
-        <DialogTitle>관리자 PIN 입력</DialogTitle>
-      </DialogHeader>
-      <div className="py-4">
-        <div className="flex justify-center items-center h-12 mb-4 border rounded-md">
-          <p className="text-2xl tracking-[1rem]">{'*'.repeat(pin.length)}</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          {keypad.map((key) =>
-            key === '' ? (
-              <div key="empty" />
-            ) : (
-              <Button
-                key={key}
-                variant="outline"
-                className="h-16 text-2xl"
-                onClick={() => handleKeyPress(key)}
-              >
-                {key === 'backspace' ? <Delete /> : key}
-              </Button>
-            )
-          )}
-        </div>
-        <DialogClose asChild>
-          <Button onClick={handlePinSubmit} className="w-full mt-4">
-            확인
-          </Button>
-        </DialogClose>
-      </div>
-    </DialogContent>
-  );
-};
+import AdminPinModal from '@/components/AdminPinModal';
 
 const GeneralKiosk = () => {
   const {
-    stores,
     selectedStoreId,
     setSelectedStoreId,
-    addTransaction,
     cart,
     addToCart,
     updateQuantity,
     removeFromCart,
     clearCart,
-    addProduct,
-    updateProduct,
-    deleteProduct,
   } = useBoundStore();
 
-  const [products, setProducts] = useState([]);
-  const [orderType, setOrderType] = useState(null);
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
+  const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+
+  const [orderType, setOrderType] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProductName, setNewProductName] = useState('');
@@ -105,11 +48,10 @@ const GeneralKiosk = () => {
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    const currentStore = stores.find(store => store.id === selectedStoreId);
-    if (currentStore) {
-      setProducts(currentStore.products);
+    if (!selectedStoreId && stores && stores.length > 0) {
+      setSelectedStoreId(String(stores[0].storeId));
     }
-  }, [selectedStoreId, stores]);
+  }, [stores, selectedStoreId, setSelectedStoreId]);
 
   useEffect(() => {
     if (isPaymentComplete) {
@@ -132,7 +74,8 @@ const GeneralKiosk = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handlePayment = () => {
-    addTransaction({
+    // TODO: addTransaction API 연동 필요
+    console.log('Payment processing:', {
       items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
       total: totalAmount,
       orderType,
@@ -158,8 +101,9 @@ const GeneralKiosk = () => {
   };
 
   const handleAddProduct = () => {
+    // TODO: addProduct API 연동 필요
     if (newProductName && newProductPrice) {
-      addProduct({
+      console.log('Adding product:', {
         name: newProductName,
         price: parseInt(newProductPrice.replace(/,/g, ''), 10),
         category: '전체',
@@ -172,11 +116,17 @@ const GeneralKiosk = () => {
   };
 
   const handleUpdateProduct = () => {
+    // TODO: updateProduct API 연동 필요
     if (editingProduct) {
-      updateProduct(editingProduct);
+      console.log('Updating product:', editingProduct);
       setEditingProduct(null);
     }
   };
+
+  const handleDeleteProduct = (productId: number) => {
+    // TODO: deleteProduct API 연동 필요
+    console.log('Deleting product:', productId);
+  }
 
   if (isPaymentComplete) {
     return (
@@ -195,14 +145,14 @@ const GeneralKiosk = () => {
         <div className="flex flex-col items-center justify-center w-full h-full bg-gray-50 p-8">
           <div className="text-center mb-12">
             <img src={logoImg} alt="KaKaON Logo" className="h-24 mx-auto mb-6" />
-            <p className="text-6xl font-bold text-gray-800">주문 유형을<br/>선택해주세요</p>
+            <p className="text-6xl font-bold text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</p>
           </div>
           <div className="flex flex-col sm:flex-row gap-10 w-full max-w-md sm:max-w-4xl">
             <Card onClick={() => setOrderType('dine-in')} className="cursor-pointer flex-1 bg-white rounded-3xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-lg">
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
                   <span className="text-9xl mb-12 inline-block">🛒</span>
-                  <h2 className="text-5xl font-bold text-gray-700">매장 주문</h2>
+                  <h2 className="text-4xl font-bold text-gray-700">매장 주문</h2>
                 </div>
               </CardContent>
             </Card>
@@ -210,7 +160,7 @@ const GeneralKiosk = () => {
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
                   <span className="text-9xl mb-12 inline-block">🛍️</span>
-                  <h2 className="text-5xl font-bold text-gray-700">포장 주문</h2>
+                  <h2 className="text-4xl font-bold text-gray-700">포장 주문</h2>
                 </div>
               </CardContent>
             </Card>
@@ -222,11 +172,11 @@ const GeneralKiosk = () => {
             {isAdminMode ? (
               <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
                 <SelectTrigger className="w-[220px]">
-                  <SelectValue placeholder="가맹점 선택" />
+                  <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "가맹점 선택"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>{store.name}</SelectItem>
+                  {stores?.map((store) => (
+                    <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -258,6 +208,9 @@ const GeneralKiosk = () => {
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
+                  <Button asChild className="h-12 px-6 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl ml-2">
+                    <Link to="/dashboard">매출관리 화면 전환</Link>
+                  </Button>
                 </>
               )}
               {!isAdminMode && (
@@ -274,11 +227,14 @@ const GeneralKiosk = () => {
           </header>
           <main className="flex-1 overflow-y-auto p-8 pt-4 min-h-0">
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {products.map((product) => (
+              {isLoadingProducts ? (
+                <p>메뉴를 불러오는 중입니다...</p>
+              ) : products && products.length > 0 ? (
+                products.map((product) => (
                 <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
                   {isAdminMode && (
                     <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                      <Button variant="destructive" size="icon" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
+                      <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
                       <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
                     </div>
                   )}
@@ -294,7 +250,10 @@ const GeneralKiosk = () => {
                     <p className="text-xl">{product.price.toLocaleString()}원</p>
                   </CardContent>
                 </Card>
-              ))}
+                ))
+              ) : (
+                <p>등록된 메뉴가 없습니다.</p>
+              )}
             </div>
           </main>
           <footer className="bg-gray-50 p-8 border-t flex-shrink-0">
@@ -316,7 +275,7 @@ const GeneralKiosk = () => {
               ))}
             </div>
             <div className="flex justify-between items-center">
-              <div className="font-bold text-4xl">
+              <div className="font-bold text-3xl">
                 <span>{orderType === 'dine-in' ? '[매장]' : '[포장]'}</span>
                 <span> 총 {totalAmount.toLocaleString()}원</span>
               </div>
@@ -365,7 +324,7 @@ const GeneralKiosk = () => {
               <Input id="edit-price" type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
               <Label htmlFor="edit-image">이미지</Label>
               <Input id="edit-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, (url) => setEditingProduct({...editingProduct, imageUrl: url}))} />
-              {editingProduct.imageUrl && <img src={newProductImage} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
+              {editingProduct.imageUrl && <img src={editingProduct.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
             </div>
             <DialogFooter>
               <DialogClose asChild><Button onClick={handleUpdateProduct}>수정하기</Button></DialogClose>
