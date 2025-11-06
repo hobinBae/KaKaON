@@ -74,8 +74,6 @@ public class PaymentController {
                     - 승인번호: authorizationNo
                     """
     )
-    @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
     @GetMapping("/stores/{storeId}")
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
