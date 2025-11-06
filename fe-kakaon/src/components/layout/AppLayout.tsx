@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState } from "react";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
 import {
@@ -11,12 +11,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBoundStore } from "@/stores/storeStore";
+import { useMyStores } from "@/lib/hooks/useStores";
+import { useLogout } from "@/lib/hooks/useAuth";
 
 // figma_mockup의 레이아웃을 기반으로 새로운 AppLayout을 정의합니다.
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
-  const { selectedStoreId, stores, setSelectedStoreId, logout } = useBoundStore();
+  const { selectedStoreId, setSelectedStoreId } = useBoundStore();
+  const { mutate: logout } = useLogout();
+
+  // useMyStores 훅을 사용하여 API로부터 매장 목록을 가져옴
+  const { data: stores, isLoading, isError } = useMyStores();
 
   // 메뉴 아이템 배열: 아이디, 아이콘, 라벨, 경로를 포함합니다.
   const menuItems = [
@@ -92,10 +98,19 @@ export function AppLayout() {
 
         {/* 사용자 프로필 및 로그아웃 */}
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
+              <span className="text-[#3C1E1E] font-bold">김</span>
+            </div>
+            <div className="flex-1">
+              <div className="text-sm text-[#333333] font-medium">김사장님</div>
+              <div className="text-xs text-[#717182]">사장님 카페</div>
+            </div>
+          </div>
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-[#717182] hover:text-[#333333] hover:bg-[#F5F5F5]"
-            onClick={logout}
+            onClick={() => logout()}
           >
             <LogOut className="w-4 h-4" />
             로그아웃
@@ -131,11 +146,12 @@ export function AppLayout() {
                 onValueChange={(val) => setSelectedStoreId(val)}
               >
                 <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
-                  <SelectValue />
+                  <SelectValue placeholder={isLoading ? "로딩 중..." : "매장 선택"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id}>
+                  {isError && <SelectItem value="error" disabled>매장 목록을 불러올 수 없습니다.</SelectItem>}
+                  {stores && stores.map((store) => (
+                    <SelectItem key={store.storeId} value={String(store.storeId)}>
                       {store.name}
                     </SelectItem>
                   ))}
@@ -144,11 +160,14 @@ export function AppLayout() {
             )}
           </div>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <Button variant="ghost" size="icon" className="relative rounded-lg">
               <Bell className="w-5 h-5 text-[#717182]" />
               <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF4D4D] rounded-full border-2 border-white"></span>
             </Button>
+            <div className="w-8 h-8 rounded-full bg-[#FEE500] flex items-center justify-center">
+              <User className="w-4 h-4 text-[#3C1E1E]" />
+            </div>
           </div>
         </header>
 
