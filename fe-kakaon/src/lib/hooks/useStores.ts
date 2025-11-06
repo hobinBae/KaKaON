@@ -1,11 +1,29 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type { Store, StoreCreateRequest } from '@/types/api';
+import apiClient from '@/lib/apiClient';
 
-// API 함수들은 나중에 실제 구현으로 대체될 예정
-const getMyStores = async (): Promise<Store[]> => Promise.reject(new Error("API not implemented"));
-const getStoreById = async (storeId: number): Promise<Store> => Promise.reject(new Error(`API not implemented for storeId: ${storeId}`));
-const createStore = async (data: StoreCreateRequest): Promise<Store> => Promise.reject(new Error("API not implemented"));
-const deleteStore = async (storeId: number): Promise<void> => Promise.reject(new Error(`API not implemented for storeId: ${storeId}`));
+// 내 매장 목록을 가져오는 API 호출 함수
+const getMyStores = async (): Promise<Store[]> => {
+  const response = await apiClient.get('/stores');
+  return response.data.data;
+};
+
+// 특정 매장 정보를 가져오는 API 호출 함수
+const getStoreById = async (storeId: number): Promise<Store> => {
+  const response = await apiClient.get(`/stores/${storeId}`);
+  return response.data.data;
+};
+
+// 신규 매장을 생성하는 API 호출 함수
+const createStore = async (data: StoreCreateRequest): Promise<Store> => {
+  const response = await apiClient.post('/stores', data);
+  return response.data.data;
+};
+
+// 매장을 삭제하는 API 호출 함수
+const deleteStore = async (storeId: number): Promise<void> => {
+  await apiClient.delete(`/stores/${storeId}`);
+};
 
 
 const storeKeys = {
