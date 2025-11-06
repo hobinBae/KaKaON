@@ -52,6 +52,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentMapper paymentMapper;
     private final OrderRepository orderRepository;
     private final PaymentCancelRepository paymentCancelRepository;
+    private final SalesCacheService salesCacheService;
 
     @Override
     @Transactional
@@ -248,7 +249,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
-        salesCacheService.updateCancelStats(storeId, payment.getAmount(), LocalDateTime.now());
+        salesCacheService.updateCancelStats(payment.getId(), payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
     }
