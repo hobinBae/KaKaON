@@ -4,6 +4,8 @@ import com.s310.kakaon.domain.payment.dto.CancelRateAnomalyDto;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
+import com.s310.kakaon.global.dto.PageResponse;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -16,11 +18,11 @@ public interface PaymentService {
 
     PaymentResponseDto deletePayment(Long memberId, Long id);
 
-    List<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request);
+    PageResponse<PaymentResponseDto> getPaymentsByStore(Long memberId, Long storeId, PaymentSearchRequestDto request, Pageable pageable);
 
     PaymentResponseDto getPaymentById(Long memberId, Long id);
 
-    byte[] downloadPaymentsCsv(Long memberId, Long storeId);
+    byte[] downloadPaymentsCsv(Long memberId, Long storeId, PaymentSearchRequestDto request);
 
     List<CancelRateAnomalyDto> findCancelRateAnomalies();
 
