@@ -22,5 +22,8 @@ public class PaymentResponseDto {
     private Integer amount;
     private LocalDateTime approvedAt;
     private String authorizationCode;
+    private PaymentMethod paymentMethod;
+    private Boolean delivery;
+    private LocalDateTime canceledAt;
 
 }

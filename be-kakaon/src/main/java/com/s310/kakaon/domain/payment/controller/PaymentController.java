@@ -7,17 +7,20 @@ import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
+import com.s310.kakaon.global.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -71,16 +74,17 @@ public class PaymentController {
                     - 승인번호: authorizationNo
                     """
     )
-    @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<List<PaymentResponseDto>>> getPaymentsByStore(
+    @GetMapping("/stores/{storeId}")
+    public ResponseEntity<ApiResponse<PageResponse<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
-            @RequestBody PaymentSearchRequestDto request,
+            @ModelAttribute PaymentSearchRequestDto request,
+            Pageable pageable,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        List<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request);
+        PageResponse<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request, pageable);
 
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 결제내역 조회 성공", response, httpRequest.getRequestURI()));
@@ -117,11 +121,12 @@ public class PaymentController {
     @GetMapping("/stores/{storeId}/export")
     public ResponseEntity<byte[]> downloadPaymentsCsv(
             @AuthenticationPrincipal String kakaoId,
+            @ModelAttribute PaymentSearchRequestDto request,
             @PathVariable Long storeId
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
 
-        byte[] csvData = paymentService.downloadPaymentsCsv(memberId, storeId);
+        byte[] csvData = paymentService.downloadPaymentsCsv(memberId, storeId, request);
 
         // 파일명 생성 (현재 시간 포함)
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -135,6 +140,34 @@ public class PaymentController {
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(csvData);
+    }
+
+    @PostMapping("/stores/{storeId}/upload")
+    public ResponseEntity<ApiResponse<String>> uploadPaymentsCsv(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            @RequestParam("file") MultipartFile file,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        // 파일 검증
+        if (file.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.of(HttpStatus.BAD_REQUEST, "파일이 비어있습니다.", null, httpRequest.getRequestURI()));
+        }
+
+        // 파일 형식 검증
+        String filename = file.getOriginalFilename();
+        if (filename == null || !filename.toLowerCase().endsWith(".csv")) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.of(HttpStatus.BAD_REQUEST, "CSV 파일만 업로드 가능합니다.", null, httpRequest.getRequestURI()));
+        }
+
+        paymentService.uploadPaymentsFromCsv(file, storeId, memberId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 CSV 업로드 성공", "CSV 파일 업로드가 완료되었습니다.", httpRequest.getRequestURI()));
     }
 
 }

@@ -78,3 +78,6 @@ application.yml
 
 # Claude Code documentation
 CLAUDE.md
+
+# QueryDSL generated files
+src/main/generated
