@@ -11,8 +11,7 @@ import Analytics from "@/pages/Analytics";
 import Alerts from "@/pages/Alerts";
 import StoreManage from "@/pages/StoreManage";
 import Settings from "@/pages/Settings";
-import Login from "@/pages/Login";
-import AdditionalInfo from "@/pages/AdditionalInfo";
+import LoginCallback from "@/pages/LoginCallback";
 import Pos from "@/pages/Pos";
 import KioskLanding from "@/pages/KioskLanding";
 import FrontKiosk from "@/pages/FrontKiosk";
@@ -26,8 +25,8 @@ const queryClient = new QueryClient();
 // 로그인이 필요한 라우트를 감싸는 PrivateRoute 컴포넌트입니다.
 const PrivateRoute = () => {
   const isLoggedIn = useBoundStore((state) => state.isLoggedIn);
-  // 로그인 상태이면 자식 라우트(Outlet)를, 아니면 /login으로 리다이렉트합니다.
-  return isLoggedIn ? <Outlet /> : <Navigate to="/login" />;
+  // 로그인 상태이면 자식 라우트(Outlet)를, 아니면 인트로 페이지('/')로 리다이렉트합니다.
+  return isLoggedIn ? <Outlet /> : <Navigate to="/" />;
 };
 
 const router = createBrowserRouter([
@@ -36,12 +35,8 @@ const router = createBrowserRouter([
     element: <Intro />,
   },
   {
-    path: "/login",
-    element: <Login />,
-  },
-  {
-    path: "/additional-info",
-    element: <AdditionalInfo />,
+    path: "/auth/callback",
+    element: <LoginCallback />,
   },
   {
     path: "/pos",

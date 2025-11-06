@@ -23,6 +23,9 @@ public class PaymentMapper {
                 .amount(payment.getAmount())
                 .approvedAt(payment.getApprovedAt())
                 .authorizationCode(payment.getAuthorizationNo())
+                .paymentMethod(payment.getPaymentMethod())
+                .canceledAt(payment.getCanceledAt())
+                .delivery(payment.getDelivery())
                 .build();
     }
 

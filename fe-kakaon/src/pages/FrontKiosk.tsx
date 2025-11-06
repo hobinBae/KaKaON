@@ -16,28 +16,26 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBoundStore } from '@/stores/storeStore';
+import { useMyStores } from '@/lib/hooks/useStores';
+import { useMenus } from '@/lib/hooks/useMenus';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AdminPinModal from '@/components/AdminPinModal';
 
 const FrontKiosk = () => {
   const {
-    stores,
     selectedStoreId,
     setSelectedStoreId,
-    addTransaction,
     cart,
     addToCart,
     updateQuantity,
-    removeFromCart,
     clearCart,
-    addProduct,
-    updateProduct,
-    deleteProduct,
   } = useBoundStore();
 
-  const [products, setProducts] = useState([]);
-  const [orderType, setOrderType] = useState(null);
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
+  const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+
+  const [orderType, setOrderType] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(false);
   const [isCartExpanded, setIsCartExpanded] = useState(false);
   const [newProductName, setNewProductName] = useState('');
@@ -50,11 +48,10 @@ const FrontKiosk = () => {
   const [countdown, setCountdown] = useState(3);
 
   useEffect(() => {
-    const currentStore = stores.find(store => store.id === selectedStoreId);
-    if (currentStore) {
-      setProducts(currentStore.products);
+    if (!selectedStoreId && stores && stores.length > 0) {
+      setSelectedStoreId(String(stores[0].storeId));
     }
-  }, [selectedStoreId, stores]);
+  }, [stores, selectedStoreId, setSelectedStoreId]);
 
   useEffect(() => {
     if (isPaymentComplete) {
@@ -77,7 +74,8 @@ const FrontKiosk = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handlePayment = () => {
-    addTransaction({
+    // TODO: addTransaction API 연동 필요
+    console.log('Payment processing:', {
       items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
       total: totalAmount,
       orderType,
@@ -103,8 +101,9 @@ const FrontKiosk = () => {
   };
 
   const handleAddProduct = () => {
+    // TODO: addProduct API 연동 필요
     if (newProductName && newProductPrice) {
-      addProduct({
+      console.log('Adding product:', {
         name: newProductName,
         price: parseInt(newProductPrice.replace(/,/g, ''), 10),
         category: '전체',
@@ -117,11 +116,17 @@ const FrontKiosk = () => {
   };
 
   const handleUpdateProduct = () => {
+    // TODO: updateProduct API 연동 필요
     if (editingProduct) {
-      updateProduct(editingProduct);
+      console.log('Updating product:', editingProduct);
       setEditingProduct(null);
     }
   };
+
+  const handleDeleteProduct = (productId: number) => {
+    // TODO: deleteProduct API 연동 필요
+    console.log('Deleting product:', productId);
+  }
 
   if (isPaymentComplete) {
     return (
@@ -165,11 +170,11 @@ const FrontKiosk = () => {
             {isAdminMode ? (
                <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
                 <SelectTrigger className="w-[220px] text-xl" style={{ height: '3rem' }}>
-                  <SelectValue placeholder="가맹점 선택" />
+                  <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "가맹점 선택"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores.map((store) => (
-                    <SelectItem key={store.id} value={store.id} className="text-lg">{store.name}</SelectItem>
+                  {stores?.map((store) => (
+                    <SelectItem key={store.storeId} value={String(store.storeId)} className="text-lg">{store.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -192,7 +197,7 @@ const FrontKiosk = () => {
                         <Label htmlFor="name">상품명</Label>
                         <Input id="name" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} />
                         <Label htmlFor="price">가격</Label>
-                        <Input id="price" type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} />
+                        <Input id="price" type="text" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} />
                         <Label htmlFor="image">이미지</Label>
                         <Input id="image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setNewProductImage)} />
                         {newProductImage && <img src={newProductImage} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
@@ -224,25 +229,31 @@ const FrontKiosk = () => {
           </header>
           <main className="flex-1 overflow-y-auto">
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
-              {products.map((product) => (
-                <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
-                  {isAdminMode && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                      <Button variant="destructive" size="icon" onClick={() => deleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                      <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
-                    </div>
-                  )}
-                  <CardContent className="p-4 text-center">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-28 object-cover mb-4 rounded-lg" />
-                    ) : (
-                      <div className="bg-gray-200 h-28 mb-4 rounded-lg"></div>
+              {isLoadingProducts ? (
+                <p>메뉴를 불러오는 중입니다...</p>
+              ) : products && products.length > 0 ? (
+                products.map((product) => (
+                  <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
+                    {isAdminMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                        <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
+                        <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
+                      </div>
                     )}
-                    <p className="text-3xl font-semibold">{product.name}</p>
-                    <p className="text-2xl">{product.price.toLocaleString()}원</p>
-                  </CardContent>
-                </Card>
-              ))}
+                    <CardContent className="p-4 text-center">
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} className="w-full h-28 object-cover mb-4 rounded-lg" />
+                      ) : (
+                        <div className="bg-gray-200 h-28 mb-4 rounded-lg"></div>
+                      )}
+                      <p className="text-3xl font-semibold">{product.name}</p>
+                      <p className="text-2xl">{product.price.toLocaleString()}원</p>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <p>등록된 메뉴가 없습니다.</p>
+              )}
             </div>
           </main>
           <footer className="p-4 mt-auto border-t bg-white sticky bottom-0">
@@ -339,7 +350,7 @@ const FrontKiosk = () => {
               <Input id="edit-price" type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
               <Label htmlFor="edit-image">이미지</Label>
               <Input id="edit-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, (url) => setEditingProduct({...editingProduct, imageUrl: url}))} />
-              {editingProduct.imageUrl && <img src={newProductImage} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
+              {editingProduct.imageUrl && <img src={editingProduct.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
             </div>
             <DialogFooter>
               <DialogClose asChild><Button onClick={handleUpdateProduct}>수정하기</Button></DialogClose>
