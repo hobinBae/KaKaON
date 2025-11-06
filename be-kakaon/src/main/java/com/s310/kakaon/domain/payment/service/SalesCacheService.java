@@ -1,7 +1,11 @@
 package com.s310.kakaon.domain.payment.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @Service
 @RequiredArgsConstructor
@@ -14,7 +18,7 @@ public class SalesCacheService {
     private static final String COUNT_PAYMENT_KEY = "sales:count:payment:%d:%s";
     private static final String COUNT_CANCEL_KEY = "sales:count:cancel:%d:%s";
 
-    public void updatePaymentStats(Long storeId, BigDecimal amount, LocalDateTime now) {
+    public void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now) {
         String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int hour = now.getHour();
 
@@ -23,10 +27,10 @@ public class SalesCacheService {
         redisTemplate.opsForValue().increment(String.format(COUNT_PAYMENT_KEY, storeId, date));
     }
 
-    public void updateCancelStats(Long storeId, BigDecimal amount, LocalDateTime now) {
+    public void updateCancelStats(Long paymentId, Integer amount, LocalDateTime now) {
         String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
-        redisTemplate.opsForValue().increment(String.format(COUNT_CANCEL_KEY, storeId, date));
-        redisTemplate.opsForValue().increment(String.format(SUM_KEY, storeId, date), -amount.doubleValue());
+        redisTemplate.opsForValue().increment(String.format(COUNT_CANCEL_KEY, paymentId, date));
+        redisTemplate.opsForValue().increment(String.format(SUM_KEY, paymentId, date), -amount.doubleValue());
     }
 }
