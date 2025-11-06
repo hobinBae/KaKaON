@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import logoImg from "@/assets/logo.png";
 import { useBoundStore } from '@/stores/storeStore';
-import { useLogout } from '@/lib/hooks/useAuth';
+import { useLogout } from '@/auth/hooks/useAuth';
 
 export default function IntroHeader() {
   const { isLoggedIn } = useBoundStore();
