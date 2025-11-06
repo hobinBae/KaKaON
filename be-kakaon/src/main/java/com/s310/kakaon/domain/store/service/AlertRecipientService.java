@@ -4,7 +4,7 @@ import com.s310.kakaon.domain.store.dto.AlertRecipientCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
 
-public interface AlertService {
+public interface AlertRecipientService {
     AlertRecipientResponseDto registerAlert(Long storeId, Long memberId, AlertRecipientCreateRequestDto request);
 
     void deleteAlert(Long storeId, Long memberId, Long id);

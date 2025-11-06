@@ -67,4 +67,8 @@ public class Alert extends BaseEntity {
         this.checked = true;
         this.checkedAt = LocalDateTime.now();
     }
+
+    public void updateEmailSent(){
+        this.emailSent = true;
+    }
 }

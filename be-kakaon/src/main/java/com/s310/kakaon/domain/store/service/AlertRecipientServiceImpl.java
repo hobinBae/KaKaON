@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AlertServiceImpl implements AlertService{
+public class AlertRecipientServiceImpl implements AlertRecipientService {
 
     private final AlertRecipientRepository alertRepository;
     private final StoreRepository storeRepository;
