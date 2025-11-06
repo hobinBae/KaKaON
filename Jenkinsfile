@@ -299,6 +299,21 @@ pipeline {
     
     post {
         success {
+            mattermostSend (
+                color: "good",
+                channel: "5to0",
+                username: "kakaon-jenkins-bot",
+                message: """
+✅ **배포 성공**
+**브랜치:** ${env.GIT_BRANCH}
+**커밋:** ${commitHash} — ${commitMessage}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+                """.stripIndent()
+            )
+
             script {
                 echo '===================================================='
                 echo '✅배포 성공!'
@@ -323,6 +338,21 @@ pipeline {
         }
         
         failure {
+            mattermostSend (
+                color: "danger",
+                channel: "5to0",
+                username: "kakaon-jenkins-bot",
+                message: """
+❌ **배포 실패**
+**프로젝트:** ${env.JOB_NAME}
+**브랜치:** ${env.GIT_BRANCH}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+⚠️ 로그 확인 필요.
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+            """.stripIndent()
+            )
             script {
                 echo '===================================================='
                 echo '❌배포 실패!'
