@@ -1,3 +1,13 @@
+// ===== 트리거 사용자명 계산 함수 =====
+def resolveTriggeredBy = {
+    def glUser = (env.gitlabUserName ?: env.gitlab_user_name ?: env.GITLAB_USER_NAME)
+    if (glUser && glUser.trim()) {
+        return glUser.trim()
+    }
+    return sh(script: "cd ${env.DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
+}
+
+
 pipeline {
     agent any
     
@@ -7,15 +17,6 @@ pipeline {
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
-    }
-
-    // ===== 트리거 사용자명 계산 함수 =====
-    def resolveTriggeredBy = {
-        def glUser = (env.gitlabUserName ?: env.gitlab_user_name ?: env.GITLAB_USER_NAME)
-        if (glUser && glUser.trim()) {
-            return glUser.trim()
-        }
-        return sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
     }
     
     stages {
