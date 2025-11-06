@@ -80,86 +80,25 @@ public class OrderController {
     /** 주문 목록 조회 (최근 7일) */
     @GetMapping
     public ResponseEntity<ApiResponse<OrderListResponseDto>> getOrders(
+            @AuthenticationPrincipal String kakaoId,
             @RequestParam(name = "storeId") Long storeId,
-            @RequestParam(name = "today") String today,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "10") int size,
-            @RequestParam(name = "status", required = false) OrderStatus status,
-            @RequestParam(name = "paymentMethod", required = false) PaymentMethod paymentMethod,
-            @RequestParam(name = "orderType", required = false) OrderType orderType,
+            @RequestParam(name = "status", required = false) String status,
+            @RequestParam(name = "paymentMethod", required = false) String paymentMethod,
+            @RequestParam(name = "orderType", required = false) String orderType,
             HttpServletRequest httpRequest
     ) {
-
-        // Dummy data 생성
-        List<OrderItemResponseDto> itemList = List.of(
-                OrderItemResponseDto.builder()
-                        .orderItemId(1L)
-                        .menuId(501L)
-                        .menuName("아메리카노")
-                        .price(3000)
-                        .imgUrl("https://cdn.example.com/menu/ame.jpg")
-                        .quantity(2)
-                        .totalPrice(6000)
-                        .createdAt("2025-10-20T03:00:00+09:00")
-                        .updatedAt("2025-10-20T03:02:00+09:00")
-                        .deletedAt(null)
-                        .build(),
-                OrderItemResponseDto.builder()
-                        .orderItemId(2L)
-                        .menuId(502L)
-                        .menuName("카페라떼")
-                        .price(4500)
-                        .imgUrl("https://cdn.example.com/menu/latte.jpg")
-                        .quantity(1)
-                        .totalPrice(4500)
-                        .createdAt("2025-10-20T03:00:00+09:00")
-                        .updatedAt("2025-10-20T03:02:00+09:00")
-                        .deletedAt(null)
-                        .build()
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        OrderListResponseDto response = orderService.getRecentOrderList(
+                memberId,
+                storeId,
+                page,
+                size,
+                status,
+                paymentMethod,
+                orderType
         );
-
-        List<OrderListResponseDto.OrderSummary> orderList = List.of(
-                OrderListResponseDto.OrderSummary.builder()
-                        .orderId(9001L)
-                        .storeId(storeId)
-                        .storeName("강남점")
-                        .status(OrderStatus.PAID)
-                        .orderType(OrderType.STORE)
-                        .paymentMethod(PaymentMethod.CARD)
-                        .totalAmount(10500)
-                        .paidAmount(10500)
-                        .refundedAmount(0)
-                        .createdAt("2025-10-20T03:00:00+09:00")
-                        .updatedAt("2025-10-20T03:02:00+09:00")
-                        .deletedAt(null)
-                        .itemsCount(3)
-                        .items(itemList)
-                        .build(),
-                OrderListResponseDto.OrderSummary.builder()
-                        .orderId(9002L)
-                        .storeId(storeId)
-                        .storeName("강남점")
-                        .status(OrderStatus.PAID)
-                        .orderType(OrderType.DELIVERY)
-                        .paymentMethod(PaymentMethod.KAKAOPAY)
-                        .totalAmount(9800)
-                        .paidAmount(9800)
-                        .refundedAmount(0)
-                        .createdAt("2025-10-21T04:00:00+09:00")
-                        .updatedAt("2025-10-21T04:05:00+09:00")
-                        .deletedAt(null)
-                        .itemsCount(2)
-                        .items(itemList)
-                        .build()
-        );
-
-        OrderListResponseDto response = OrderListResponseDto.builder()
-                .content(orderList)
-                .page(page)
-                .size(size)
-                .totalElements(124)
-                .totalPages(7)
-                .build();
 
         return ResponseEntity.ok(ApiResponse.of(
                 HttpStatus.OK,
