@@ -344,9 +344,21 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Override
     @Transactional(readOnly = true)
-    public List<CancelRateAnomalyDto> findCancelRateAnomalies() {
-
-        return List.of();
+    public List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies() {
+        List<CancelRateAnomalyDto> results = paymentCancelRepository.getWeeklyCancelStats();
+        return results.stream()
+                .map(r -> {
+                    double increase = r.getThisWeekCancelRate() - r.getLastWeekCancelRate();
+                    return CancelRateAnomalyDto.builder()
+                            .storeId(r.getStoreId())
+                            .storeName(r.getStoreName())
+                            .lastWeekCancelRate(r.getLastWeekCancelRate())
+                            .thisWeekCancelRate(r.getThisWeekCancelRate())
+                            .increasePercent(increase)
+                            .build();
+                })
+                .filter(dto -> dto.getIncreasePercent() >= 20.0)
+                .toList();
     }
 
     private String escapeCsvField(String field) {

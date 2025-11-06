@@ -8,7 +8,7 @@ import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
 import com.s310.kakaon.domain.store.entity.AlertRecipient;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.mapper.AlertMapper;
-import com.s310.kakaon.domain.store.repository.AlertRepository;
+import com.s310.kakaon.domain.store.repository.AlertRecipientRepository;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Slf4j
 public class AlertServiceImpl implements AlertService{
 
-    private final AlertRepository alertRepository;
+    private final AlertRecipientRepository alertRepository;
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
     private final AlertMapper alertMapper;

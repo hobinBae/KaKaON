@@ -24,6 +24,6 @@ public interface PaymentService {
 
     byte[] downloadPaymentsCsv(Long memberId, Long storeId, PaymentSearchRequestDto request);
 
-    List<CancelRateAnomalyDto> findCancelRateAnomalies();
+    List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies();
 
 }

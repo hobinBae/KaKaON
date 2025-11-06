@@ -12,7 +12,11 @@ import lombok.NoArgsConstructor;
 public class CancelRateAnomalyDto {
     private Long storeId;
     private String storeName;
-    private Double lastWeekRate;
-    private Double thisWeekRate;
-//    private Double increasePercent;
+    private Double lastWeekCancelRate;
+    private Double thisWeekCancelRate;
+    private Double increasePercent;
+
+    public CancelRateAnomalyDto(Long storeId, String storeName, Double lastWeekCancelRate, Double thisWeekCancelRate){
+        this(storeId, storeName, lastWeekCancelRate, thisWeekCancelRate, null);
+    }
 }
