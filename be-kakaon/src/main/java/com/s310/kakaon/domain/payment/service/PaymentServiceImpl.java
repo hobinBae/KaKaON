@@ -81,6 +81,9 @@ public class PaymentServiceImpl implements PaymentService{
 
         paymentRepository.save(payment);
 
+        // ✅ Redis 통계 즉시 반영
+//        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
+
         return paymentMapper.fromEntity(payment);
     }
 
@@ -246,6 +249,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
+//        salesCacheService.updateCancelStats(storeId, payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
     }
@@ -279,7 +283,7 @@ public class PaymentServiceImpl implements PaymentService{
         Payment payment = paymentRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
-        return paymentMapper.fromEntity (payment);
+        return paymentMapper.fromEntity(payment);
     }
 
     public String generateAuthorizationNo(){
@@ -313,20 +317,20 @@ public class PaymentServiceImpl implements PaymentService{
             baos.write(0xBF);
 
             // CSV 헤더
-            writer.println("결제ID,매장명,주문ID,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시,생성일시,수정일시");
+            writer.println("결제ID,매장명,주문ID,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시");
 
             // CSV 데이터
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             for (PaymentResponseDto payment : paymentDtos) {
-                writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s,%s,%s%n",
+                writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s%n",
                         payment.getPaymentId(),
                         escapeCsvField(store.getName()),
                         payment.getOrderId(),
                         escapeCsvField(payment.getAuthorizationCode()),
                         payment.getAmount(),
-                        payment.getPaymentMethod().name(),
-                        payment.getStatus().name(),
-                        payment.getDelivery() ? "배달" : "포장",
+                        payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "",
+                        payment.getStatus() != null ? payment.getStatus().name() : "",
+                        payment.getDelivery() != null && payment.getDelivery() ? "배달" : "포장",
                         payment.getApprovedAt() != null ? payment.getApprovedAt().format(formatter) : "",
                         payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : ""
 

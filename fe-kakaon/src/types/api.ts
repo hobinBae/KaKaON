@@ -61,4 +61,28 @@ export interface StoreCreateRequest {
   businessHours: BusinessHour[];
 }
 
+// ================== Menu ==================
+export interface Menu {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  imageUrl?: string;
+}
+
+// ================== Cart ==================
+export type CartItem = Menu & { quantity: number };
+
+// ================== Transaction ==================
+export type Transaction = {
+  id: string;
+  items: { name: string; quantity: number; price: number }[];
+  total: number;
+  date: string;
+  storeId: string;
+  orderType: string;
+  paymentMethod: string;
+  status: 'completed' | 'cancelled';
+};
+
 // 다른 도메인(Order, Menu 등)의 타입도 여기에 추가할 수 있음
