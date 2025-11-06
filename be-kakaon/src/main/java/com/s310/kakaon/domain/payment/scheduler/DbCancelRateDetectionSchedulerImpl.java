@@ -25,19 +25,13 @@ public class DbCancelRateDetectionSchedulerImpl implements CancelRateDetectionSc
 
     @Override
 //    @Scheduled(cron = "0 0 * * * *")
-    @Scheduled(cron = "0 * * * * *") // ✅ 매 분 0초마다
+    @Scheduled(cron = "0 * * * * *") //  매 분 0초마다 xptmxm
     public void detectCancelRateIncrease() {
         log.info("[Batch] 최근 1시간 취소율 이상 탐지 시작");
 
         List<CancelRateAnomalyDto> anomalies = paymentService.findHourlyCancelRateAnomalies();
 
         for (CancelRateAnomalyDto anomaly : anomalies) {
-            // null 방어 (래퍼 타입이면 특히 중요)
-            double lastWeek = anomaly.getLastWeekCancelRate() == null ? 0.0 : anomaly.getLastWeekCancelRate();
-            double thisWeek = anomaly.getThisWeekCancelRate() == null ? 0.0 : anomaly.getThisWeekCancelRate();
-            double increase = anomaly.getIncreasePercent() == null
-                    ? (thisWeek - lastWeek)
-                    : anomaly.getIncreasePercent();
 
             LocalDateTime now = LocalDateTime.now();
             LocalDateTime oneHourAgo = now.minusHours(1);
