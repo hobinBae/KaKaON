@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
-import { useLogout } from "@/lib/hooks/useAuth";
+import { useLogout } from "@/auth/hooks/useAuth";
 
 // figma_mockup의 레이아웃을 기반으로 새로운 AppLayout을 정의합니다.
 export function AppLayout() {
