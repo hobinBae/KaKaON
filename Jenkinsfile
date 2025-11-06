@@ -299,11 +299,15 @@ pipeline {
     
     post {
         success {
-            mattermostSend (
-                color: "good",
-                channel: "5to0",
-                username: "kakaon-jenkins-bot",
-                message: """
+            script {
+                
+                def commitMessage = sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%s", returnStdout: true).trim()
+                def commitHash    = sh(script: "cd ${DEPLOY_PATH} && git rev-parse --short HEAD", returnStdout: true).trim()
+                def triggeredBy   = currentBuild.getBuildCauses()[0]?.userName ?: "Jenkins"
+                mattermostSend(
+                    color: "good",
+                    channel: "kakaon-jenkins-bot@5to0",
+                    message: """
 ✅ **배포 성공**
 **브랜치:** ${env.GIT_BRANCH}
 **커밋:** ${commitHash} — ${commitMessage}
@@ -311,10 +315,9 @@ pipeline {
 **빌드 번호:** #${env.BUILD_NUMBER}
 **걸린 시간:** ${currentBuild.durationString}
 🔗 <${env.BUILD_URL}|빌드 상세보기>
-                """.stripIndent()
-            )
+""".stripIndent()
+      )
 
-            script {
                 echo '===================================================='
                 echo '✅배포 성공!'
                 echo '===================================================='
@@ -338,11 +341,12 @@ pipeline {
         }
         
         failure {
-            mattermostSend (
-                color: "danger",
-                channel: "5to0",
-                username: "kakaon-jenkins-bot",
-                message: """
+            script {
+                def triggeredBy = currentBuild.getBuildCauses()[0]?.userName ?: "Jenkins"
+                mattermostSend(
+                    color: "danger",
+                    channel: "kakaon-jenkins-bot@5to0",
+                    message: """
 ❌ **배포 실패**
 **프로젝트:** ${env.JOB_NAME}
 **브랜치:** ${env.GIT_BRANCH}
@@ -351,9 +355,9 @@ pipeline {
 **걸린 시간:** ${currentBuild.durationString}
 ⚠️ 로그 확인 필요.
 🔗 <${env.BUILD_URL}|빌드 상세보기>
-            """.stripIndent()
-            )
-            script {
+""".stripIndent()
+      )
+
                 echo '===================================================='
                 echo '❌배포 실패!'
                 echo '===================================================='
