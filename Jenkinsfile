@@ -8,6 +8,15 @@ pipeline {
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
     }
+
+    // ===== 트리거 사용자명 계산 함수 =====
+    def resolveTriggeredBy = {
+        def glUser = (env.gitlabUserName ?: env.gitlab_user_name ?: env.GITLAB_USER_NAME)
+        if (glUser && glUser.trim()) {
+            return glUser.trim()
+        }
+        return sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
+    }
     
     stages {
         stage('배포 시작') {
@@ -303,10 +312,10 @@ pipeline {
                 
                 def commitMessage = sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%s", returnStdout: true).trim()
                 def commitHash    = sh(script: "cd ${DEPLOY_PATH} && git rev-parse --short HEAD", returnStdout: true).trim()
-                def triggeredBy   = currentBuild.getBuildCauses()[0]?.userName ?: "Jenkins"
+                def triggeredBy   = resolveTriggeredBy()
                 mattermostSend(
                     color: "good",
-                    channel: "kakaon-jenkins-bot@5to0",
+                    channel: "5to0",
                     message: """
 ✅ **배포 성공**
 **브랜치:** ${env.GIT_BRANCH}
@@ -342,10 +351,10 @@ pipeline {
         
         failure {
             script {
-                def triggeredBy = currentBuild.getBuildCauses()[0]?.userName ?: "Jenkins"
+                def triggeredBy = resolveTriggeredBy()
                 mattermostSend(
                     color: "danger",
-                    channel: "kakaon-jenkins-bot@5to0",
+                    channel: "5to0",
                     message: """
 ❌ **배포 실패**
 **프로젝트:** ${env.JOB_NAME}
