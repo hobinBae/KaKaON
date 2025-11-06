@@ -69,7 +69,7 @@ public class MenuController {
             @Validated(MenuValidationGroups.Create.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-        MenuSummaryResponseDto responseDto = menuService.create(memberId, req, storeId);
+        MenuSummaryResponseDto responseDto = menuService.create(storeId, req, memberId);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.CREATED, "메뉴 생성이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
     }
 
