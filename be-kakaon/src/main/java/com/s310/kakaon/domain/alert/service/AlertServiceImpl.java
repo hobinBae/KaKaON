@@ -56,7 +56,9 @@ public class AlertServiceImpl implements AlertService{
 
         if(!alertRecipients.isEmpty()){
             for (AlertRecipient alertRecipient : alertRecipients) {
-                mailService.sendAlertMail(alertRecipient.getEmail(), subject, text);
+                if(alertRecipient.getActive()){
+                    mailService.sendAlertMail(alertRecipient.getEmail(), subject, text);
+                }
             }
         }
 
