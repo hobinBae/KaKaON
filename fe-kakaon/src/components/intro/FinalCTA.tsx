@@ -3,8 +3,7 @@ import Section from './Section';
 
 export default function FinalCTA() {
   const handleLogin = () => {
-    const backendUrl = (import.meta.env.VITE_API_BASE_URL || '').replace('/api/v1', '');
-    const url = `${backendUrl}/oauth2/authorization/kakao`;
+    const url = import.meta.env.VITE_OAUTH2_AUTHORIZE ;
     const width = 500;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;

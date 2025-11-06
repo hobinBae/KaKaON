@@ -70,8 +70,7 @@ export default function Hero() {
   const subtitleLine2 = "사장님은 비즈니스 성장에만 집중할 수 있도록 카카온이 돕겠습니다.";
 
   const handleLogin = () => {
-    const backendUrl = (import.meta.env.VITE_OAUTH2_AUTHORIZE || '').replace('/api/v1', '');
-    const url = `${backendUrl}/oauth2/authorization/kakao`;
+    const url = import.meta.env.VITE_OAUTH2_AUTHORIZE ;
     const width = 500;
     const height = 700;
     const left = window.screen.width / 2 - width / 2;

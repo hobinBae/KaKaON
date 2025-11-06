@@ -10,8 +10,6 @@ export default function IntroHeader() {
 
   const handleLogin = () => {
     // 카카오 로그인 페이지를 팝업으로 열도록 수정했음
-    // const backendUrl = (import.meta.env.VITE_API_BASE_URL || '').replace('/api/v1', '');
-    // const url = `${backendUrl}/oauth2/authorization/kakao`;
     const url = import.meta.env.VITE_OAUTH2_AUTHORIZE ;
     const width = 500;
     const height = 700;
@@ -40,9 +38,6 @@ export default function IntroHeader() {
             <>
               <Button variant="ghost" onClick={handleLogin}>
                 로그인
-              </Button>
-              <Button onClick={handleLogin} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90">
-                무료로 시작하기
               </Button>
             </>
           )}
