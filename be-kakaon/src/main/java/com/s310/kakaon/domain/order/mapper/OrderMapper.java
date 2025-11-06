@@ -35,7 +35,6 @@ public class OrderMapper {
        Orders order =  Orders.builder()
                 .store(store)
                 .totalAmount(request.getTotalAmount())
-                .paidAmount(request.getTotalAmount())
                 .build();
 
         for ( OrderRequestDto.OrderItemCreateRequestDto dto: request.getItems()) {
