@@ -32,9 +32,10 @@ public class OrderMapper {
     }
 
     public Orders toEntity(Store store, OrderRequestDto request){
-       Orders order =  Orders.builder()
+        Orders order = Orders.builder()
                 .store(store)
                 .totalAmount(request.getTotalAmount())
+                .paidAmount(0)
                 .build();
 
         for ( OrderRequestDto.OrderItemCreateRequestDto dto: request.getItems()) {
