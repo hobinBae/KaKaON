@@ -140,7 +140,12 @@ export default function StoreManage() {
   });
 
   const handleStoreClick = (store: Store) => {
-    setSelectedStore(store);
+    // 같은 가맹점을 클릭하면 닫기, 다른 가맹점을 클릭하면 열기
+    if (selectedStore?.storeId === store.storeId) {
+      setSelectedStore(null);
+    } else {
+      setSelectedStore(store);
+    }
   };
 
   const handleDeleteRecipient = (id: number) => {
@@ -296,291 +301,296 @@ export default function StoreManage() {
             </TableHeader>
             <TableBody>
               {stores.map((store) => (
-                <TableRow
-                  key={store.storeId}
-                  className="border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer"
-                  onClick={() => handleStoreClick(store)}
-                >
-                  <TableCell className="pl-6">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <Star className="w-4 h-4 text-[#717182]" />
-                        <span className="text-sm text-[#333333]">{store.name}</span>
+                <>
+                  <TableRow
+                    key={store.storeId}
+                    className={`border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer ${
+                      selectedStore?.storeId === store.storeId ? 'bg-[#FFFAE6]' : ''
+                    }`}
+                    onClick={() => handleStoreClick(store)}
+                  >
+                    <TableCell className="pl-6">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <Star className="w-4 h-4 text-[#717182]" />
+                          <span className="text-sm text-[#333333]">{store.name}</span>
+                        </div>
                       </div>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <div>
-                      <p className="text-sm text-[#333333]">
-                        ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
-                      </p>
-                      {store.changeRate !== undefined && (
-                        <div
-                          className={`flex items-center gap-1 text-xs justify-center ${
-                            store.changeRate > 0
-                              ? "text-[#4CAF50]"
-                              : "text-[#FF4D4D]"
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <div>
+                        <p className="text-sm text-[#333333]">
+                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
+                        </p>
+                        {store.changeRate !== undefined && (
+                          <div
+                            className={`flex items-center gap-1 text-xs justify-center ${
+                              store.changeRate > 0
+                                ? "text-[#4CAF50]"
+                                : "text-[#FF4D4D]"
+                            }`}
+                          >
+                            {store.changeRate > 0 ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            <span>{Math.abs(store.changeRate)}%</span>
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {store.cancelRate !== undefined ? (
+                        <Badge
+                          variant="outline"
+                          className={`rounded ${
+                            store.cancelRate > 3.5
+                              ? "border-[#FF4D4D] text-[#FF4D4D]"
+                              : "border-[#717182] text-[#717182]"
                           }`}
                         >
-                          {store.changeRate > 0 ? (
-                            <TrendingUp className="w-3 h-3" />
-                          ) : (
-                            <TrendingDown className="w-3 h-3" />
-                          )}
-                          <span>{Math.abs(store.changeRate)}%</span>
-                        </div>
+                          {store.cancelRate}%
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-[#717182]">-</span>
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {store.cancelRate !== undefined ? (
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(store.alertCount ?? 0) > 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="rounded"
+                        >
+                          {store.alertCount}건
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-[#717182]">없음</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
                       <Badge
-                        variant="outline"
                         className={`rounded ${
-                          store.cancelRate > 3.5
-                            ? "border-[#FF4D4D] text-[#FF4D4D]"
-                            : "border-[#717182] text-[#717182]"
+                          store.status === 'OPEN'
+                            ? 'bg-[#4CAF50] text-white'
+                            : 'bg-[#717182] text-white'
                         }`}
                       >
-                        {store.cancelRate}%
+                        {store.status === 'OPEN' ? '운영중' : '마감'}
                       </Badge>
-                    ) : (
-                      <span className="text-xs text-[#717182]">-</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {(store.alertCount ?? 0) > 0 ? (
-                      <Badge
-                        variant="destructive"
-                        className="rounded"
-                      >
-                        {store.alertCount}건
-                      </Badge>
-                    ) : (
-                      <span className="text-xs text-[#717182]">없음</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    <Badge
-                      className={`rounded ${
-                        store.status === 'OPEN'
-                          ? 'bg-[#4CAF50] text-white'
-                          : 'bg-[#717182] text-white'
-                      }`}
-                    >
-                      {store.status === 'OPEN' ? '운영중' : '마감'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="w-[200px]">
-                    <div className="flex items-center gap-2">
-                      <div className="w-full h-2.5 relative">
-                        <div
-                          className="bg-[#FFB800] h-2.5"
-                          style={{ width: `${maxSales > 0 ? (getSalesData(store, selectedPeriod) / maxSales) * 100 : 0}%` }}
-                        ></div>
+                    </TableCell>
+                    <TableCell className="w-[200px]">
+                      <div className="flex items-center gap-2">
+                        <div className="w-full h-2.5 relative">
+                          <div
+                            className="bg-[#FFB800] h-2.5"
+                            style={{ width: `${maxSales > 0 ? (getSalesData(store, selectedPeriod) / maxSales) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500 w-16 text-right">
+                          {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
+                        </span>
                       </div>
-                      <span className="text-xs text-gray-500 w-16 text-right">
-                        {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex gap-2 justify-end">
-                      <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
-                        <Link to="/transactions">거래내역</Link>
-                      </Button>
-                      <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
-                        <Link to="/analytics">매출분석</Link>
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                          <Link to="/transactions">거래내역</Link>
+                        </Button>
+                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                          <Link to="/analytics">매출분석</Link>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+
+                  {/* Expanded Detail Row */}
+                  {selectedStore?.storeId === store.storeId && (
+                    <TableRow key={`${store.storeId}-detail`}>
+                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-6">
+                        <div className="space-y-6">
+                          <h4 className="text-[#333333] font-semibold">{selectedStore.name} 상세 관리</h4>
+
+                          <Tabs defaultValue="basic" className="w-full">
+                            <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
+                              <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                기본정보
+                              </TabsTrigger>
+                              <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                알림설정
+                              </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="basic" className="mt-6">
+                              <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                                    <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                                    <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-6">
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                      <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                      <Input
+                                        value={
+                                          selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
+                                          selectedStore.businessType === 'CAFE' ? '카페' :
+                                          '기타'
+                                        }
+                                        className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                                        readOnly
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                      <Input defaultValue={selectedStore.phone} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                      <Input defaultValue={selectedStore.address} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <label className="text-sm text-[#717182]">영업시간</label>
+                                      <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm">수정</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-2xl">
+                                          <DialogHeader>
+                                            <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                            <DialogDescription>
+                                              요일별 영업시간과 휴무일을 설정하세요.
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          <BusinessHoursForm />
+                                          <DialogFooter>
+                                            <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                                          </DialogFooter>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                    <div className="border rounded-lg p-4 space-y-2 bg-white">
+                                      {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
+                                        <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
+                                          <span className="font-semibold">{day}</span>
+                                          {hours.isClosed ? (
+                                            <span className="text-gray-500">휴무일</span>
+                                          ) : (
+                                            <div>
+                                              {hours.timeSlots.map((slot, index) => (
+                                                <span key={index} className="text-sm">{slot.start} - {slot.end}</span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end mt-6">
+                                <Button>수정 완료</Button>
+                              </div>
+
+                              {/* Danger Zone */}
+                              <Card className="p-6 mt-6 border-[#FF4D4D] border">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
+                                    <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                                  </div>
+                                  <Button variant="destructive" className="rounded-lg">
+                                    가맹점 삭제
+                                  </Button>
+                                </div>
+                              </Card>
+                            </TabsContent>
+
+                            <TabsContent value="alerts" className="mt-6">
+                              <div className="space-y-4">
+                                {alertRecipients.map((recipient) => (
+                                  <div key={recipient.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+                                    <div>
+                                      <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
+                                      <p className="text-xs text-[#717182]">{recipient.email}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Switch defaultChecked />
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {isAddingAlert && (
+                                <div className="p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)] space-y-4 mt-4">
+                                  <Input
+                                    placeholder="이름"
+                                    className="rounded-lg"
+                                    value={newRecipient.name}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
+                                  />
+                                  <Input
+                                    placeholder="직위"
+                                    className="rounded-lg"
+                                    value={newRecipient.position}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, position: e.target.value })}
+                                  />
+                                  <Input
+                                    type="email"
+                                    placeholder="이메일 주소"
+                                    className="rounded-lg"
+                                    value={newRecipient.email}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" onClick={() => setIsAddingAlert(false)}>취소</Button>
+                                    <Button
+                                      className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                      onClick={handleAddRecipient}
+                                    >
+                                      저장
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex justify-center mt-6">
+                                <Button
+                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                  onClick={() => setIsAddingAlert(true)}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  추가
+                                </Button>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
               ))}
             </TableBody>
           </Table>
         )}
       </Card>
-
-      {/* Store Detail Tabs */}
-      {selectedStore && (
-        <>
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4">
-              {selectedStore.name} 상세 관리
-            </h3>
-            <Tabs defaultValue="basic" className="w-full">
-              <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
-                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
-                  기본정보
-                </TabsTrigger>
-                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
-                  알림설정
-                </TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="basic" className="mt-6">
-                <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="text-sm text-[#717182] mb-2 block">상호명</label>
-                      <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                    </div>
-                    <div>
-                      <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                      <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-6">
-                      <div>
-                        <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
-                        <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                      </div>
-                      <div>
-                        <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                        <Input
-                          value={
-                            selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
-                            selectedStore.businessType === 'CAFE' ? '카페' :
-                            '기타'
-                          }
-                          className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-                          readOnly
-                        />
-                      </div>
-                      <div>
-                        <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                        <Input defaultValue={selectedStore.phone} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
-                      </div>
-                      <div>
-                        <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                        <Input defaultValue={selectedStore.address} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
-                      </div>
-                    </div>
-                    <div>
-                        <div className="flex items-center justify-between mb-2">
-                            <label className="text-sm text-[#717182]">영업시간</label>
-                            <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm">수정</Button>
-                                </DialogTrigger>
-                                <DialogContent className="max-w-2xl">
-                                    <DialogHeader>
-                                    <DialogTitle>영업시간 상세 설정</DialogTitle>
-                                    <DialogDescription>
-                                        요일별 영업시간과 휴무일을 설정하세요.
-                                    </DialogDescription>
-                                    </DialogHeader>
-                                    <BusinessHoursForm />
-                                    <DialogFooter>
-                                    <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
-                                    </DialogFooter>
-                                </DialogContent>
-                            </Dialog>
-                        </div>
-                      <div className="border rounded-lg p-4 space-y-2">
-                        {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
-                          <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
-                            <span className="font-semibold">{day}</span>
-                            {hours.isClosed ? (
-                              <span className="text-gray-500">휴무일</span>
-                            ) : (
-                              <div>
-                                {hours.timeSlots.map((slot, index) => (
-                                  <span key={index} className="text-sm">{slot.start} - {slot.end}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex justify-end mt-6">
-                    <Button>수정 완료</Button>
-                </div>
-
-                {/* Danger Zone */}
-                <Card className="p-6 mt-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
-                      <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
-                    </div>
-                    <Button variant="destructive" className="rounded-lg">
-                      가맹점 삭제
-                    </Button>
-                  </div>
-                </Card>
-              </TabsContent>
-
-              <TabsContent value="alerts" className="mt-6">
-                <div className="space-y-4">
-                  {alertRecipients.map((recipient) => (
-                    <div key={recipient.id} className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
-                      <div>
-                        <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
-                        <p className="text-xs text-[#717182]">{recipient.email}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {isAddingAlert && (
-                  <div className="p-4 bg-[#F5F5F5] rounded-lg space-y-4 mt-4">
-                    <Input
-                      placeholder="이름"
-                      className="rounded-lg"
-                      value={newRecipient.name}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
-                    />
-                    <Input
-                      placeholder="직위"
-                      className="rounded-lg"
-                      value={newRecipient.position}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, position: e.target.value })}
-                    />
-                    <Input
-                      type="email"
-                      placeholder="이메일 주소"
-                      className="rounded-lg"
-                      value={newRecipient.email}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => setIsAddingAlert(false)}>취소</Button>
-                      <Button
-                        className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
-                        onClick={handleAddRecipient}
-                      >
-                        저장
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-center mt-6">
-                  <Button
-                    className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
-                    onClick={() => setIsAddingAlert(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    추가
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-        </>
-      )}
     </div>
   );
 }
