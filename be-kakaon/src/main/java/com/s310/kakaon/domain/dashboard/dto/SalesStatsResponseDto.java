@@ -24,5 +24,8 @@ public class SalesStatsResponseDto {
     public static class HourlySales {
         private Integer hour; // 0~23
         private Integer sales; // 해당 시간대 매출액
+        private Integer paymentCount;
+        private Integer cancelCount;
+        private double cancelRate;
     }
 }
