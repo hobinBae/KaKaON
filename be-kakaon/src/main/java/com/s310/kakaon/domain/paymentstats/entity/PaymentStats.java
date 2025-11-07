@@ -12,6 +12,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
@@ -36,41 +37,41 @@ public class PaymentStats extends BaseEntity{
     @JoinColumn(name = "store_id", nullable = false)
     private Store store;
 
-    //통계 날짜는 생성 날짜를 그냥 써도 상관없지 않을까용
-//    @Column(name = "total_sales", nullable = false)
-//    private LocalDateTime statsDate;
+    //통계 날짜는 생성 날짜를 그냥 써도 상관없지 않을까용 -> 상관있음 영업종료시간이 다음날짜면??
+    @Column(name = "start_date", nullable = false)
+    private LocalDate statsDate;
 
-    @Column(name = "total_sales", precision = 14, scale = 2, nullable = false)
-    private BigDecimal totalSales;
+    @Column(name = "total_sales", nullable = false)
+    private Integer totalSales;
 
-    @Column(name = "total_cancels", precision = 14, scale = 2, nullable = false)
-    private BigDecimal totalCancels;
+    @Column(name = "total_cancel_sales", nullable = false)
+    private Integer totalCancelSales;
 
     @Builder.Default
     @Column(name = "sales_cnt", nullable = false)
     private Long salesCnt = 0L;
 
     @Builder.Default
-    @Column(name = "cancels_cnt", nullable = false)
-    private Long cancelsCnt = 0L;
+    @Column(name = "cancel_cnt", nullable = false)
+    private Long cancelCnt = 0L;
 
     @Builder.Default
-    @Column(name = "card_sales" , precision =  14, scale = 2, nullable = false)
-    private BigDecimal cardSales = BigDecimal.ZERO;
+    @Column(name = "card_sales", nullable = false)
+    private Integer cardSales = 0;
 
     @Builder.Default
-    @Column(name = "kakao_sales" , precision =  14, scale = 2, nullable = false)
-    private BigDecimal kakaoSales = BigDecimal.ZERO;
+    @Column(name = "kakao_sales", nullable = false)
+    private Integer kakaoSales = 0;
 
     @Builder.Default
-    @Column(name = "cash_sales" , precision =  14, scale = 2, nullable = false)
-    private BigDecimal cashSales = BigDecimal.ZERO;
+    @Column(name = "cash_sales", nullable = false)
+    private Integer cashSales = 0;
 
     @Builder.Default
-    @Column(name = "transfer_sales" , precision =  14, scale = 2, nullable = false)
-    private BigDecimal transferSales = BigDecimal.ZERO;
+    @Column(name = "transfer_sales", nullable = false)
+    private Integer transferSales = 0;
 
     @Builder.Default
-    @Column(name = "delivery_sales", precision =  14, scale = 2, nullable = false)
-    private BigDecimal deliverySales = BigDecimal.ZERO;
+    @Column(name = "delivery_sales", nullable = false)
+    private Integer deliverySales = 0;
 }

@@ -42,10 +42,10 @@ public class PaymentStatsHourly {
 
     //0 ~ 23시
     @Column(name = "hour", nullable = false)
-    private Integer hour;
+    private int hour;
 
-    @Column(name = "hourly_total_sales", nullable = false, precision = 14, scale = 2)
-    private BigDecimal hourlyTotalSales;
+    @Column(name = "hourly_total_sales", nullable = false)
+    private Integer hourlyTotalSales;
 
 
 
