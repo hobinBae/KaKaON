@@ -54,8 +54,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                         attributes.getProvider(),
                         attributes.getProviderId())
                 .map(entity -> {
-                    // 기존 회원 정보 업데이트
-                    entity.updateName(attributes.getName());
+                    // 기존 회원 정보 업데이트 : 서비스에서 이름 수정 후 로그인하면 회원정보 다시 카카오에서 불러오기 때문에 코드 제거
+//                    entity.updateName(attributes.getName());
                     log.info("기존 회원 정보 업데이트 - Email: {}", entity.getEmail());
                     return entity;
                 })
