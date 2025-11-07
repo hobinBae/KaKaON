@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/select";
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
-import { useLogout } from "@/lib/hooks/useAuth";
+import { useLogout } from "@/auth/hooks/useAuth";
 
 // figma_mockup의 레이아웃을 기반으로 새로운 AppLayout을 정의합니다.
 export function AppLayout() {
@@ -139,8 +139,8 @@ export function AppLayout() {
             >
               <Menu className="w-6 h-6" />
             </Button>
-            {/* 가맹점 관리 페이지가 아닐 때만 필터를 보여줍니다. */}
-            {location.pathname !== '/stores' && (
+            {/* 가맹점 관리 페이지와 설정 페이지가 아니고, 매장이 2개 이상일 때만 필터를 보여줍니다. */}
+            {location.pathname !== '/stores' && location.pathname !== '/settings' && stores && stores.length > 1 && (
               <Select
                 value={selectedStoreId ?? ""}
                 onValueChange={(val) => setSelectedStoreId(val)}

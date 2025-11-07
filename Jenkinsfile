@@ -1,3 +1,13 @@
+// ===== 트리거 사용자명 계산 함수 =====
+def resolveTriggeredBy = {
+    def glUser = (env.gitlabUserName ?: env.gitlab_user_name ?: env.GITLAB_USER_NAME)
+    if (glUser && glUser.trim()) {
+        return glUser.trim()
+    }
+    return sh(script: "cd ${env.DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
+}
+
+
 pipeline {
     agent any
     
@@ -300,6 +310,24 @@ pipeline {
     post {
         success {
             script {
+                
+                def commitMessage = sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%s", returnStdout: true).trim()
+                def commitHash    = sh(script: "cd ${DEPLOY_PATH} && git rev-parse --short HEAD", returnStdout: true).trim()
+                def triggeredBy   = resolveTriggeredBy()
+                mattermostSend(
+                    color: "good",
+                    channel: "5to0",
+                    message: """
+✅ **배포 성공**
+**브랜치:** ${env.GIT_BRANCH}
+**커밋:** ${commitHash} — ${commitMessage}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+""".stripIndent()
+      )
+
                 echo '===================================================='
                 echo '✅배포 성공!'
                 echo '===================================================='
@@ -324,6 +352,22 @@ pipeline {
         
         failure {
             script {
+                def triggeredBy = resolveTriggeredBy()
+                mattermostSend(
+                    color: "danger",
+                    channel: "5to0",
+                    message: """
+❌ **배포 실패**
+**프로젝트:** ${env.JOB_NAME}
+**브랜치:** ${env.GIT_BRANCH}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+⚠️ 로그 확인 필요.
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+""".stripIndent()
+      )
+
                 echo '===================================================='
                 echo '❌배포 실패!'
                 echo '===================================================='

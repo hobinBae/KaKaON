@@ -2,6 +2,7 @@ import axios, { type InternalAxiosRequestConfig } from 'axios';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
+  withCredentials: true, // HttpOnly 쿠키를 주고받기 위해 추가
   headers: {
     'Content-Type': 'application/json',
   },

@@ -2,7 +2,7 @@ package com.s310.kakaon.domain.store.controller;
 
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.store.dto.*;
-import com.s310.kakaon.domain.store.service.AlertService;
+import com.s310.kakaon.domain.store.service.AlertRecipientService;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.*;
 public class StoreController {
 
     private final StoreService storeService;
-    private final AlertService alertService;
+    private final AlertRecipientService alertService;
     private final MemberService memberService;
     private final PathMatcher pathMatcher;
 

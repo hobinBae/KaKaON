@@ -9,6 +9,7 @@ import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -20,12 +21,15 @@ import java.time.ZoneOffset;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class MenuServiceImpl implements MenuService{
     private final MenuRepository menuRepository;
     private final StoreRepository storeRepository;
 
     @Transactional
     public MenuSummaryResponseDto create(Long storeId, MenuRequestDto req, Long userId) {
+        log.info("정보 {}", storeId);
+        log.info("회원정보 {}", userId);
         // 1) 매장 존재 확인
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));

@@ -54,129 +54,76 @@ import {
 } from "recharts";
 import { Switch } from "@/components/ui/switch";
 import { BusinessHoursForm } from "@/components/BusinessHoursForm";
-
-const initialStoreData = [
-  {
-    id: "ST001",
-    name: "강남점",
-    code: "KN001",
-    address: "서울 강남구 테헤란로 123",
-    todaySales: 6200000,
-    weeklySales: 43400000,
-    monthlySales: 186000000,
-    salesChange: 12.5,
-    cancellationRate: 3.2,
-    alertCount: 2,
-    staffCount: 8,
-    status: "운영중",
-    businessHours: {
-      '월': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-      '화': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-      '수': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-      '목': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-      '금': { isClosed: false, timeSlots: [{ start: '09:00', end: '20:00' }] },
-      '토': { isClosed: false, timeSlots: [{ start: '10:00', end: '20:00' }] },
-      '일': { isClosed: true, timeSlots: [] },
-    },
-  },
-  {
-    id: "ST002",
-    name: "홍대점",
-    code: "HD001",
-    address: "서울 마포구 홍익로 45",
-    todaySales: 5800000,
-    weeklySales: 40600000,
-    monthlySales: 174000000,
-    salesChange: 8.3,
-    cancellationRate: 2.8,
-    alertCount: 1,
-    staffCount: 6,
-    status: "운영중",
-    businessHours: {
-        '월': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '화': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '수': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '목': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '금': { isClosed: false, timeSlots: [{ start: '09:00', end: '20:00' }] },
-        '토': { isClosed: false, timeSlots: [{ start: '10:00', end: '20:00' }] },
-        '일': { isClosed: true, timeSlots: [] },
-    },
-  },
-  {
-    id: "ST003",
-    name: "잠실점",
-    code: "JS001",
-    address: "서울 송파구 올림픽로 234",
-    todaySales: 4200000,
-    weeklySales: 29400000,
-    monthlySales: 126000000,
-    salesChange: -5.2,
-    cancellationRate: 4.1,
-    alertCount: 3,
-    staffCount: 7,
-    status: "운영중",
-    businessHours: {
-        '월': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '화': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '수': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '목': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '금': { isClosed: false, timeSlots: [{ start: '09:00', end: '20:00' }] },
-        '토': { isClosed: false, timeSlots: [{ start: '10:00', end: '20:00' }] },
-        '일': { isClosed: true, timeSlots: [] },
-    },
-  },
-  {
-    id: "ST004",
-    name: "신촌점",
-    code: "SC001",
-    address: "서울 서대문구 신촌역로 78",
-    todaySales: 3800000,
-    weeklySales: 26600000,
-    monthlySales: 114000000,
-    salesChange: 3.1,
-    cancellationRate: 2.5,
-    alertCount: 0,
-    staffCount: 5,
-    status: "운영중",
-    businessHours: {
-        '월': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '화': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '수': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '목': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-        '금': { isClosed: false, timeSlots: [{ start: '09:00', end: '20:00' }] },
-        '토': { isClosed: false, timeSlots: [{ start: '10:00', end: '20:00' }] },
-        '일': { isClosed: true, timeSlots: [] },
-    },
-  },
-];
+import { useMyStores } from "@/lib/hooks/useStores";
+import type { Store } from "@/types/api";
 
 const initialAlertRecipients = [
   { id: 1, name: "김사장", position: "대표", email: "owner@kakaopay.com" },
   { id: 2, name: "김직원", position: "점장", email: "manager@kakaopay.com" },
 ];
 
+// 요일 변환 헬퍼 함수
+const dayOfWeekToKorean: Record<string, string> = {
+  'MONDAY': '월',
+  'TUESDAY': '화',
+  'WEDNESDAY': '수',
+  'THURSDAY': '목',
+  'FRIDAY': '금',
+  'SATURDAY': '토',
+  'SUNDAY': '일',
+};
+
+// BusinessHour[] 배열을 화면 표시용 객체로 변환
+const convertBusinessHours = (businessHours: Store['businessHours']) => {
+  const converted: Record<string, { isClosed: boolean; timeSlots: { start: string; end: string }[] }> = {
+    '월': { isClosed: true, timeSlots: [] },
+    '화': { isClosed: true, timeSlots: [] },
+    '수': { isClosed: true, timeSlots: [] },
+    '목': { isClosed: true, timeSlots: [] },
+    '금': { isClosed: true, timeSlots: [] },
+    '토': { isClosed: true, timeSlots: [] },
+    '일': { isClosed: true, timeSlots: [] },
+  };
+
+  businessHours?.forEach((hour) => {
+    const koreanDay = dayOfWeekToKorean[hour.dayOfWeek];
+    if (koreanDay) {
+      converted[koreanDay] = {
+        isClosed: false,
+        timeSlots: [{ start: hour.openTime, end: hour.closeTime }],
+      };
+    }
+  });
+
+  return converted;
+};
+
 type SalesPeriod = "일별" | "주별" | "월별";
 
 export default function StoreManage() {
-  const [stores, setStores] = useState(initialStoreData);
+  // API에서 매장 목록 가져오기
+  const { data: stores, isLoading, isError } = useMyStores();
+
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
 
-  const getSalesData = (store: typeof initialStoreData[0], period: SalesPeriod) => {
+  // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
+  const getSalesData = (store: Store, period: SalesPeriod) => {
+    const totalSales = store.totalSales ?? 0;
     switch (period) {
       case "일별":
-        return store.todaySales;
+        return Math.round(totalSales * 0.03); // 임시: 전체 매출의 3%를 오늘 매출로 가정
       case "주별":
-        return store.weeklySales;
+        return Math.round(totalSales * 0.2); // 임시: 전체 매출의 20%를 이번주 매출로 가정
       case "월별":
-        return store.monthlySales;
+        return totalSales; // 전체 매출을 이번달 매출로 사용
       default:
         return 0;
     }
   };
-  
-  const maxSales = Math.max(...stores.map(s => getSalesData(s, selectedPeriod)));
 
-  const [selectedStore, setSelectedStore] = useState<typeof initialStoreData[0] | null>(null);
+  const maxSales = stores ? Math.max(...stores.map(s => getSalesData(s, selectedPeriod))) : 0;
+
+  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
   const [isAddingAlert, setIsAddingAlert] = useState(false);
   const [alertRecipients, setAlertRecipients] = useState(initialAlertRecipients);
   const [newRecipient, setNewRecipient] = useState({ name: "", position: "", email: "" });
@@ -192,8 +139,13 @@ export default function StoreManage() {
     hours: "",
   });
 
-  const handleStoreClick = (store: typeof initialStoreData[0]) => {
-    setSelectedStore(store);
+  const handleStoreClick = (store: Store) => {
+    // 같은 가맹점을 클릭하면 닫기, 다른 가맹점을 클릭하면 열기
+    if (selectedStore?.storeId === store.storeId) {
+      setSelectedStore(null);
+    } else {
+      setSelectedStore(store);
+    }
   };
 
   const handleDeleteRecipient = (id: number) => {
@@ -212,33 +164,9 @@ export default function StoreManage() {
   };
 
   const handleAddStore = () => {
-    if (newStore.name && newStore.businessNumber && newStore.owner && newStore.type && newStore.address && newStore.phone) {
-      const newStoreData = {
-        ...newStore,
-        id: `ST${String(stores.length + 1).padStart(3, '0')}`,
-        code: `CODE${String(stores.length + 1).padStart(3, '0')}`,
-        todaySales: 0,
-        weeklySales: 0,
-        monthlySales: 0,
-        salesChange: 0,
-        cancellationRate: 0,
-        alertCount: 0,
-        staffCount: 0,
-        status: "운영중",
-        businessHours: {
-            '월': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-            '화': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-            '수': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-            '목': { isClosed: false, timeSlots: [{ start: '09:00', end: '18:00' }] },
-            '금': { isClosed: false, timeSlots: [{ start: '09:00', end: '20:00' }] },
-            '토': { isClosed: false, timeSlots: [{ start: '10:00', end: '20:00' }] },
-            '일': { isClosed: true, timeSlots: [] },
-        },
-      };
-      setStores([...stores, newStoreData]);
-      setNewStore({ name: "", businessNumber: "", owner: "", type: "", address: "", phone: "", hours: "" });
-      setIsAddingStore(false);
-    }
+    // TODO: API 연동 필요 (useCreateStore 훅 사용)
+    console.log('가맹점 추가 기능은 API 연동 후 사용 가능합니다.');
+    setIsAddingStore(false);
   };
 
   return (
@@ -525,21 +453,6 @@ export default function StoreManage() {
                                 </DialogContent>
                             </Dialog>
                         </div>
-                      <div className="border rounded-lg p-4 space-y-2">
-                        {Object.entries(selectedStore.businessHours).map(([day, hours]) => (
-                          <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
-                            <span className="font-semibold">{day}</span>
-                            {hours.isClosed ? (
-                              <span className="text-gray-500">휴무일</span>
-                            ) : (
-                              <div>
-                                {hours.timeSlots.map((slot, index) => (
-                                  <span key={index} className="text-sm">{slot.start} - {slot.end}</span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
                       </div>
                     </div>
                   </div>
@@ -568,66 +481,278 @@ export default function StoreManage() {
                   {alertRecipients.map((recipient) => (
                     <div key={recipient.id} className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
                       <div>
-                        <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
-                        <p className="text-xs text-[#717182]">{recipient.email}</p>
+                        <p className="text-sm text-[#333333]">
+                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
+                        </p>
+                        {store.changeRate !== undefined && (
+                          <div
+                            className={`flex items-center gap-1 text-xs justify-center ${
+                              store.changeRate > 0
+                                ? "text-[#4CAF50]"
+                                : "text-[#FF4D4D]"
+                            }`}
+                          >
+                            {store.changeRate > 0 ? (
+                              <TrendingUp className="w-3 h-3" />
+                            ) : (
+                              <TrendingDown className="w-3 h-3" />
+                            )}
+                            <span>{Math.abs(store.changeRate)}%</span>
+                          </div>
+                        )}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {store.cancelRate !== undefined ? (
+                        <Badge
+                          variant="outline"
+                          className={`rounded ${
+                            store.cancelRate > 3.5
+                              ? "border-[#FF4D4D] text-[#FF4D4D]"
+                              : "border-[#717182] text-[#717182]"
+                          }`}
+                        >
+                          {store.cancelRate}%
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-[#717182]">-</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {(store.alertCount ?? 0) > 0 ? (
+                        <Badge
+                          variant="destructive"
+                          className="rounded"
+                        >
+                          {store.alertCount}건
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-[#717182]">없음</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Badge
+                        className={`rounded ${
+                          store.status === 'OPEN'
+                            ? 'bg-[#4CAF50] text-white'
+                            : 'bg-[#717182] text-white'
+                        }`}
+                      >
+                        {store.status === 'OPEN' ? '운영중' : '마감'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="w-[200px]">
                       <div className="flex items-center gap-2">
-                        <Switch defaultChecked />
-                        <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
-                          <X className="w-4 h-4" />
+                        <div className="w-full h-2.5 relative">
+                          <div
+                            className="bg-[#FFB800] h-2.5"
+                            style={{ width: `${maxSales > 0 ? (getSalesData(store, selectedPeriod) / maxSales) * 100 : 0}%` }}
+                          ></div>
+                        </div>
+                        <span className="text-xs text-gray-500 w-16 text-right">
+                          {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex gap-2 justify-end">
+                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                          <Link to="/transactions">거래내역</Link>
+                        </Button>
+                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                          <Link to="/analytics">매출분석</Link>
                         </Button>
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    </TableCell>
+                  </TableRow>
 
-                {isAddingAlert && (
-                  <div className="p-4 bg-[#F5F5F5] rounded-lg space-y-4 mt-4">
-                    <Input
-                      placeholder="이름"
-                      className="rounded-lg"
-                      value={newRecipient.name}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
-                    />
-                    <Input
-                      placeholder="직위"
-                      className="rounded-lg"
-                      value={newRecipient.position}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, position: e.target.value })}
-                    />
-                    <Input
-                      type="email"
-                      placeholder="이메일 주소"
-                      className="rounded-lg"
-                      value={newRecipient.email}
-                      onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
-                    />
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" onClick={() => setIsAddingAlert(false)}>취소</Button>
-                      <Button
-                        className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
-                        onClick={handleAddRecipient}
-                      >
-                        저장
-                      </Button>
-                    </div>
-                  </div>
-                )}
+                  {/* Expanded Detail Row */}
+                  {selectedStore?.storeId === store.storeId && (
+                    <TableRow key={`${store.storeId}-detail`}>
+                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-6">
+                        <div className="space-y-6">
+                          <h4 className="text-[#333333] font-semibold">{selectedStore.name} 상세 관리</h4>
 
-                <div className="flex justify-center mt-6">
-                  <Button
-                    className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
-                    onClick={() => setIsAddingAlert(true)}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    추가
-                  </Button>
-                </div>
-              </TabsContent>
-            </Tabs>
-          </Card>
-        </>
-      )}
+                          <Tabs defaultValue="basic" className="w-full">
+                            <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
+                              <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                기본정보
+                              </TabsTrigger>
+                              <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                알림설정
+                              </TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="basic" className="mt-6">
+                              <div className="space-y-6">
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                                    <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                                    <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-6">
+                                  <div className="space-y-6">
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                      <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                      <Input
+                                        value={
+                                          selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
+                                          selectedStore.businessType === 'CAFE' ? '카페' :
+                                          '기타'
+                                        }
+                                        className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                                        readOnly
+                                      />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                      <Input defaultValue={selectedStore.phone} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                                    </div>
+                                    <div>
+                                      <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                      <Input defaultValue={selectedStore.address} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                                    </div>
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <label className="text-sm text-[#717182]">영업시간</label>
+                                      <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm">수정</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-2xl">
+                                          <DialogHeader>
+                                            <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                            <DialogDescription>
+                                              요일별 영업시간과 휴무일을 설정하세요.
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          <BusinessHoursForm />
+                                          <DialogFooter>
+                                            <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                                          </DialogFooter>
+                                        </DialogContent>
+                                      </Dialog>
+                                    </div>
+                                    <div className="border rounded-lg p-4 space-y-2 bg-white">
+                                      {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
+                                        <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
+                                          <span className="font-semibold">{day}</span>
+                                          {hours.isClosed ? (
+                                            <span className="text-gray-500">휴무일</span>
+                                          ) : (
+                                            <div>
+                                              {hours.timeSlots.map((slot, index) => (
+                                                <span key={index} className="text-sm">{slot.start} - {slot.end}</span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end mt-6">
+                                <Button>수정 완료</Button>
+                              </div>
+
+                              {/* Danger Zone */}
+                              <Card className="p-6 mt-6 border-[#FF4D4D] border">
+                                <div className="flex items-center justify-between">
+                                  <div>
+                                    <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
+                                    <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                                  </div>
+                                  <Button variant="destructive" className="rounded-lg">
+                                    가맹점 삭제
+                                  </Button>
+                                </div>
+                              </Card>
+                            </TabsContent>
+
+                            <TabsContent value="alerts" className="mt-6">
+                              <div className="space-y-4">
+                                {alertRecipients.map((recipient) => (
+                                  <div key={recipient.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+                                    <div>
+                                      <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
+                                      <p className="text-xs text-[#717182]">{recipient.email}</p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <Switch defaultChecked />
+                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                        <X className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+
+                              {isAddingAlert && (
+                                <div className="p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)] space-y-4 mt-4">
+                                  <Input
+                                    placeholder="이름"
+                                    className="rounded-lg"
+                                    value={newRecipient.name}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
+                                  />
+                                  <Input
+                                    placeholder="직위"
+                                    className="rounded-lg"
+                                    value={newRecipient.position}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, position: e.target.value })}
+                                  />
+                                  <Input
+                                    type="email"
+                                    placeholder="이메일 주소"
+                                    className="rounded-lg"
+                                    value={newRecipient.email}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <Button variant="ghost" onClick={() => setIsAddingAlert(false)}>취소</Button>
+                                    <Button
+                                      className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                      onClick={handleAddRecipient}
+                                    >
+                                      저장
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex justify-center mt-6">
+                                <Button
+                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                  onClick={() => setIsAddingAlert(true)}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  추가
+                                </Button>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
     </div>
   );
 }

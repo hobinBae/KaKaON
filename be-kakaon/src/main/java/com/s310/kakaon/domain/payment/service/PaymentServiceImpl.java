@@ -4,6 +4,7 @@ import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
+import com.s310.kakaon.domain.payment.dto.CancelRateAnomalyDto;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
@@ -343,6 +344,25 @@ public class PaymentServiceImpl implements PaymentService{
             log.error("CSV 생성 중 오류 발생", e);
             throw new ApiException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies() {
+        List<CancelRateAnomalyDto> results = paymentCancelRepository.getWeeklyCancelStats();
+        return results.stream()
+                .map(r -> {
+                    double increase = r.getThisWeekCancelRate() - r.getLastWeekCancelRate();
+                    return CancelRateAnomalyDto.builder()
+                            .storeId(r.getStoreId())
+                            .storeName(r.getStoreName())
+                            .lastWeekCancelRate(r.getLastWeekCancelRate())
+                            .thisWeekCancelRate(r.getThisWeekCancelRate())
+                            .increasePercent(increase)
+                            .build();
+                })
+                .filter(dto -> dto.getIncreasePercent() >= 20.0)
+                .toList();
     }
 
     private String escapeCsvField(String field) {

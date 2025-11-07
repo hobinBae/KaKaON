@@ -1,7 +1,6 @@
 package com.s310.kakaon.domain.order.service;
 
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.menu.repository.MenuRepository;
 import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderItem;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
@@ -52,7 +51,6 @@ public class OrderServiceImpl implements OrderService{
     private final OrderRepository orderRepository;
     private final MemberRepository memberRepository;
     private final StoreRepository storeRepository;
-    private final MenuRepository menuRepository;
     private final PaymentService paymentService;
     private final OrderMapper orderMapper;
     private final PaymentRepository paymentRepository;
@@ -72,6 +70,8 @@ public class OrderServiceImpl implements OrderService{
 
 
         paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
+
+        order.updateStatus(request.getTotalAmount());
 
         return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
     }

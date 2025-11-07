@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner"; // sonner로 Toaster 변경
 import { AppLayout } from "@/components/layout/AppLayout";
 import { useBoundStore } from "@/stores/storeStore";
+import AuthProvider from "@/auth/AuthProvider";
 
 // 페이지 컴포넌트들을 import 합니다.
 import Dashboard from "@/pages/Dashboard";
@@ -76,7 +77,9 @@ const router = createBrowserRouter([
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
       <Toaster />
     </QueryClientProvider>
   );
