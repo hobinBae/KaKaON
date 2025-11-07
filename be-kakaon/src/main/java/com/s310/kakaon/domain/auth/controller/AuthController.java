@@ -20,7 +20,7 @@ import java.util.Optional;
 
 @Tag(name = "Auth", description = "JWT / OAuth2 인증 및 토큰 갱신 관련 API")
 @RestController
-@RequestMapping("/api/v1                                                                      /auth")
+@RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
 
