@@ -297,15 +297,15 @@ export default function StoreManage() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
-                    <DialogHeader>
+                    <DialogHeader className="text-left">
                       <DialogTitle>영업시간 상세 설정</DialogTitle>
                       <DialogDescription>
                         요일별 영업시간과 휴무일을 설정하세요.
                       </DialogDescription>
                     </DialogHeader>
                     <BusinessHoursForm />
-                    <DialogFooter>
-                      <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                    <DialogFooter className="justify-center sm:justify-end">
+                      <Button className="w-full sm:w-auto" onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -329,10 +329,6 @@ export default function StoreManage() {
               className="pl-9 rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
             />
           </div>
-          <Button variant="outline" className="rounded-lg">
-            <Filter className="w-4 h-4 mr-2" />
-            필터
-          </Button>
         </div>
       </Card>
 
@@ -342,11 +338,11 @@ export default function StoreManage() {
           <TableHeader>
             <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
               <TableHead className="text-[#333333] pl-6">가맹점명</TableHead>
-              <TableHead className="text-[#333333] text-center">오늘 매출</TableHead>
-              <TableHead className="text-[#333333] text-center">취소율</TableHead>
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">오늘 매출</TableHead>
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">취소율</TableHead>
               <TableHead className="text-[#333333] text-center">알림</TableHead>
               <TableHead className="text-[#333333] text-center">상태</TableHead>
-              <TableHead className="text-[#333333] text-center">
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2 -ml-2">
@@ -379,7 +375,7 @@ export default function StoreManage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center hidden tablet:table-cell">
                   <div>
                     <p className="text-sm text-[#333333]">
                       ₩{(store.todaySales / 1000000).toFixed(1)}M
@@ -400,7 +396,7 @@ export default function StoreManage() {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell className="text-center">
+                <TableCell className="text-center hidden tablet:table-cell">
                   <Badge
                     variant="outline"
                     className={`rounded ${
@@ -431,7 +427,7 @@ export default function StoreManage() {
                     {store.status}
                   </Badge>
                 </TableCell>
-                <TableCell className="w-[200px]">
+                <TableCell className="w-[200px] hidden tablet:table-cell">
                   <div className="flex items-center gap-2">
                     <div className="w-full h-2.5 relative">
                       <div
@@ -479,7 +475,7 @@ export default function StoreManage() {
 
               <TabsContent value="basic" className="mt-6">
                 <div className="space-y-6">
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
                     <div>
                       <label className="text-sm text-[#717182] mb-2 block">상호명</label>
                       <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
@@ -489,7 +485,7 @@ export default function StoreManage() {
                       <Input value="123-45-67890" className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
                     <div className="space-y-6">
                       <div>
                         <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
@@ -516,15 +512,15 @@ export default function StoreManage() {
                                     <Button variant="outline" size="sm">수정</Button>
                                 </DialogTrigger>
                                 <DialogContent className="max-w-2xl">
-                                    <DialogHeader>
+                                    <DialogHeader className="text-left">
                                     <DialogTitle>영업시간 상세 설정</DialogTitle>
                                     <DialogDescription>
                                         요일별 영업시간과 휴무일을 설정하세요.
                                     </DialogDescription>
                                     </DialogHeader>
                                     <BusinessHoursForm />
-                                    <DialogFooter>
-                                    <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                                    <DialogFooter className="justify-center sm:justify-end">
+                                    <Button className="w-full sm:w-auto" onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
@@ -555,12 +551,12 @@ export default function StoreManage() {
 
                 {/* Danger Zone */}
                 <Card className="p-6 mt-6">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4">
                     <div>
                       <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
                       <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
                     </div>
-                    <Button variant="destructive" className="rounded-lg">
+                    <Button variant="destructive" className="rounded-lg w-full tablet:w-auto">
                       가맹점 삭제
                     </Button>
                   </div>

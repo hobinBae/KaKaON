@@ -2,17 +2,24 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar as CalendarIcon, RotateCw } from "lucide-react";
+import { AlertTriangle, Calendar as CalendarIcon, RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { format, addDays, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear } from "date-fns";
+import { format, addDays, differenceInCalendarDays, parse, startOfMonth, endOfMonth, subMonths, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, isValid, addMonths, setYear, setMonth } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Input } from "@/components/ui/input";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+} from "@/components/ui/alert-dialog";
 
 const transactionDetails = {
   'TX-20251015-003': { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소' },
@@ -22,7 +29,7 @@ const transactionDetails = {
 const alerts = [
   {
     id: 'AL-20251015-001',
-    type: '전주 대비 취소율 20% 이상 증가',
+    type: '취소율 급증',
     time: '2025-10-15 12:30:00',
     status: 'unread',
     description: '취소율이 전주 대비 60% 증가했습니다. 고객 불만이나 제품 문제를 확인해주세요.',
@@ -35,7 +42,7 @@ const alerts = [
   },
   {
     id: 'AL-20251015-002',
-    type: '10분 내 동일결제수단 다중결제 감지',
+    type: '동일 결제수단',
     time: '2025-10-15 10:45:00',
     status: 'unread',
     details: {
@@ -58,7 +65,7 @@ const alerts = [
   },
   {
     id: 'AL-20251014-001',
-    type: '고액 거래 발생',
+    type: '고액결제 급증',
     time: '2025-10-14 15:22:00',
     status: 'read',
     details: {
@@ -82,6 +89,9 @@ export default function Alerts() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [alertOpen, setAlertOpen] = useState(false);
+  const [alertMessage, setAlertMessage] = useState<React.ReactNode>("");
+  const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
@@ -146,6 +156,187 @@ export default function Alerts() {
     setDateRange({ from, to });
   };
 
+  function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
+    const today = new Date();
+    const currentYear = today.getFullYear();
+    const currentMonth = today.getMonth();
+    const years = Array.from({ length: 10 }, (_, i) => currentYear - 9 + i);
+    const months = Array.from({ length: 12 }, (_, i) => i);
+
+    const isCurrentOrFutureMonth = displayMonth.getFullYear() > currentYear ||
+      (displayMonth.getFullYear() === currentYear && displayMonth.getMonth() >= currentMonth);
+
+    const isCurrentYear = displayMonth.getFullYear() === currentYear;
+
+    return (
+      <div className="flex justify-center items-center gap-2 py-2">
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onMonthChange(subMonths(displayMonth, 1))}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+
+        <div className="flex gap-1">
+          <Select
+            value={displayMonth.getFullYear().toString()}
+            onValueChange={(value) => {
+              onMonthChange(setYear(displayMonth, parseInt(value)));
+            }}
+          >
+            <SelectTrigger className="h-7 w-20 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year} value={year.toString()}>
+                  {year}년
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={displayMonth.getMonth().toString()}
+            onValueChange={(value) => {
+              onMonthChange(setMonth(displayMonth, parseInt(value)));
+            }}
+          >
+            <SelectTrigger className="h-7 w-16 text-sm">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {months.map((month) => (
+                <SelectItem
+                  key={month}
+                  value={month.toString()}
+                  disabled={isCurrentYear && month > currentMonth}
+                >
+                  {month + 1}월
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          variant="outline"
+          size="icon"
+          className="h-7 w-7"
+          onClick={() => onMonthChange(addMonths(displayMonth, 1))}
+          disabled={isCurrentOrFutureMonth}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    );
+  }
+
+  const showAlert = (message: React.ReactNode) => {
+    setAlertMessage(message);
+    setAlertOpen(true);
+  };
+
+  const handleDateInputChange = (type: 'start' | 'end', value: string) => {
+    const digitsOnly = value.replace(/[^\d]/g, '');
+    const truncated = digitsOnly.slice(0, 8);
+    let formatted = truncated;
+    if (truncated.length > 4) {
+      formatted = truncated.slice(0, 4) + '.' + truncated.slice(4);
+    }
+    if (truncated.length > 6) {
+      formatted = truncated.slice(0, 4) + '.' + truncated.slice(4, 6) + '.' + truncated.slice(6);
+    }
+    if (type === 'start') {
+      setStartInput(formatted);
+    } else {
+      setEndInput(formatted);
+    }
+  };
+
+  const handleDateInputBlur = (type: 'start' | 'end') => {
+    const value = type === 'start' ? startInput : endInput;
+    if (!value) {
+      if (type === 'start') setDateRange({ from: undefined, to: dateRange?.to });
+      else setDateRange({ from: dateRange?.from, to: undefined });
+      return;
+    }
+    const parsedDate = parse(value, 'yyyy.MM.dd', new Date());
+    if (!isValid(parsedDate)) {
+      if (type === 'start' && dateRange?.from) setStartInput(format(dateRange.from, "yyyy.MM.dd"));
+      else if (type === 'end' && dateRange?.to) setEndInput(format(dateRange.to, "yyyy.MM.dd"));
+      else { if (type === 'start') setStartInput(""); else setEndInput(""); }
+      return;
+    }
+    if (parsedDate > new Date()) {
+      showAlert('오늘 이후의 날짜는 선택할 수 없습니다.');
+      if (type === 'start' && dateRange?.from) setStartInput(format(dateRange.from, "yyyy.MM.dd"));
+      else if (type === 'end' && dateRange?.to) setEndInput(format(dateRange.to, "yyyy.MM.dd"));
+      else { if (type === 'start') setStartInput(""); else setEndInput(""); }
+      return;
+    }
+    if (type === 'start') {
+      if (dateRange?.to && parsedDate > dateRange.to) {
+        showAlert('시작일은 종료일보다 이전이어야 합니다.');
+        if (dateRange?.from) setStartInput(format(dateRange.from, "yyyy.MM.dd"));
+        else setStartInput("");
+        return;
+      }
+      if (dateRange?.to) {
+        const maxDate = addDays(parsedDate, 365);
+        if (dateRange.to > maxDate) {
+          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          if (dateRange?.from) setStartInput(format(dateRange.from, "yyyy.MM.dd"));
+          else setStartInput("");
+          return;
+        }
+      }
+      setDateRange({ from: parsedDate, to: dateRange?.to });
+      setActivePeriod("");
+    } else {
+      if (dateRange?.from && parsedDate < dateRange.from) {
+        showAlert('종료일은 시작일보다 이후여야 합니다.');
+        if (dateRange?.to) setEndInput(format(dateRange.to, "yyyy.MM.dd"));
+        else setEndInput("");
+        return;
+      }
+      if (dateRange?.from) {
+        const maxDate = addDays(dateRange.from, 365);
+        if (parsedDate > maxDate) {
+          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          if (dateRange?.to) setEndInput(format(dateRange.to, "yyyy.MM.dd"));
+          else setEndInput("");
+          return;
+        }
+      }
+      setDateRange({ from: dateRange?.from, to: parsedDate });
+      setActivePeriod("");
+    }
+  };
+
+  const handleDateSelect = (day: Date | undefined) => {
+    if (!day) return;
+    if (!dateRange?.from || dateRange.to) {
+      setDateRange({ from: day, to: undefined });
+      setActivePeriod("");
+    } else {
+      if (format(day, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd')) {
+        setDateRange({ from: day, to: day });
+        setShowCalendar(false);
+        setActivePeriod("");
+      } else if (day > dateRange.from) {
+        setDateRange({ from: dateRange.from, to: day });
+        setShowCalendar(false);
+        setActivePeriod("");
+      } else {
+        setDateRange({ from: day, to: undefined });
+        setActivePeriod("");
+      }
+    }
+  };
+
   // 스샷 톤의 세그먼트 공통 클래스
   const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
   const segmentItem =
@@ -155,20 +346,21 @@ export default function Alerts() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col tablet:flex-row tablet:items-center tablet:justify-between">
         <div>
           <h1 className="text-[#333333] mb-1">이상거래 알림</h1>
           <p className="text-sm text-[#717182]">이상거래 및 중요 알림을 확인하세요</p>
         </div>
-        <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
+        <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none mt-4 tablet:mt-0">
           모두 읽음으로 표시
         </Button>
       </div>
 
       {/* Filters */}
       <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white">
+        <div className="space-y-4">
         {/* ====== 조회기간 : 한 줄 전체 폭 사용 ====== */}
-        <div className="grid grid-cols-[72px_1fr] items-center gap-3">
+        <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3">
           <div className="text-sm font-semibold text-[#333]">조회기간</div>
 
           <div className="flex items-center gap-2 flex-wrap">
@@ -180,46 +372,65 @@ export default function Alerts() {
             </ToggleGroup>
 
 
-            <div className="relative">
+            <div className="relative flex items-center gap-2 w-full tablet:w-auto">
+              <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
+                <Input
+                  type="text"
+                  placeholder="YYYY.MM.DD"
+                  value={startInput}
+                  onChange={(e) => handleDateInputChange('start', e.target.value)}
+                  onBlur={() => handleDateInputBlur('start')}
+                  className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                />
+                <span className="text-sm text-gray-500 text-center">~</span>
+                <Input
+                  type="text"
+                  placeholder="YYYY.MM.DD"
+                  value={endInput}
+                  onChange={(e) => handleDateInputChange('end', e.target.value)}
+                  onBlur={() => handleDateInputBlur('end')}
+                  className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                />
+              </div>
               <Button
                 variant={"outline"}
-                className="h-8 text-sm rounded-lg border border-gray-300 bg-white px-4 flex items-center gap-2"
-                onClick={() => setShowCalendar(!showCalendar)}
+                size={"icon"}
+                className="h-8 w-8 rounded-lg border border-gray-300 bg-white"
+                onClick={() => {
+                  if (!showCalendar && dateRange?.from) {
+                    setCalendarMonth(dateRange.from);
+                  }
+                  setShowCalendar(!showCalendar);
+                }}
               >
                 <CalendarIcon className="w-4 h-4" />
-                {dateRange?.from ? (
-                  dateRange.to ? (
-                    <>
-                      {format(dateRange.from, "yyyy.MM.dd")} ~{" "}
-                      {format(dateRange.to, "yyyy.MM.dd")}
-                    </>
-                  ) : (
-                    format(dateRange.from, "yyyy.MM.dd")
-                  )
-                ) : (
-                  <span>날짜를 선택하세요</span>
-                )}
               </Button>
               {showCalendar && (
                 <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
                   <Calendar
                     initialFocus
                     mode="range"
-                    defaultMonth={dateRange?.from}
+                    month={calendarMonth}
+                    onMonthChange={setCalendarMonth}
                     selected={dateRange}
-                    onSelect={(range) => {
-                      setDateRange(range);
-                      setActivePeriod("");
-                      if (range?.from && range?.to) {
-                        setShowCalendar(false);
-                      }
-                    }}
+                    onDayClick={handleDateSelect}
                     numberOfMonths={1}
-                    components={{}}
+                    fixedWeeks={false}
+                    components={{
+                      Caption: ({ displayMonth }) => (
+                        <CustomCaption displayMonth={displayMonth} onMonthChange={setCalendarMonth} />
+                      ),
+                    }}
                     locale={ko}
+                    disabled={(date) => {
+                      if (date > new Date()) return true;
+                      if (dateRange?.from && !dateRange?.to) {
+                        const maxDate = addDays(dateRange.from, 365);
+                        if (date > maxDate) return true;
+                      }
+                      return false;
+                    }}
                     formatters={{
-                      formatCaption: (date) =>
-                        `${format(date, "yyyy년 M월", { locale: ko })}`,
                       formatWeekdayName: (day) =>
                         format(day, "eee", { locale: ko }),
                     }}
@@ -228,13 +439,15 @@ export default function Alerts() {
                       head_row: "flex",
                       head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
                       row: "flex w-full mt-2",
-                      cell: "h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20",
+                      cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
                       day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
                       day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                      day_today: "bg-accent text-accent-foreground",
+                      day_range_start: "rounded-l-full",
+                      day_range_end: "rounded-r-full",
+                      day_today: "bg-accent/50 text-accent-foreground ring-2 ring-primary ring-inset",
                       day_outside: "day-outside text-muted-foreground opacity-50",
                       day_disabled: "text-muted-foreground opacity-50",
-                      day_range_middle: "aria-selected:bg-accent aria-selected:text-accent-foreground",
+                      day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
                       day_hidden: "invisible",
                     }}
                   />
@@ -245,30 +458,44 @@ export default function Alerts() {
         </div>
 
         {/* ====== 유형 + 상태 : 같은 줄 ====== */}
-        <div className="grid grid-cols-[72px_1fr] items-center gap-3 mt-4">
-          <div className="text-sm font-semibold text-[#333]">필터</div>
-          <div className="flex items-center gap-10 flex-wrap">
-            <div className="flex items-center gap-3">
-              <div className="text-sm font-semibold text-[#333] shrink-0">유형</div>
-              <Select value={typeFilter} onValueChange={setTypeFilter}>
-                <SelectTrigger className="rounded-lg bg-[#F5F5F5] w-[180px]">
-                  <SelectValue />
+        <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3 mt-1">
+          <div className="text-sm font-semibold text-[#333]">이상거래</div>
+          <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between flex-wrap gap-4">
+            {/* Mobile Dropdown for Type */}
+            <div className="w-full tablet:hidden">
+              <Select value={typeFilter} onValueChange={(value) => value && setTypeFilter(value)}>
+                <SelectTrigger className="w-full h-9 text-sm">
+                  <SelectValue placeholder="이상거래 유형 선택" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">전체</SelectItem>
-                  <SelectItem value="취소율">취소율</SelectItem>
-                  <SelectItem value="다중결제">다중결제</SelectItem>
-                  <SelectItem value="정산">정산</SelectItem>
-                  <SelectItem value="고액">고액</SelectItem>
+                  <SelectItem value="all">전체 유형</SelectItem>
+                  <SelectItem value="동일 결제수단">동일 결제수단</SelectItem>
+                  <SelectItem value="영업시간 외 거래">영업시간 외 거래</SelectItem>
+                  <SelectItem value="동일금액 반복결제">반복결제</SelectItem>
+                  <SelectItem value="고액결제 급증">고액결제 급증</SelectItem>
+                  <SelectItem value="거래빈도 급증">거래빈도 급증</SelectItem>
+                  <SelectItem value="취소율 급증">취소율 급증</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex items-center gap-3">
-              <div className="text-sm font-semibold text-[#333] shrink-0">상태</div>
-              <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)} className={segmentWrap}>
-                <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
-                <ToggleGroupItem value="unread" className={segmentItem}>미확인</ToggleGroupItem>
-                <ToggleGroupItem value="read" className={segmentItem}>확인됨</ToggleGroupItem>
+
+            {/* Desktop ToggleGroup for Type */}
+            <ToggleGroup type="single" value={typeFilter} onValueChange={(value) => value && setTypeFilter(value)} className={`${segmentWrap} hidden tablet:flex flex-1`}>
+              <ToggleGroupItem value="all" className={segmentItem}>전체 유형</ToggleGroupItem>
+              <ToggleGroupItem value="동일 결제수단" className={segmentItem}>동일 결제수단</ToggleGroupItem>
+              <ToggleGroupItem value="영업시간 외 거래" className={segmentItem}>영업시간 외 거래</ToggleGroupItem>
+              <ToggleGroupItem value="동일금액 반복결제" className={segmentItem}>반복결제</ToggleGroupItem>
+              <ToggleGroupItem value="고액결제 급증" className={segmentItem}>고액결제 급증</ToggleGroupItem>
+              <ToggleGroupItem value="거래빈도 급증" className={segmentItem}>거래빈도 급증</ToggleGroupItem>
+              <ToggleGroupItem value="취소율 급증" className={segmentItem}>취소율 급증</ToggleGroupItem>
+            </ToggleGroup>
+
+            <div className="flex items-center gap-4 w-full tablet:w-auto">
+              <div className="text-sm font-semibold text-[#333] shrink-0 tablet:ml-4">상태</div>
+              <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => value && setStatusFilter(value)} className={`${segmentWrap} flex-1 tablet:flex-initial`}>
+                <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
+                <ToggleGroupItem value="unread" className={`${segmentItem} flex-1`}>미확인</ToggleGroupItem>
+                <ToggleGroupItem value="read" className={`${segmentItem} flex-1`}>확인됨</ToggleGroupItem>
               </ToggleGroup>
             </div>
           </div>
@@ -276,7 +503,7 @@ export default function Alerts() {
 
         {/* 하단 요약/버튼 */}
         <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
-          <div className="text-sm text-[#333]">
+          <div className="text-sm text-[#333] flex-1">
             {dateRange?.from && dateRange?.to && (
               <>
                 {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
@@ -287,14 +514,15 @@ export default function Alerts() {
             )}
           </div>
           <div className="flex gap-2">
-            <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
+            <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm tablet:inline-flex hidden">
               <RotateCw className="w-4 h-4 mr-1" />
               초기화
             </Button>
-            <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
-              조회하기
+            <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 rounded-lg tablet:hidden">
+              <RotateCw className="w-4 h-4" />
             </Button>
           </div>
+        </div>
         </div>
       </Card>
 
@@ -303,10 +531,13 @@ export default function Alerts() {
         <Table>
           <TableHeader>
             <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-              <TableHead className="text-[#333333] pl-6">알림ID</TableHead>
-              <TableHead className="text-[#333333]">발생시각</TableHead>
+              <TableHead className="text-[#333333] pl-6 hidden tablet:table-cell">알림ID</TableHead>
+              <TableHead className="text-[#333333] pl-6 tablet:pl-3">
+                <span className="hidden tablet:inline">발생시간</span>
+                <span className="tablet:hidden">시간</span>
+              </TableHead>
               <TableHead className="text-[#333333]">유형</TableHead>
-              <TableHead className="text-[#333333]">상태</TableHead>
+              <TableHead className="text-[#333333] pr-6">상태</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -318,15 +549,18 @@ export default function Alerts() {
                 }`}
                 onClick={() => setSelectedAlert(alert)}
               >
-                <TableCell className="text-[#333333] pl-6">{alert.id}</TableCell>
-                <TableCell className="text-[#717182]">{alert.time}</TableCell>
-                <TableCell>
+                <TableCell className="text-[#333333] pl-6 hidden tablet:table-cell">{alert.id}</TableCell>
+                <TableCell className="text-[#717182] text-xs tablet:text-sm pl-6 tablet:pl-3">
+                  <span className="hidden tablet:inline">{format(new Date(alert.time), 'yyyy.MM.dd (eee) HH:mm', { locale: ko })}</span>
+                  <span className="tablet:hidden">{format(new Date(alert.time), 'MM.dd HH:mm')}</span>
+                </TableCell>
+                <TableCell className="pr-2">
                   <div className="flex items-center gap-2">
-                    <AlertTriangle className="w-4 h-4 text-[#FF4D4D]" />
-                    <span className="text-[#333333]">{alert.type}</span>
+                    <AlertTriangle className="w-4 h-4 text-[#FF4D4D] shrink-0" />
+                    <span className="text-[#333333] text-xs tablet:text-sm truncate">{alert.type}</span>
                   </div>
                 </TableCell>
-                <TableCell>
+                <TableCell className="pr-6">
                   <Badge
                     variant={alert.status === 'unread' ? 'default' : 'secondary'}
                     className="rounded"
@@ -338,88 +572,91 @@ export default function Alerts() {
             ))}
           </TableBody>
         </Table>
+        <div className="flex items-center justify-between p-4 border-t border-[rgba(0,0,0,0.08)]">
+          <div className="text-sm text-[#717182]">총 {filteredAlerts.length}건</div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" className="rounded">이전</Button>
+            <Button size="sm" className="bg-[#FEE500] text-[#3C1E1E] rounded shadow-none">1</Button>
+            <Button size="sm" variant="outline" className="rounded">다음</Button>
+          </div>
+        </div>
       </Card>
 
-      {/* Alert Detail Sheet */}
-      <Sheet open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
-        <SheetContent className="w-[500px] sm:w-[540px] p-0">
-          <SheetHeader>
-            <SheetTitle>알림 상세정보</SheetTitle>
-          </SheetHeader>
+      {/* Alert Detail Dialog */}
+      <Dialog open={!!selectedAlert} onOpenChange={() => setSelectedAlert(null)}>
+        <DialogContent className="max-w-2xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle>알림 상세정보</DialogTitle>
+          </DialogHeader>
           {selectedAlert && (
-            <div className="p-4 space-y-8 text-sm overflow-y-auto">
-              <div className="space-y-4 border-b pb-6">
-                <div className="flex">
-                  <span className="w-24 font-medium text-gray-500">알림ID</span>
-                  <span className="text-gray-800">{selectedAlert.id}</span>
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">알림ID</div>
+                  <div className="text-[#333333]">{selectedAlert.id}</div>
                 </div>
-                <div className="flex">
-                  <span className="w-24 font-medium text-gray-500">알림 유형</span>
-                  <span className="text-gray-800">{selectedAlert.type}</span>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">발생시각</div>
+                  <div className="text-[#333333]">{selectedAlert.time}</div>
+                </div>
+                <div className="col-span-2 grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-[#717182] mb-1">유형</div>
+                    <div className="text-[#333333]">{selectedAlert.type}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-[#717182] mb-1">상태</div>
+                    <Badge
+                      variant={selectedAlert.status === 'unread' ? 'default' : 'secondary'}
+                      className="rounded"
+                    >
+                      {selectedAlert.status === 'unread' ? '미확인' : '확인됨'}
+                    </Badge>
+                  </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-x-4 gap-y-4 border-b pb-6">
-                <div className="flex flex-col">
-                  <span className="font-medium text-gray-500 mb-1">발생시각</span>
-                  <span className="text-gray-800">{selectedAlert.time}</span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="font-medium text-gray-500 mb-1">상태</span>
-                  <Badge
-                    variant={selectedAlert.status === 'unread' ? 'destructive' : 'secondary'}
-                    className="rounded w-fit"
-                  >
-                    {selectedAlert.status === 'unread' ? '미확인' : '확인됨'}
-                  </Badge>
-                </div>
-              </div>
+              {selectedAlert.description && (
+                <Card className="p-4 bg-gray-50 rounded-lg">
+                  <h3 className="text-sm font-semibold mb-2">상세 설명</h3>
+                  <p className="text-sm text-gray-800">{selectedAlert.description}</p>
+                </Card>
+              )}
 
-              <div>
-                <h4 className="font-medium text-gray-500 mb-2">상세 설명</h4>
-                <p className="text-gray-800 bg-gray-50 p-4 rounded-md">{selectedAlert.description}</p>
-              </div>
-
-              {/* Related Transactions */}
               {selectedAlert.type !== '정산 완료' && (
                 <div>
-                  <h4 className="text-[#333333] mb-4">관련 거래 내역</h4>
+                  <h4 className="text-sm font-semibold mb-2">관련 거래 내역</h4>
                   <div className="space-y-2">
-                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm cursor-pointer hover:bg-gray-200" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-003'])}>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-[#717182]">TX-20251015-003</span>
-                        <span className="text-[#FF4D4D]">취소</span>
+                    <div className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-003'])}>
+                      <div className="flex justify-between">
+                        <span className="font-medium">TX-20251015-003</span>
+                        <span className="text-red-500">취소</span>
                       </div>
-                      <div className="text-[#333333]">15,000원 · 카드결제</div>
+                      <div className="text-gray-600">15,000원 · 카드결제</div>
                     </div>
-                    <div className="p-3 rounded-lg bg-[#F5F5F5] text-sm cursor-pointer hover:bg-gray-200" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-008'])}>
-                      <div className="flex justify-between mb-1">
-                        <span className="text-[#717182]">TX-20251015-008</span>
-                        <span className="text-[#FF4D4D]">취소</span>
+                    <div className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-008'])}>
+                      <div className="flex justify-between">
+                        <span className="font-medium">TX-20251015-008</span>
+                        <span className="text-red-500">취소</span>
                       </div>
-                      <div className="text-[#333333]">48,000원 · 카드결제</div>
+                      <div className="text-gray-600">48,000원 · 카드결제</div>
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Email Notification */}
-              <div className="p-4 rounded-lg bg-[#4CAF50]/5 border border-[#4CAF50]/20">
-                <div className="text-sm text-[#4CAF50]">
-                  ✓ 이메일 발송 완료 (admin@example.com)
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="space-y-3">
-                <Button className="w-full bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
-                  확인 완료
-                </Button>
+              <div className="flex gap-3 pt-4 border-t">
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedAlert(null)}>닫기</Button>
+                {selectedAlert.status === 'unread' && (
+                  <Button className="flex-1 rounded-lg bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FFD700]">
+                    확인 완료
+                  </Button>
+                )}
               </div>
             </div>
           )}
-        </SheetContent>
-      </Sheet>
+        </DialogContent>
+      </Dialog>
 
       {/* Transaction Detail Modal */}
       <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
@@ -463,6 +700,36 @@ export default function Alerts() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
+        <AlertDialogContent className="sm:max-w-[280px] rounded-xl border-0 shadow-xl p-5 gap-3">
+          <AlertDialogHeader className="text-center pb-0 gap-2">
+            <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE500]">
+              <svg
+                className="h-6 w-6 text-[#3C1E1E]"
+                fill="none"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth="2.5"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+            <AlertDialogDescription className="text-sm text-[#333] font-medium text-center">
+              {alertMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="sm:justify-center pt-1">
+            <AlertDialogAction
+              className="w-full h-9 bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FFD700] font-semibold rounded-lg border-0 shadow-sm transition-all text-sm"
+            >
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

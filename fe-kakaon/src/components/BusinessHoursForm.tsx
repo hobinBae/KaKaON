@@ -74,8 +74,8 @@ export function BusinessHoursForm() {
       <h3 className="text-sm text-[#717182] mb-2 block">영업시간 설정</h3>
       <div className="space-y-2 border p-3 rounded-md">
         {daysOfWeek.map((day) => (
-          <div key={day} className="grid grid-cols-[auto_1fr] items-center gap-x-2 pl-2">
-            <div className="w-10 flex items-center">
+          <div key={day} className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-start tablet:items-center gap-x-2 pl-2">
+            <div className="w-10 flex items-center h-10">
                 <Label htmlFor={`holiday-${day}`} className="font-semibold">{day}</Label>
             </div>
             <div className="flex-grow space-y-2">

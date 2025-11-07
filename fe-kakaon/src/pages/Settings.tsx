@@ -41,6 +41,43 @@ export default function Settings() {
           </div>
         </Card>
 
+        {/* PIN Management */}
+        <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+          <h3 className="text-[#333333] mb-2">관리자 PIN 번호</h3>
+          <p className="text-sm text-[#717182] mb-4">기본 핀번호는 0000입니다.</p>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm text-[#333333] mb-2">현재 PIN 번호</label>
+              <Input
+                type="password"
+                placeholder="현재 PIN 번호를 입력하세요"
+                className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-[#333333] mb-2">새 PIN 번호</label>
+              <Input
+                type="password"
+                placeholder="새 PIN 번호를 입력하세요"
+                className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+              />
+            </div>
+            <div>
+              <label className="block text-sm text-[#333333] mb-2">새 PIN 번호 확인</label>
+              <Input
+                type="password"
+                placeholder="새 PIN 번호를 다시 입력하세요"
+                className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+              />
+            </div>
+          </div>
+          <div className="flex justify-center mt-6">
+            <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none px-8 w-full max-w-xs">
+              PIN 번호 수정
+            </Button>
+          </div>
+        </Card>
+
         {/* Submit Button */}
         <div className="flex justify-center">
           <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none px-8 w-full max-w-xs">
@@ -50,12 +87,12 @@ export default function Settings() {
 
         {/* Danger Zone */}
         <Card className="p-6 border-red-200">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4">
             <div>
               <h3 className="text-[#FF4D4D] mb-1">계정 삭제</h3>
               <p className="text-sm text-[#717182]">계정을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
             </div>
-            <Button variant="destructive" className="rounded-lg">
+            <Button variant="destructive" className="rounded-lg w-full tablet:w-auto">
               계정 삭제
             </Button>
           </div>
