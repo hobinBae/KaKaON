@@ -34,7 +34,7 @@ public class AlertPayment {
     @JoinColumn(name = "payment_id", nullable = false)
     private Payment payment;
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "alert_id", nullable = false)
     private Alert alert;
 

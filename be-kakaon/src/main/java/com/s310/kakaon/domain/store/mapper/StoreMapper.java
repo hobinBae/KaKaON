@@ -1,7 +1,6 @@
 package com.s310.kakaon.domain.store.mapper;
 
 import com.s310.kakaon.domain.member.entity.Member;
-import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.BusinessHourDto;
 import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
@@ -15,7 +14,7 @@ import java.time.LocalTime;
 @Component
 @RequiredArgsConstructor
 public class StoreMapper {
-    private final AlertMapper alertMapper;
+    private final AlertRecipientMapper alertRecipientMapper;
 
     public StoreResponseDto fromEntity(Store store){
         return StoreResponseDto.builder()
@@ -40,7 +39,7 @@ public class StoreMapper {
                 )
                 .alertRecipientResponse(
                         store.getAlertRecipient().stream()
-                                .map(al -> alertMapper.fromEntity(al)
+                                .map(al -> alertRecipientMapper.fromEntity(al)
                                         ).toList()
                 )
                 .build();

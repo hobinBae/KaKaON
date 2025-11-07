@@ -61,7 +61,7 @@ public class PaymentController {
     //결제 수단 : 전체, 카드, 계좌, 카카오페이, 현금
     //결제 상태 : 전체, 완료, 취소
     //주문 구분 : 전체, 배달 주문, 가게 주문
-    //승인번호 검색
+    //승인번호 검색 -> api 분리
     @Operation(
             summary = "가맹점 결제 내역 조회",
             description = """
