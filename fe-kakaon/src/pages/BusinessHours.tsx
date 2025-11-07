@@ -65,19 +65,19 @@ export default function BusinessHours() {
         <div className="flex items-center pb-4 border-b mb-4">
           <div className={`inline-flex items-center font-semibold px-2 py-1 rounded-full text-xs ${isBusinessOpen ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
             <span className={`w-3 h-3 rounded-full mr-2 ${isBusinessOpen ? 'bg-green-500' : 'bg-red-500'}`}></span>
-            <span>{isBusinessOpen ? '영업중' : '영업종료'}</span>
+            <span>{isBusinessOpen ? '영업중' : '종료'}</span>
           </div>
           <span className="ml-4 text-md text-gray-800 font-semibold">
-            {isBusinessOpen ? `${formatElapsedTime(elapsedTime)} 영업중` : '총 0시간 0분 영업종료'}
+            {isBusinessOpen ? `${formatElapsedTime(elapsedTime)} 영업중` : '총 0시간 0분 종료'}
           </span>
         </div>
         <div className="space-y-2">
           <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50">
-            <span className="text-sm text-gray-500">영업 시작</span>
+            <span className="text-sm text-gray-500">시작</span>
             <span className="text-sm text-gray-800 font-semibold">{formatDateTime(startTime)}</span>
           </div>
           <div className="flex justify-between items-center p-3 rounded-lg bg-gray-50">
-            <span className="text-sm text-gray-500">영업 마감</span>
+            <span className="text-sm text-gray-500">마감</span>
             <span className="text-sm text-gray-800 font-semibold">{formatDateTime(endTime)}</span>
           </div>
         </div>

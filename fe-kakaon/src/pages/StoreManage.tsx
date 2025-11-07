@@ -225,15 +225,15 @@ export default function StoreManage() {
                     </Button>
                   </DialogTrigger>
                   <DialogContent className="max-w-2xl">
-                    <DialogHeader>
+                    <DialogHeader className="text-left">
                       <DialogTitle>영업시간 상세 설정</DialogTitle>
                       <DialogDescription>
                         요일별 영업시간과 휴무일을 설정하세요.
                       </DialogDescription>
                     </DialogHeader>
                     <BusinessHoursForm />
-                    <DialogFooter>
-                      <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                    <DialogFooter className="justify-center sm:justify-end">
+                      <Button className="w-full sm:w-auto" onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -257,67 +257,229 @@ export default function StoreManage() {
               className="pl-9 rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
             />
           </div>
-          <Button variant="outline" className="rounded-lg">
-            <Filter className="w-4 h-4 mr-2" />
-            필터
-          </Button>
         </div>
       </Card>
 
       {/* Store Table */}
       <Card className="rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none overflow-hidden">
-        {isLoading ? (
-          <div className="p-8 text-center text-[#717182]">로딩 중...</div>
-        ) : isError ? (
-          <div className="p-8 text-center text-[#FF4D4D]">매장 목록을 불러올 수 없습니다.</div>
-        ) : !stores || stores.length === 0 ? (
-          <div className="p-8 text-center text-[#717182]">등록된 매장이 없습니다.</div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-                <TableHead className="text-[#333333] pl-6">가맹점명</TableHead>
-                <TableHead className="text-[#333333] text-center">매출</TableHead>
-                <TableHead className="text-[#333333] text-center">취소율</TableHead>
-                <TableHead className="text-[#333333] text-center">알림</TableHead>
-                <TableHead className="text-[#333333] text-center">상태</TableHead>
-                <TableHead className="text-[#333333] text-center">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2 -ml-2">
-                        {selectedPeriod} 매출 현황
-                        <ChevronDown className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem onClick={() => setSelectedPeriod("일별")}>일별 매출 현황</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedPeriod("주별")}>주별 매출 현황</DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => setSelectedPeriod("월별")}>월별 매출 현황</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableHead>
-                <TableHead className="text-[#333333]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {stores.map((store) => (
-                <>
-                  <TableRow
-                    key={store.storeId}
-                    className={`border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer ${
-                      selectedStore?.storeId === store.storeId ? 'bg-[#FFFAE6]' : ''
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
+              <TableHead className="text-[#333333] pl-6">가맹점명</TableHead>
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">오늘 매출</TableHead>
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">취소율</TableHead>
+              <TableHead className="text-[#333333] text-center">알림</TableHead>
+              <TableHead className="text-[#333333] text-center">상태</TableHead>
+              <TableHead className="text-[#333333] text-center hidden tablet:table-cell">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2 -ml-2">
+                      {selectedPeriod} 매출 현황
+                      <ChevronDown className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("일별")}>일별 매출 현황</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("주별")}>주별 매출 현황</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => setSelectedPeriod("월별")}>월별 매출 현황</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableHead>
+              <TableHead className="text-[#333333]"></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {stores.map((store) => (
+              <TableRow
+                key={store.id}
+                className="border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer"
+                onClick={() => handleStoreClick(store)}
+              >
+                <TableCell className="pl-6">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Star className="w-4 h-4 text-[#717182]" />
+                      <span className="text-sm text-[#333333]">{store.name}</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center hidden tablet:table-cell">
+                  <div>
+                    <p className="text-sm text-[#333333]">
+                      ₩{(store.todaySales / 1000000).toFixed(1)}M
+                    </p>
+                    <div
+                      className={`flex items-center gap-1 text-xs justify-center ${
+                        store.salesChange > 0
+                          ? "text-[#4CAF50]"
+                          : "text-[#FF4D4D]"
+                      }`}
+                    >
+                      {store.salesChange > 0 ? (
+                        <TrendingUp className="w-3 h-3" />
+                      ) : (
+                        <TrendingDown className="w-3 h-3" />
+                      )}
+                      <span>{Math.abs(store.salesChange)}%</span>
+                    </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center hidden tablet:table-cell">
+                  <Badge
+                    variant="outline"
+                    className={`rounded ${
+                      store.cancellationRate > 3.5
+                        ? "border-[#FF4D4D] text-[#FF4D4D]"
+                        : "border-[#717182] text-[#717182]"
                     }`}
-                    onClick={() => handleStoreClick(store)}
                   >
-                    <TableCell className="pl-6">
+                    {store.cancellationRate}%
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-center">
+                  {store.alertCount > 0 ? (
+                    <Badge
+                      variant="destructive"
+                      className="rounded"
+                    >
+                      {store.alertCount}건
+                    </Badge>
+                  ) : (
+                    <span className="text-xs text-[#717182]">없음</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  <Badge
+                    className="rounded bg-[#4CAF50] text-white"
+                  >
+                    {store.status}
+                  </Badge>
+                </TableCell>
+                <TableCell className="w-[200px] hidden tablet:table-cell">
+                  <div className="flex items-center gap-2">
+                    <div className="w-full h-2.5 relative">
+                      <div
+                        className="bg-[#FFB800] h-2.5"
+                        style={{ width: `${(getSalesData(store, selectedPeriod) / maxSales) * 100}%` }}
+                      ></div>
+                    </div>
+                    <span className="text-xs text-gray-500 w-16 text-right">
+                      {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
+                    </span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="flex gap-2 justify-end">
+                    <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                      <Link to="/transactions">거래내역</Link>
+                    </Button>
+                    <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
+                      <Link to="/analytics">매출분석</Link>
+                    </Button>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
+
+      {/* Store Detail Tabs */}
+      {selectedStore && (
+        <>
+          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4">
+              {selectedStore.name} 상세 관리
+            </h3>
+            <Tabs defaultValue="basic" className="w-full">
+              <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
+                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                  기본정보
+                </TabsTrigger>
+                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                  알림설정
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="basic" className="mt-6">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
+                    <div>
+                      <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                      <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                    </div>
+                    <div>
+                      <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                      <Input value="123-45-67890" className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
+                    <div className="space-y-6">
                       <div>
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-[#717182]" />
-                          <span className="text-sm text-[#333333]">{store.name}</span>
+                        <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                        <Input value="김사장" className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                      </div>
+                      <div>
+                        <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                        <Input value="음식점업" className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                      </div>
+                      <div>
+                        <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                        <Input defaultValue="02-1234-5678" className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                      </div>
+                      <div>
+                        <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                        <Input defaultValue={selectedStore.address} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
+                      </div>
+                    </div>
+                    <div>
+                        <div className="flex items-center justify-between mb-2">
+                            <label className="text-sm text-[#717182]">영업시간</label>
+                            <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm">수정</Button>
+                                </DialogTrigger>
+                                <DialogContent className="max-w-2xl">
+                                    <DialogHeader className="text-left">
+                                    <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                    <DialogDescription>
+                                        요일별 영업시간과 휴무일을 설정하세요.
+                                    </DialogDescription>
+                                    </DialogHeader>
+                                    <BusinessHoursForm />
+                                    <DialogFooter className="justify-center sm:justify-end">
+                                    <Button className="w-full sm:w-auto" onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                                    </DialogFooter>
+                                </DialogContent>
+                            </Dialog>
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className="text-center">
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end mt-6">
+                    <Button>수정 완료</Button>
+                </div>
+
+                {/* Danger Zone */}
+                <Card className="p-6 mt-6">
+                  <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4">
+                    <div>
+                      <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
+                      <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                    </div>
+                    <Button variant="destructive" className="rounded-lg w-full tablet:w-auto">
+                      가맹점 삭제
+                    </Button>
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="alerts" className="mt-6">
+                <div className="space-y-4">
+                  {alertRecipients.map((recipient) => (
+                    <div key={recipient.id} className="flex items-center justify-between p-4 bg-[#F5F5F5] rounded-lg">
                       <div>
                         <p className="text-sm text-[#333333]">
                           ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M

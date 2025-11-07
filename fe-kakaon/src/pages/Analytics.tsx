@@ -636,7 +636,7 @@ export default function Analytics() {
                 <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
                   <Input
                     type="text"
-                    placeholder="yyyy.mm.dd"
+                    placeholder="YYYY.MM.DD"
                     value={startDateInput}
                     onChange={(e) => handleDateInputChange('start', e.target.value)}
                     onBlur={() => handleDateInputBlur('start')}
@@ -645,7 +645,7 @@ export default function Analytics() {
                   <span className="text-sm text-gray-500 text-center">~</span>
                   <Input
                     type="text"
-                    placeholder="yyyy.mm.dd"
+                    placeholder="YYYY.MM.DD"
                     value={endDateInput}
                     onChange={(e) => handleDateInputChange('end', e.target.value)}
                     onBlur={() => handleDateInputBlur('end')}
