@@ -95,7 +95,7 @@ export default function Settings() {
     // 세 부분으로 나뉜 전화번호를 하나의 문자열로 합침
     const fullPhone = (values.phone1 && values.phone2 && values.phone3)
       ? `${values.phone1}-${values.phone2}-${values.phone3}`
-      : null;
+      : "";
 
     const payload = {
       name: values.name,
