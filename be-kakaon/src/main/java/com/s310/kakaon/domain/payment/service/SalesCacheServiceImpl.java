@@ -88,7 +88,8 @@ public class SalesCacheServiceImpl implements SalesCacheService {
     }
 
     /** redis value -> int 값으로 변경 메서드 */
-    private int getIntValue(String key) {
+    @Override
+    public int getIntValue(String key) {
         String value = redisTemplate.opsForValue().get(key);
         return value != null ? (int) Double.parseDouble(value) : 0;
     }

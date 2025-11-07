@@ -30,4 +30,6 @@ public interface SalesCacheService {
      * @return 해당 날짜의 매출 통계 (시간대별 포함)
      */
     SalesStatsResponseDto getSalesStats(Long storeId, String date);
+
+    int getIntValue(String key);
 }
