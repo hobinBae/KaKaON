@@ -85,7 +85,20 @@ public class AlertController {
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "이상 거래 알림 목록 조회 성공", response, httpRequest.getRequestURI()));
     }
+
     //단건 읽음 처리
+    @PatchMapping("/{alertId}/read")
+    public ResponseEntity<ApiResponse<AlertResponseDto>> readAlert(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            @PathVariable Long alertId,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        AlertResponseDto response = alertService.checkedAnomalyAlert(memberId, storeId, alertId);
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "알림 읽음 처리 성공", response, httpRequest.getRequestURI()));
+    }
 
     //모두 읽음 표시
     @Operation(
@@ -104,6 +117,7 @@ public class AlertController {
             Pageable pageable,
             HttpServletRequest httpRequest
     ) {
+
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         PageResponse<AlertResponseDto> response = alertService.checkedAnomalyAlerts(memberId, storeId, pageable);
         return ResponseEntity.status(HttpStatus.OK)

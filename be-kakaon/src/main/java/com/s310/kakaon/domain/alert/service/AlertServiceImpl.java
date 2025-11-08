@@ -99,12 +99,12 @@ public class AlertServiceImpl implements AlertService{
 
     @Override
     @Transactional(readOnly = true)
-    public AlertDetailResponseDto getAnomalyAlert(Long memberId, Long storeId, Long alertId) {
+    public AlertDetailResponseDto getAnomalyAlert(Long memberId, Long storeId, Long id) {
 
          memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
-        Alert alert = alertRepository.findById(alertId)
+        Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.ALERT_NOT_FOUND));
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
@@ -123,6 +123,7 @@ public class AlertServiceImpl implements AlertService{
 
 
         return AlertDetailResponseDto.builder()
+                .id(alert.getId())
                 .alertUuid(alert.getAlertUuid())
                 .alertType(alert.getAlertType())
                 .detectedAt(alert.getDetectedAt())
@@ -150,6 +151,23 @@ public class AlertServiceImpl implements AlertService{
         Page<AlertResponseDto> responsePage = alerts.map(alertMapper::fromEntity);
 
         return PageResponse.from(responsePage);
+
+    }
+
+    @Override
+    @Transactional
+    public AlertResponseDto checkedAnomalyAlert(Long memberId, Long storeId, Long id) {
+        memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        Alert alert = alertRepository.findById(id)
+                .orElseThrow(() -> new ApiException(ErrorCode.ALERT_NOT_FOUND));
+
+        alert.updateChecked();
+        return alertMapper.fromEntity(alert);
 
     }
 

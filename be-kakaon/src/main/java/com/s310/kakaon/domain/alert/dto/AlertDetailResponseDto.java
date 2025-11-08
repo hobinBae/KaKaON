@@ -16,6 +16,7 @@ import java.util.List;
 @Getter
 public class AlertDetailResponseDto {
 
+    private Long id;
     private String alertUuid;
     private AlertType alertType;
     private LocalDateTime detectedAt;

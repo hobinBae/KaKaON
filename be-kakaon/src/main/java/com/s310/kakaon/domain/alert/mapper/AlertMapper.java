@@ -10,6 +10,7 @@ public class AlertMapper {
 
     public AlertResponseDto fromEntity(Alert alert){
         return AlertResponseDto.builder()
+                .id(alert.getId())
                 .alertUuid(alert.getAlertUuid())
                 .detectedAt(alert.getDetectedAt())
                 .alertType(alert.getAlertType())
@@ -17,4 +18,5 @@ public class AlertMapper {
                 .build()
                 ;
     }
+
 }

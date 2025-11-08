@@ -14,6 +14,7 @@ import java.time.LocalDateTime;
 @Builder
 public class AlertResponseDto {
 
+    private Long id;
     private String alertUuid; // 이상거래 uuid(나중에 알림 아이디로 바꿀 수도..)
     private LocalDateTime detectedAt; // 탐지(발생)시간
     private AlertType alertType; // 이상거래 유형
