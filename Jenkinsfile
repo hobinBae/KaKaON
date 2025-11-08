@@ -16,7 +16,8 @@ pipeline {
         DEPLOY_PATH = '/home/ubuntu/app'
         
         // ===== Git 브랜치 =====
-        GIT_BRANCH = 'develop'
+        // GIT_BRANCH = 'develop'
+        GIT_BRANCH = 'INFRA/feature/https'
 
         // ===== 항상 배포용 compose 파일만 사용 =====
         COMPOSE_FILE = 'docker-compose-prod.yml'
