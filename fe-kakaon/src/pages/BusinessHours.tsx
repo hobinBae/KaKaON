@@ -3,16 +3,38 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import AdminPinModal from '@/components/AdminPinModal';
+import { useBoundStore } from '@/stores/storeStore';
+import { useOperationStatus, useUpdateOperationStatus } from '@/lib/hooks/useStores';
+import { toast } from 'sonner';
 
 export default function BusinessHours() {
+  const { selectedStoreId } = useBoundStore();
+  const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
+  const { mutate: updateStatus } = useUpdateOperationStatus();
+
   const [isBusinessOpen, setIsBusinessOpen] = useState(false);
-  const [startTime, setStartTime] = useState(null);
-  const [endTime, setEndTime] = useState(null);
+  const [startTime, setStartTime] = useState<Date | null>(null);
+  const [endTime, setEndTime] = useState<Date | null>(null);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
 
   useEffect(() => {
-    let timer;
+    if (operationStatus) {
+      setIsBusinessOpen(operationStatus.status === 'OPEN');
+      // TODO: 시작/종료 시간을 API로부터 받아와야 정확한 경과 시간 계산 가능
+      // 임시로 상태 변경 시점을 시작 시간으로 설정
+      if (operationStatus.status === 'OPEN') {
+        setStartTime(new Date()); 
+        setEndTime(null);
+      } else {
+        setStartTime(null);
+        setEndTime(new Date());
+      }
+    }
+  }, [operationStatus]);
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
     if (isBusinessOpen && startTime) {
       timer = setInterval(() => {
         const now = new Date();
@@ -23,13 +45,13 @@ export default function BusinessHours() {
     return () => clearInterval(timer);
   }, [isBusinessOpen, startTime]);
 
-  const formatElapsedTime = (seconds) => {
+  const formatElapsedTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600);
     const m = Math.floor((seconds % 3600) / 60);
     return `총 ${h}시간 ${m}분`;
   };
 
-  const formatDateTime = (date) => {
+  const formatDateTime = (date: Date | null) => {
     if (!date) return '-';
     const days = ['일', '월', '화', '수', '목', '금', '토'];
     const year = date.getFullYear();
@@ -43,16 +65,29 @@ export default function BusinessHours() {
   };
 
   const handlePinVerified = () => {
-    if (isBusinessOpen) {
-      setIsBusinessOpen(false);
-      setEndTime(new Date());
-    } else {
-      setStartTime(new Date());
-      setEndTime(null);
-      setIsBusinessOpen(true);
+    if (!selectedStoreId) {
+      toast.error("먼저 헤더에서 가맹점을 선택해주세요.");
+      setIsPinModalOpen(false);
+      return;
     }
-    setIsPinModalOpen(false);
+
+    const newStatus = isBusinessOpen ? 'CLOSED' : 'OPEN';
+    updateStatus({ storeId: Number(selectedStoreId), data: { status: newStatus } }, {
+      onSuccess: () => {
+        toast.success(`영업 상태가 성공적으로 변경되었습니다: ${newStatus === 'OPEN' ? '영업 시작' : '영업 마감'}`);
+        setIsPinModalOpen(false);
+        // UI 상태 업데이트는 useEffect [operationStatus] 에서 처리
+      },
+      onError: (error) => {
+        toast.error("영업 상태 변경에 실패했습니다.", { description: error.message });
+        setIsPinModalOpen(false);
+      }
+    });
   };
+
+  if (isLoading) {
+    return <div>영업 상태를 불러오는 중...</div>;
+  }
 
   return (
     <div className="space-y-6">
