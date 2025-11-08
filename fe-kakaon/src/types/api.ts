@@ -58,6 +58,11 @@ export interface StoreCreateRequest {
   businessType: BusinessType;
   address: string;
   phone: string;
+  city: string;
+  state?: string;
+  postalCode: string;
+  latitude: number;
+  longitude: number;
   businessHours: BusinessHour[];
 }
 

@@ -54,6 +54,16 @@ import type { Store, StoreCreateRequest, BusinessHour, AlertRecipient } from "@/
 import { toast } from "sonner";
 // import { useEffect } from "react"; // 수정 기능 비활성화로 미사용
 
+// 전역 window 객체에 daum과 kakao 타입 선언했음
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    daum: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kakao: any;
+  }
+}
+
 // TODO: 알림 수신자 목록 API 연동 후 이 더미 데이터는 제거해야 합니다.
 const initialAlertRecipients: AlertRecipient[] = [
   { id: 1, name: "김사장", position: "대표", email: "owner@kakaopay.com", active: true },
@@ -152,8 +162,14 @@ export default function StoreManage() {
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
   const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
-  const [newStoreAddress, setNewStoreAddress] = useState("");
+  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
+  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
   const [newStorePhone, setNewStorePhone] = useState("");
+  const [newStoreCity, setNewStoreCity] = useState("");
+  const [newStoreState, setNewStoreState] = useState("");
+  const [newStorePostalCode, setNewStorePostalCode] = useState("");
+  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
+  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
   const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState | null>(null);
 
   // // 가맹점 정보 수정을 위한 상태 (TODO: 백엔드 API 구현 후 주석 해제)
@@ -168,6 +184,40 @@ export default function StoreManage() {
   //     setEditingBusinessHours(convertBusinessHours(selectedStore.businessHours));
   //   }
   // }, [selectedStore]);
+
+  // Daum 우편번호 검색 및 Kakao 좌표 변환을 처리하는 함수를 작성했음
+  const handleAddressSearch = () => {
+    if (!window.daum || !window.kakao || !window.kakao.maps) {
+      toast.error("주소 검색 서비스 로딩에 실패했습니다. 페이지를 새로고침 해주세요.");
+      return;
+    }
+
+    const geocoder = new window.kakao.maps.services.Geocoder();
+
+    new window.daum.Postcode({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      oncomplete: function(data: any) {
+        const roadAddr = data.roadAddress; // 도로명 주소 변수
+        
+        setNewStorePostalCode(data.zonecode);
+        setNewStoreBaseAddress(roadAddr);
+        setNewStoreCity(data.sido);
+        setNewStoreState(data.sigungu);
+
+        // 주소로 좌표를 검색했음
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        geocoder.addressSearch(data.address, function(result: any, status: any) {
+             if (status === window.kakao.maps.services.Status.OK) {
+                setNewStoreLatitude(parseFloat(result[0].y));
+                setNewStoreLongitude(parseFloat(result[0].x));
+                toast.success("주소가 좌표로 변환되었습니다.");
+             } else {
+                toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
+             }
+        });
+      }
+    }).open();
+  };
 
 
   const handleStoreClick = (store: Store) => {
@@ -228,12 +278,20 @@ export default function StoreManage() {
         closeTime: (val.timeSlots[0] as { start: string; end: string }).end,
       }));
 
+    // 기본 주소와 상세 주소를 조합하여 최종 주소를 생성했음
+    const fullAddress = `${newStoreBaseAddress} ${newStoreDetailAddress}`.trim();
+
     const newStoreData: StoreCreateRequest = {
       name: newStoreName,
       businessNumber: newStoreBusinessNumber,
       businessType: newStoreType,
-      address: newStoreAddress,
+      address: fullAddress, // 조합된 전체 주소를 사용함
       phone: newStorePhone,
+      city: newStoreCity,
+      state: newStoreState,
+      postalCode: newStorePostalCode,
+      latitude: newStoreLatitude,
+      longitude: newStoreLongitude,
       businessHours: businessHours,
     };
 
@@ -245,8 +303,14 @@ export default function StoreManage() {
         setNewStoreName("");
         setNewStoreBusinessNumber("");
         setNewStoreType("RESTAURANT");
-        setNewStoreAddress("");
+        setNewStoreBaseAddress("");
+        setNewStoreDetailAddress("");
         setNewStorePhone("");
+        setNewStoreCity("");
+        setNewStoreState("");
+        setNewStorePostalCode("");
+        setNewStoreLatitude(0);
+        setNewStoreLongitude(0);
         setNewStoreBusinessHours(null);
       },
       onError: (error) => {
@@ -362,7 +426,22 @@ export default function StoreManage() {
               </div>
               <div className="col-span-2">
                 <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                <Input value={newStoreAddress} onChange={(e) => setNewStoreAddress(e.target.value)} />
+                <div className="flex gap-2">
+                  <Input value={newStorePostalCode} placeholder="우편번호" readOnly />
+                  <Button type="button" variant="outline" onClick={handleAddressSearch}>
+                    우편번호 찾기
+                  </Button>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Input value={newStoreBaseAddress} placeholder="주소" readOnly />
+              </div>
+              <div className="col-span-2">
+                <Input 
+                  value={newStoreDetailAddress}
+                  onChange={(e) => setNewStoreDetailAddress(e.target.value)} 
+                  placeholder="상세주소 입력" 
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm text-[#717182] mb-2 block">영업시간</label>
