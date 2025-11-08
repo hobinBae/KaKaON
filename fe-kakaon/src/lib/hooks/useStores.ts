@@ -1,6 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import type { Store, StoreCreateRequest } from '@/types/api';
+import type {
+  Store,
+  StoreCreateRequest,
+  OperationStatusUpdateRequest,
+  OperationStatusUpdateResponse,
+  AlertRecipient,
+  AlertRecipientCreateRequest,
+  AlertRecipientUpdateRequest,
+} from '@/types/api';
 import apiClient from '@/lib/apiClient';
+
+// ================== 가맹점 API 함수들 ==================
 
 // 내 매장 목록을 가져오는 API 호출 함수
 const getMyStores = async (): Promise<Store[]> => {
@@ -20,9 +30,50 @@ const createStore = async (data: StoreCreateRequest): Promise<Store> => {
   return response.data.data;
 };
 
+// // 매장을 수정하는 API 호출 함수
+// // TODO: 백엔드에 StoreUpdateRequestDto 및 PATCH /stores/{storeId} API 구현 필요
+// const updateStore = async ({ storeId, data }: { storeId: number; data: Partial<StoreCreateRequest> }): Promise<Store> => {
+//   const response = await apiClient.patch(`/stores/${storeId}`, data);
+//   return response.data.data;
+// };
+
 // 매장을 삭제하는 API 호출 함수
 const deleteStore = async (storeId: number): Promise<void> => {
   await apiClient.delete(`/stores/${storeId}`);
+};
+
+// ================== 영업 상태 API 함수들 ==================
+
+// 가맹점 영업 상태를 조회하는 API 함수
+const getOperationStatus = async (storeId: number): Promise<OperationStatusUpdateResponse> => {
+  const response = await apiClient.get(`/stores/${storeId}/operation-status`);
+  return response.data.data;
+};
+
+// 가맹점 영업 상태를 변경하는 API 함수
+const updateOperationStatus = async ({ storeId, data }: { storeId: number; data: OperationStatusUpdateRequest }): Promise<OperationStatusUpdateResponse> => {
+  const endpoint = data.status === 'OPEN' ? `/stores/${storeId}/open` : `/stores/${storeId}/close`;
+  const response = await apiClient.post(endpoint, data);
+  return response.data.data;
+};
+
+// ================== 알림 수신자 API 함수들 ==================
+
+// 알림 수신자를 등록하는 API 함수
+const registerAlertRecipient = async ({ storeId, data }: { storeId: number; data: AlertRecipientCreateRequest }): Promise<AlertRecipient> => {
+  const response = await apiClient.post(`/stores/${storeId}/alert-recipient`, data);
+  return response.data.data;
+};
+
+// 알림 수신자를 수정하는 API 함수
+const updateAlertRecipient = async ({ storeId, alertId, data }: { storeId: number; alertId: number; data: AlertRecipientUpdateRequest }): Promise<AlertRecipient> => {
+  const response = await apiClient.patch(`/stores/${storeId}/alert-recipient/${alertId}`, data);
+  return response.data.data;
+};
+
+// 알림 수신자를 삭제하는 API 함수
+const deleteAlertRecipient = async ({ storeId, alertId }: { storeId: number; alertId: number }): Promise<void> => {
+  await apiClient.delete(`/stores/${storeId}/alert-recipient/${alertId}`);
 };
 
 
@@ -31,6 +82,8 @@ const storeKeys = {
   lists: () => [...storeKeys.all, 'list'] as const,
   details: () => [...storeKeys.all, 'detail'] as const,
   detail: (id: number) => [...storeKeys.details(), id] as const,
+  operationStatus: (id: number) => [...storeKeys.all, 'operation-status', id] as const,
+  alertRecipients: (id: number) => [...storeKeys.all, 'alert-recipients', id] as const,
 };
 
 /**
@@ -80,6 +133,95 @@ export const useDeleteStore = () => {
       queryClient.invalidateQueries({ queryKey: storeKeys.lists() });
       // 상세 정보 쿼리 캐시도 제거
       queryClient.removeQueries({ queryKey: storeKeys.detail(storeId) });
+    },
+  });
+};
+
+// /**
+//  * 가맹점 정보를 수정하는 커스텀 훅
+//  * TODO: 백엔드 API 구현 후 주석 해제
+//  */
+// export const useUpdateStore = () => {
+//   const queryClient = useQueryClient();
+//   return useMutation({
+//     mutationFn: updateStore,
+//     onSuccess: (updatedStore) => {
+//       // 가맹점 목록 쿼리를 무효화하여 목록을 새로고침
+//       queryClient.invalidateQueries({ queryKey: storeKeys.lists() });
+//       // 수정된 가맹점의 상세 정보 캐시를 직접 업데이트
+//       queryClient.setQueryData(storeKeys.detail(updatedStore.storeId), updatedStore);
+//     },
+//   });
+// };
+
+// ================== 영업 상태 관련 훅 ==================
+
+/**
+ * 특정 가맹점의 영업 상태를 조회하는 커스텀 훅
+ */
+export const useOperationStatus = (storeId: number) => {
+  return useQuery({
+    queryKey: storeKeys.operationStatus(storeId),
+    queryFn: () => getOperationStatus(storeId),
+    enabled: !!storeId,
+  });
+};
+
+/**
+ * 가맹점의 영업 상태를 변경하는 커스텀 훅
+ */
+export const useUpdateOperationStatus = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateOperationStatus,
+    onSuccess: (data) => {
+      // 영업 상태 쿼리 캐시를 업데이트
+      queryClient.setQueryData(storeKeys.operationStatus(data.storeId), data);
+      // 가맹점 상세 정보 쿼리도 무효화하여 상태를 동기화
+      queryClient.invalidateQueries({ queryKey: storeKeys.detail(data.storeId) });
+    },
+  });
+};
+
+// ================== 알림 수신자 관련 훅 ==================
+
+/**
+ * 알림 수신자를 등록하는 커스텀 훅
+ */
+export const useRegisterAlertRecipient = () => {
+  // const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: registerAlertRecipient,
+    onSuccess: () => {
+      // 알림 수신자 목록 조회 API가 없으므로, 성공 시 별도 처리 없음.
+      // 필요 시, queryClient.invalidateQueries({ queryKey: storeKeys.alertRecipients(storeId) });
+    },
+  });
+};
+
+/**
+ * 알림 수신자를 수정하는 커스텀 훅
+ */
+export const useUpdateAlertRecipient = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateAlertRecipient,
+    onSuccess: (data, variables) => {
+      // 알림 수신자 목록 API가 있다면 아래 코드로 캐시를 무효화해야 합니다.
+      // queryClient.invalidateQueries({ queryKey: storeKeys.alertRecipients(variables.storeId) });
+    },
+  });
+};
+
+/**
+ * 알림 수신자를 삭제하는 커스텀 훅
+ */
+export const useDeleteAlertRecipient = () => {
+  // const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteAlertRecipient,
+    onSuccess: () => {
+      // 성공 시 별도 처리 없음.
     },
   });
 };
