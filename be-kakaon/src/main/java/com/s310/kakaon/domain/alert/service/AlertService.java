@@ -10,7 +10,7 @@ public interface AlertService {
 
     PageResponse<AlertResponseDto> getAnomalyAlerts(Long storeId, Long memberId, AlertSearchRequestDto request, Pageable pageable);
 
-    AlertDetailResponseDto getAnomalyAlert(Long memberId, Long alertId);
+    AlertDetailResponseDto getAnomalyAlert(Long memberId, Long storeId, Long alertId);
 
     PageResponse<AlertResponseDto> checkedAnomalyAlerts(Long storeId, Long memberId, Pageable pageable);
 

@@ -99,13 +99,15 @@ public class AlertServiceImpl implements AlertService{
 
     @Override
     @Transactional(readOnly = true)
-    public AlertDetailResponseDto getAnomalyAlert(Long memberId, Long alertId) {
+    public AlertDetailResponseDto getAnomalyAlert(Long memberId, Long storeId, Long alertId) {
 
          memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Alert alert = alertRepository.findById(alertId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ALERT_NOT_FOUND));
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         List<PaymentSimpleResponseDto> paymentDtos = alert.getAlertPayments().stream()
                 .map(alertPayment -> {

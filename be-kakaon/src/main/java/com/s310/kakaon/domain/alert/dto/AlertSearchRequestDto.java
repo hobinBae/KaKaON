@@ -12,6 +12,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
+@Builder
 public class AlertSearchRequestDto {
     @DateTimeFormat(pattern = "yyyy-MM-dd")
     private LocalDate startDate;
