@@ -58,7 +58,42 @@ export interface StoreCreateRequest {
   businessType: BusinessType;
   address: string;
   phone: string;
+  city: string;
+  state?: string;
+  postalCode: string;
+  latitude: number;
+  longitude: number;
   businessHours: BusinessHour[];
+}
+
+export interface OperationStatusUpdateRequest {
+  status: StoreStatus;
+}
+
+export interface OperationStatusUpdateResponse {
+  storeId: number;
+  status: StoreStatus;
+}
+
+export interface AlertRecipient {
+  id: number;
+  name: string;
+  position: string;
+  email: string;
+  active: boolean;
+}
+
+export interface AlertRecipientCreateRequest {
+  name: string;
+  position: string;
+  email: string;
+}
+
+export interface AlertRecipientUpdateRequest {
+  name?: string;
+  position?: string;
+  email?: string;
+  active?: boolean;
 }
 
 // ================== Menu ==================
