@@ -73,6 +73,14 @@ services:
       # 인증서/챌린지 파일 공유
       - letsencrypt:/etc/letsencrypt
       - certbot-web:/var/www/certbot
+  
+  certbot:
+    image: certbot/certbot:latest
+    container_name: certbot
+    volumes:
+      - certbot-web:/var/www/certbot
+      - letsencrypt:/etc/letsencrypt
+    networks: [backend-net]
 
 volumes:
   mysql_data:
