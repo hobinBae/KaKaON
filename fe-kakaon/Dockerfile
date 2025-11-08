@@ -21,7 +21,7 @@ FROM nginx:1.27-alpine
 WORKDIR /usr/share/nginx/html
 
 # nginx 설정 파일 복사
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY nginx/nginx.conf /etc/nginx/conf.d/default.conf
 
 # 빌드 결과물 복사
 COPY --from=builder /app/dist ./
