@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import {
   Plus,
   Search,
@@ -454,7 +454,7 @@ export default function StoreManage() {
             </TableHeader>
             <TableBody>
               {stores.map((store) => (
-                <>
+                <Fragment key={store.storeId}>
                   <TableRow
                     key={store.storeId}
                     className={`border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer ${
@@ -750,7 +750,7 @@ export default function StoreManage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>
