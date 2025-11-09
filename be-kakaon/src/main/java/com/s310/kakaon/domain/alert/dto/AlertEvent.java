@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.alert.dto;
 
 import com.s310.kakaon.domain.alert.entity.AlertType;
+import com.s310.kakaon.domain.payment.entity.Payment;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,4 +20,7 @@ public class AlertEvent {
     private  AlertType alertType;   // 알림 종류 (ALE-006-1 등)
     private  String description;    // 알림 내용 (예: "전주 대비 취소율 25% 증가")
     private  LocalDateTime detectedAt; // 탐지 시각
+
+    private Long paymentId;
+
 }

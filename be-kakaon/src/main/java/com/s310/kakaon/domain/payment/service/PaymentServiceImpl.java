@@ -1,5 +1,8 @@
 package com.s310.kakaon.domain.payment.service;
 
+import com.s310.kakaon.domain.alert.dto.AlertEvent;
+import com.s310.kakaon.domain.alert.entity.AlertType;
+import com.s310.kakaon.domain.alert.service.AlertService;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
@@ -22,12 +25,16 @@ import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import jakarta.transaction.TransactionScoped;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.ManyToAny;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -54,6 +61,9 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentMapper paymentMapper;
     private final OrderRepository orderRepository;
     private final PaymentCancelRepository paymentCancelRepository;
+    private final ApplicationEventPublisher publisher;
+    private final StringRedisTemplate stringRedisTemplate;
+    private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
 
     @Override
     @Transactional
@@ -85,6 +95,10 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
 //        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
+        long t1 = System.currentTimeMillis();
+        detectAfterHoursTransaction(store, payment);
+        long t2 = System.currentTimeMillis();
+        log.info("[PERF] 이상거래 탐지 완료 시점: {} ms", (t2 - t1));
         return paymentMapper.fromEntity(payment);
     }
 
@@ -393,6 +407,25 @@ public class PaymentServiceImpl implements PaymentService{
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
             throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+    }
+
+    public void detectAfterHoursTransaction(Store store, Payment payment) {
+        String redisKey = REDIS_KEY_PREFIX + store.getId();
+
+
+        if (!Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisKey))) {
+            AlertEvent event = AlertEvent.builder()
+                    .alertUuid(UUID.randomUUID().toString().substring(0, 20))
+                    .storeId(store.getId())
+                    .storeName(store.getName())
+                    .alertType(AlertType.OUT_OF_BUSINESS_HOUR)
+                    .description("영업시간 외 거래가 발생했습니다.")
+                    .detectedAt(LocalDateTime.now())
+                    .paymentId(payment.getId())
+                    .build();
+            publisher.publishEvent(event);
+            log.info("[AlertEvent 발행] {}", event.getDescription());
         }
     }
 }

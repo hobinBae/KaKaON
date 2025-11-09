@@ -23,6 +23,7 @@ import jakarta.persistence.criteria.Path;
 import jakarta.persistence.criteria.Root;
 import jakarta.persistence.criteria.Subquery;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -46,6 +47,7 @@ import jakarta.persistence.criteria.Predicate;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class OrderServiceImpl implements OrderService{
 
     private final OrderRepository orderRepository;
@@ -60,6 +62,7 @@ public class OrderServiceImpl implements OrderService{
     @Override
     @Transactional
     public OrderResponseDto createOrderAndPayment(Long memberId, Long storeId, OrderRequestDto request) {
+
         Orders order = createOrder(memberId, storeId, request);
 
         PaymentCreateRequestDto payRequest = PaymentCreateRequestDto.builder()
@@ -70,7 +73,6 @@ public class OrderServiceImpl implements OrderService{
 
 
         paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
-
         order.updateStatus(request.getTotalAmount());
 
         return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
