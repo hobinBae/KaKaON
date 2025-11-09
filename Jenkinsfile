@@ -4,7 +4,7 @@ def resolveTriggeredBy = {
     if (glUser && glUser.trim()) {
         return glUser.trim()
     }
-    return sh(script: "git -C \"${env.WORKSPACE}\" log -1 --pretty=%an", returnStdout: true).trim()
+    return sh(script: "cd ${env.DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
 }
 
 
@@ -13,8 +13,7 @@ pipeline {
     
     environment {
         // ===== 배포 경로 =====
-        // DEPLOY_PATH = '/home/ubuntu/app'
-        DEPLOY_PATH = "${WORKSPACE}"
+        DEPLOY_PATH = '/home/ubuntu/app'
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
@@ -74,38 +73,37 @@ pipeline {
                     echo '최신 코드 가져오기...'
                     echo '================================================='
 
-                    dir("${DEPLOY_PATH}") {
-                        sh """
+                    sh """
+                        cd ${DEPLOY_PATH}
 
-                            # 워킹디렉터리 안전 등록 (루트권한/컨테이너에서 퍼미션 경고 회피)
-                            git config --global --add safe.directory .
+                        # 워킹디렉터리 안전 등록 (루트권한/컨테이너에서 퍼미션 경고 회피)
+                        git config --global --add safe.directory ${DEPLOY_PATH} || true
 
-                            # 원격 URL에 토큰 주입 (HTTPS)
-                            git remote set-url origin \
-                            https://${GIT_USER}:${GIT_TOKEN}@lab.ssafy.com/s13-final/S13P31S310.git
+                        # 원격 URL에 토큰 주입 (HTTPS)
+                        git remote set-url origin \
+                        https://${GIT_USER}:${GIT_TOKEN}@lab.ssafy.com/s13-final/S13P31S310.git
 
-                            
-                            echo "현재 브랜치 확인..."
-                            git branch -a
-                            
-                            echo "Git Fetch..."
-                            git fetch origin
-                            
-                            echo "브랜치 체크아웃: ${GIT_BRANCH}"
-                            git checkout ${GIT_BRANCH}
-                            
-                            echo "Git Pull..."
-                            git pull origin ${GIT_BRANCH}
-                            
-                            echo "최신 코드로 업데이트 완료!"
-                            echo ""
-                            echo "현재 커밋 정보:"
-                            git log -1 --oneline --decorate
-                            echo ""
-                            echo "변경된 파일:"
-                            git log -1 --stat
-                        """
-                    }
+                        
+                        echo "현재 브랜치 확인..."
+                        git branch -a
+                        
+                        echo "Git Fetch..."
+                        git fetch origin
+                        
+                        echo "브랜치 체크아웃: ${GIT_BRANCH}"
+                        git checkout ${GIT_BRANCH}
+                        
+                        echo "Git Pull..."
+                        git pull origin ${GIT_BRANCH}
+                        
+                        echo "최신 코드로 업데이트 완료!"
+                        echo ""
+                        echo "현재 커밋 정보:"
+                        git log -1 --oneline --decorate
+                        echo ""
+                        echo "변경된 파일:"
+                        git log -1 --stat
+                    """
                 }
             }
         }
@@ -117,19 +115,18 @@ pipeline {
                     echo '기존 컨테이너 중지 중...'
                     echo '================================================='
                     
-                    dir("${DEPLOY_PATH}") {
-                        sh """
-                            
-                            echo "현재 실행 중인 컨테이너:"
-                            docker ps
-                            
-                            echo ""
-                            echo "Docker Compose Down..."
-                            docker compose -f ${COMPOSE_FILE} down || echo "실행 중인 컨테이너 없음"
-                            
-                            echo "컨테이너 중지 완료!"
-                        """
-                    }
+                    sh """
+                        cd ${DEPLOY_PATH}
+                        
+                        echo "현재 실행 중인 컨테이너:"
+                        docker ps
+                        
+                        echo ""
+                        echo "Docker Compose Down..."
+                        docker compose -f ${COMPOSE_FILE} down || echo "실행 중인 컨테이너 없음"
+                        
+                        echo "컨테이너 중지 완료!"
+                    """
                 }
             }
         }
@@ -141,23 +138,22 @@ pipeline {
                     echo 'Docker 이미지 빌드 중...'
                     echo '================================================='
                     
-                    dir("${DEPLOY_PATH}") {
-                        sh """
-                            
-                            echo "Backend 이미지 빌드..."
-                            docker compose -f ${COMPOSE_FILE} build --no-cache be-kakaon
-                            
-                            echo ""
-                            echo "Frontend 이미지 빌드..."
-                            docker compose -f ${COMPOSE_FILE} build --no-cache fe-kakaon
-                            
-                            echo ""
-                            echo "이미지 빌드 완료!"
-                            echo ""
-                            echo "빌드된 이미지 목록:"
-                            docker images | grep -E "REPOSITORY|kakaon"
-                        """
-                    }
+                    sh """
+                        cd ${DEPLOY_PATH}
+                        
+                        echo "Backend 이미지 빌드..."
+                        docker compose -f ${COMPOSE_FILE} build --no-cache be-kakaon
+                        
+                        echo ""
+                        echo "Frontend 이미지 빌드..."
+                        docker compose -f ${COMPOSE_FILE} build --no-cache fe-kakaon
+                        
+                        echo ""
+                        echo "이미지 빌드 완료!"
+                        echo ""
+                        echo "빌드된 이미지 목록:"
+                        docker images | grep -E "REPOSITORY|kakaon"
+                    """
                 }
             }
         }
@@ -169,23 +165,22 @@ pipeline {
                     echo 'Docker Compose로 컨테이너 시작...'
                     echo '================================================='
                     
-                    dir("${DEPLOY_PATH}") {
-                        sh """
-                            
-                            echo "Docker Compose Up..."
-                            docker compose -f ${COMPOSE_FILE} up -d
-                            
-                            echo ""
-                            echo "컨테이너 시작 대기 (15초)..."
-                            sleep 15
-                            
-                            echo ""
-                            echo "컨테이너 시작 완료!"
-                            echo ""
-                            echo "컨테이너 상태:"
-                            docker compose -f ${COMPOSE_FILE} ps
-                        """
-                    }
+                    sh """
+                        cd ${DEPLOY_PATH}
+                        
+                        echo "Docker Compose Up..."
+                        docker compose -f ${COMPOSE_FILE} up -d
+                        
+                        echo ""
+                        echo "컨테이너 시작 대기 (15초)..."
+                        sleep 15
+                        
+                        echo ""
+                        echo "컨테이너 시작 완료!"
+                        echo ""
+                        echo "컨테이너 상태:"
+                        docker compose -f ${COMPOSE_FILE} ps
+                    """
                 }
             }
         }
@@ -319,8 +314,9 @@ pipeline {
     post {
         success {
             script {
-                def commitMessage = sh(script: "git -C \"${env.WORKSPACE}\" log -1 --pretty=%s", returnStdout: true).trim()
-                def commitHash    = sh(script: "git -C \"${env.WORKSPACE}\" rev-parse --short HEAD", returnStdout: true).trim()
+                
+                def commitMessage = sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%s", returnStdout: true).trim()
+                def commitHash    = sh(script: "cd ${DEPLOY_PATH} && git rev-parse --short HEAD", returnStdout: true).trim()
                 def triggeredBy   = resolveTriggeredBy()
                 mattermostSend(
                     color: "good",
