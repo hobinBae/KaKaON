@@ -91,6 +91,27 @@ public class PaymentController {
     }
 
     @Operation(
+            summary = "승인번호로 결제 내역 단건 조회",
+            description = """
+        특정 결제 승인번호(authorizationNo)에 해당하는 결제 정보를 조회합니다.  
+        """
+    )
+    @GetMapping("/authorization/{authorizationNo}")
+    public ResponseEntity<ApiResponse<PaymentResponseDto>> getPaymentByAuthorizationNo(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable String authorizationNo,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        PaymentResponseDto response = paymentService.getPaymentByAuthorizationNo(memberId, authorizationNo);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "승인 번호 조회 성공", response, httpRequest.getRequestURI()));
+    }
+
+
+    @Operation(
             summary = "결제 단건 조회",
             description = """
                     결제 ID(paymentId)를 기준으로 단일 결제 내역을 조회합니다.  

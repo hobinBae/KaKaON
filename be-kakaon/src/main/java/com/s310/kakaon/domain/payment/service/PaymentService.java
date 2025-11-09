@@ -26,4 +26,6 @@ public interface PaymentService {
 
     List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies();
 
+    PaymentResponseDto getPaymentByAuthorizationNo(Long memberId, String authorizationNo);
+
 }
