@@ -47,6 +47,15 @@ public class PaymentStatsHourly {
     @Column(name = "hourly_total_sales", nullable = false)
     private Integer hourlyTotalSales;
 
+    @Column(name = "hourly_payment_count", nullable = false)
+    private Integer hourlyPaymentCount;
+
+    @Column(name = "hourly_cancel_count", nullable = false)
+    private Integer hourlyCancelCount;
+
+    @Column(name = "hourly_cancel_rate", nullable = false)
+    private Double hourlyCancelRate;
+
 
 
 

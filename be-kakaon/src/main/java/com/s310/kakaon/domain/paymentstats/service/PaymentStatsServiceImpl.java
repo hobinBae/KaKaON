@@ -5,6 +5,7 @@ import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStatsHourly;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -13,10 +14,13 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,7 @@ public class PaymentStatsServiceImpl implements PaymentStatsService {
     private final PaymentRepository paymentRepository;
 
     @Override
+    @Transactional
     public void saveDailyPaymentStats(Long storeId, LocalDate date) {
 
         // 기본 검증
@@ -66,6 +71,23 @@ public class PaymentStatsServiceImpl implements PaymentStatsService {
                 .transferSales(paymentMethodSales.getOrDefault(PaymentMethod.TRANSFER, 0))
                 .deliverySales(deliverySum)
                 .build();
+
+        statsRepository.save(daily);
+
+        // 시간대별 통계 엔티티 리스트 생성
+        List<PaymentStatsHourly> hourlyStats = redisStats.getHourlySales().stream()
+                .map(h -> PaymentStatsHourly.builder()
+                        .paymentStats(daily)
+                        .hour(h.getHour())
+                        .hourlyTotalSales(h.getSales())
+                        .hourlyPaymentCount(h.getPaymentCount())
+                        .hourlyCancelCount(h.getCancelCount())
+                        .hourlyCancelRate(h.getCancelRate())
+                        .build()
+                )
+                .collect(Collectors.toList());
+
+        statsHourlyRepository.saveAll(hourlyStats);
 
     }
 }
