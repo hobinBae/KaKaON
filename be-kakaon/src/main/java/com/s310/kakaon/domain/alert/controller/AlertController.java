@@ -87,6 +87,18 @@ public class AlertController {
     }
 
     //단건 읽음 처리
+    @Operation(
+            summary = "단건 알림 읽음 처리",
+            description = """
+                    특정 가맹점(storeId)의 단건 미확인 알림을 읽음 처리합니다.  
+                    - PATCH /api/v1/stores/{storeId}/alerts/{alertId}/read  
+                    - 반환값: 변경된 단건 알림   
+                    """
+    )
+    @Parameters({
+            @Parameter(name = "storeId", description = "가맹점 ID", required = true),
+            @Parameter(name = "alertId", description = "알림 ID", required = true)
+    })
     @PatchMapping("/{alertId}/read")
     public ResponseEntity<ApiResponse<AlertResponseDto>> readAlert(
             @AuthenticationPrincipal String kakaoId,
