@@ -304,7 +304,7 @@ pipeline {
                         
                         echo ""
                         echo "==== 포트 확인 ===="
-                        sudo netstat -tulpn | grep -E "80|443|8080|3306|6379|9090" || echo "netstat not available"
+                        sudo netstat -tulpn | grep -E "80|443|8080|3306|6379" || echo "netstat not available"
                     """
                 }
             }
@@ -344,7 +344,7 @@ pipeline {
                 echo '접속 정보:'
                 echo "  - Frontend: https://k13s310.p.ssafy.io"
                 echo "  - Backend API(프록시 경유): https://k13s310.p.ssafy.io/api"
-                echo "  - Jenkins: http://k13s310.p.ssafy.io:9090"
+                echo "  - Jenkins: https://k13s310.p.ssafy.io/jenkins"
                 echo ''
                 echo '유용한 명령어:'
                 echo "  - 로그 확인: docker compose -f ${COMPOSE_FILE} logs -f"
