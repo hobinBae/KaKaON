@@ -42,11 +42,8 @@ public class AlertServiceImpl implements AlertService{
     @Override
     @Transactional
     public void createAndSendAlert(AlertEvent event) {
-        long t1 = System.currentTimeMillis();
         Store store = storeRepository.findById(event.getStoreId())
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
-        long t2 = System.currentTimeMillis();
-        log.info("[PERF] 상점 조회 {} ms", (t2 - t1));
         List<AlertRecipient> alertRecipients = store.getAlertRecipient();
 
         Alert alert = Alert.builder()
@@ -58,8 +55,6 @@ public class AlertServiceImpl implements AlertService{
                 .emailSent(false)
                 .checked(false)
                 .build();
-        long t3 = System.currentTimeMillis();
-        log.info("[PERF] 알림 만들기 {} ms", (t3 - t2));
         // 메일 내용 구성
         String subject = "[이상거래 탐지 알림] " + alert.getAlertType().getDescription();
         String text = String.format(
@@ -69,12 +64,8 @@ public class AlertServiceImpl implements AlertService{
                 alert.getDescription(),
                 alert.getDetectedAt().format(DateTimeFormatter.ofPattern("yy.MM.dd HH:mm"))
         );
-        long t4 = System.currentTimeMillis();
-        log.info("[PERF] 텍스트 만들기 {} ms", (t4 - t3));
         // 가맹점 이메일로 전송 (Store 엔티티에 email 필드 있다고 가정)
         mailService.sendAlertMail(store.getMember().getEmail(), subject, text);
-        long t5 = System.currentTimeMillis();
-        log.info("[PERF] 메일 보내기 {} ms", (t5 - t4));
         alertRepository.save(alert);
         if(event.getPaymentId() != null){
 
@@ -89,8 +80,6 @@ public class AlertServiceImpl implements AlertService{
             alertPaymentRepository.save(alertPayment);
 
         }
-        long t6 = System.currentTimeMillis();
-        log.info("[PERF] 이상거래 관련 결제내역 저장 {} ms", (t6 - t5));
         if(!alertRecipients.isEmpty()){
             for (AlertRecipient alertRecipient : alertRecipients) {
                 if(alertRecipient.getActive()){
@@ -104,8 +93,6 @@ public class AlertServiceImpl implements AlertService{
         }catch(Exception e){
             log.warn("[메일 전송 실패] storeId={}, reason={}", store.getId(), e.getMessage());
         }
-        long t7 = System.currentTimeMillis();
-        log.info("[PERF] 직원이 있다면 메일 전송 {} ms", (t7 - t6));
     }
 
     @Override
