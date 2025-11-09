@@ -1,9 +1,12 @@
 package com.s310.kakaon.domain.alert.entity;
 
 public enum AlertType {
-    CANCEL_RATE_SPIKE,
-    DUPLICATE_PAYMENT,
-    NIGHT_PAYMENT,
-    SMALL_REPEAT,
-    LOCATION_MISMATCH
+    
+    SAME_PAYMENT_METHOD,
+    OUT_OF_BUSINESS_HOUR,
+    REPEATED_PAYMENT,
+    HIGH_AMOUNT_SPIKE,
+    TRANSACTION_FREQUENCY_SPIKE,
+    CANCEL_RATE_SPIKE;
+
 }
