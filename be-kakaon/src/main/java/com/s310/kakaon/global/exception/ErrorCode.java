@@ -49,8 +49,9 @@ public enum ErrorCode {
     // CSV 업로드 관련
     INVALID_CSV_FORMAT("INVALID_CSV_FORMAT", HttpStatus.BAD_REQUEST, "CSV 파일 형식이 올바르지 않습니다."),
     CSV_UPLOAD_FAILED("CSV_UPLOAD_FAILED", HttpStatus.BAD_REQUEST, "CSV 업로드에 실패했습니다."),
-    FILE_READ_ERROR("FILE_READ_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽는 중 오류가 발생했습니다.")
+    FILE_READ_ERROR("FILE_READ_ERROR", HttpStatus.INTERNAL_SERVER_ERROR, "파일을 읽는 중 오류가 발생했습니다."),
 
+    ALERT_NOT_FOUND("ALERT_NOT_FOUND", HttpStatus.NOT_FOUND, "이상 거래 알림을 찾을 수 없습니다.")
             ;
 
     //

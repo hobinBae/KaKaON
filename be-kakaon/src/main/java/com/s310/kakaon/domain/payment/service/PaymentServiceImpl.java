@@ -21,6 +21,7 @@ import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
+import jakarta.transaction.TransactionScoped;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.annotations.ManyToAny;
@@ -364,6 +365,19 @@ public class PaymentServiceImpl implements PaymentService{
                 .filter(dto -> dto.getIncreasePercent() >= 20.0)
                 .toList();
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PaymentResponseDto getPaymentByAuthorizationNo(Long memberId, String authorizationNo) {
+        memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        Payment payment = paymentRepository.findByAuthorizationNo(authorizationNo)
+                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
+
+        return paymentMapper.fromEntity(payment);
+    }
+
 
     private String escapeCsvField(String field) {
         if (field == null) {
