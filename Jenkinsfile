@@ -295,6 +295,8 @@ pipeline {
                     echo '================================================='
                     
                     sh """
+                        cd ${DEPLOY_PATH}
+
                         echo "==== Docker Compose 상태 ===="
                         docker compose -f ${COMPOSE_FILE} ps
                         
@@ -385,7 +387,8 @@ pipeline {
                 echo '===================================================='
                 
                 // 실패 시 로그 수집
-                sh '''
+                sh """
+                    cd ${DEPLOY_PATH}
                     echo "에러 로그 수집 중..."
                     echo "==== Backend 로그 ===="
                     docker logs be-kakaon --tail 100 2>&1 || true
@@ -393,7 +396,7 @@ pipeline {
                     docker logs fe-kakaon --tail 50 2>&1 || true
                     echo "==== Compose 상태 ===="
                     docker compose -f ${COMPOSE_FILE} ps || true
-                '''
+                """
             }
         }
         
