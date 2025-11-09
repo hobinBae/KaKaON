@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, Fragment } from "react";
 import {
   Plus,
   Search,
@@ -7,16 +7,11 @@ import {
   TrendingUp,
   TrendingDown,
   X,
-  Calendar as CalendarIcon,
   ChevronDown,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
-import { ko } from "date-fns/locale";
-import { DateRange } from "react-day-picker";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -43,23 +38,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { Switch } from "@/components/ui/switch";
-import { BusinessHoursForm } from "@/components/BusinessHoursForm";
-import { useMyStores } from "@/lib/hooks/useStores";
-import type { Store } from "@/types/api";
+import { BusinessHoursForm, type BusinessHoursState } from "@/components/BusinessHoursForm";
+import { 
+  useMyStores, 
+  useCreateStore, 
+  useDeleteStore,
+  useStoreById, // 상세 조회를 위해 추가
+  // useUpdateStore, // TODO: 백엔드 API 구현 후 주석 해제
+  useRegisterAlertRecipient,
+  useDeleteAlertRecipient,
+  useUpdateAlertRecipient,
+} from "@/lib/hooks/useStores";
+import type { Store, StoreCreateRequest, BusinessHour, AlertRecipient } from "@/types/api";
+import { toast } from "sonner";
+// import { useEffect } from "react"; // 수정 기능 비활성화로 미사용
 
-const initialAlertRecipients = [
-  { id: 1, name: "김사장", position: "대표", email: "owner@kakaopay.com" },
-  { id: 2, name: "김직원", position: "점장", email: "manager@kakaopay.com" },
+// 전역 window 객체에 daum과 kakao 타입 선언했음
+declare global {
+  interface Window {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    daum: any;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    kakao: any;
+  }
+}
+
+// TODO: 알림 수신자 목록 API 연동 후 이 더미 데이터는 제거해야 합니다.
+const initialAlertRecipients: AlertRecipient[] = [
+  { id: 1, name: "김사장", position: "대표", email: "owner@kakaopay.com", active: true },
+  { id: 2, name: "김직원", position: "점장", email: "manager@kakaopay.com", active: true },
 ];
 
 // 요일 변환 헬퍼 함수
@@ -71,6 +79,16 @@ const dayOfWeekToKorean: Record<string, string> = {
   'FRIDAY': '금',
   'SATURDAY': '토',
   'SUNDAY': '일',
+};
+
+const koreanToDayOfWeek: Record<string, BusinessHour['dayOfWeek']> = {
+  '월': 'MONDAY',
+  '화': 'TUESDAY',
+  '수': 'WEDNESDAY',
+  '목': 'THURSDAY',
+  '금': 'FRIDAY',
+  '토': 'SATURDAY',
+  '일': 'SUNDAY',
 };
 
 // BusinessHour[] 배열을 화면 표시용 객체로 변환
@@ -103,6 +121,12 @@ type SalesPeriod = "일별" | "주별" | "월별";
 export default function StoreManage() {
   // API에서 매장 목록 가져오기
   const { data: stores, isLoading, isError } = useMyStores();
+  const { mutate: createStore, isPending: isCreatingStore } = useCreateStore();
+  const { mutate: deleteStore } = useDeleteStore();
+  // const { mutate: updateStore } = useUpdateStore(); // TODO: 백엔드 API 구현 후 주석 해제
+  const { mutate: registerAlertRecipient } = useRegisterAlertRecipient();
+  const { mutate: deleteAlertRecipient } = useDeleteAlertRecipient();
+  const { mutate: updateAlertRecipient } = useUpdateAlertRecipient();
 
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
 
@@ -123,51 +147,235 @@ export default function StoreManage() {
 
   const maxSales = stores ? Math.max(...stores.map(s => getSalesData(s, selectedPeriod))) : 0;
 
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
+  const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null);
+
+  // 선택된 ID를 기반으로 상세 정보를 가져오는 쿼리
+  const { data: selectedStore, isLoading: isStoreDetailLoading } = useStoreById(selectedStoreId!);
+
   const [isAddingAlert, setIsAddingAlert] = useState(false);
-  const [alertRecipients, setAlertRecipients] = useState(initialAlertRecipients);
+  const [alertRecipients, setAlertRecipients] = useState<AlertRecipient[]>(initialAlertRecipients);
   const [newRecipient, setNewRecipient] = useState({ name: "", position: "", email: "" });
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
-  const [newStore, setNewStore] = useState({
-    name: "",
-    businessNumber: "",
-    owner: "",
-    type: "",
-    address: "",
-    phone: "",
-    hours: "",
-  });
+  
+  // 새 가맹점 추가를 위한 상태
+  const [newStoreName, setNewStoreName] = useState("");
+  const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
+  const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
+  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
+  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
+  const [newStorePhone, setNewStorePhone] = useState("");
+  const [newStoreCity, setNewStoreCity] = useState("");
+  const [newStoreState, setNewStoreState] = useState("");
+  const [newStorePostalCode, setNewStorePostalCode] = useState("");
+  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
+  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
+  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState | null>(null);
+
+  // // 가맹점 정보 수정을 위한 상태 (TODO: 백엔드 API 구현 후 주석 해제)
+  // const [editingStorePhone, setEditingStorePhone] = useState("");
+  // const [editingStoreAddress, setEditingStoreAddress] = useState("");
+  // const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
+
+  // useEffect(() => {
+  //   if (selectedStore) {
+  //     setEditingStorePhone(selectedStore.phone);
+  //     setEditingStoreAddress(selectedStore.address);
+  //     setEditingBusinessHours(convertBusinessHours(selectedStore.businessHours));
+  //   }
+  // }, [selectedStore]);
+
+  // Daum 우편번호 검색 및 Kakao 좌표 변환을 처리하는 함수를 작성했음
+  const handleAddressSearch = () => {
+    if (!window.daum || !window.kakao || !window.kakao.maps) {
+      toast.error("주소 검색 서비스 로딩에 실패했습니다. 페이지를 새로고침 해주세요.");
+      return;
+    }
+
+    const geocoder = new window.kakao.maps.services.Geocoder();
+
+    new window.daum.Postcode({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      oncomplete: function(data: any) {
+        const roadAddr = data.roadAddress; // 도로명 주소 변수
+        
+        setNewStorePostalCode(data.zonecode);
+        setNewStoreBaseAddress(roadAddr);
+        setNewStoreCity(data.sido);
+        setNewStoreState(data.sigungu);
+
+        // 주소로 좌표를 검색했음
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        geocoder.addressSearch(data.address, function(result: any, status: any) {
+             if (status === window.kakao.maps.services.Status.OK) {
+                setNewStoreLatitude(parseFloat(result[0].y));
+                setNewStoreLongitude(parseFloat(result[0].x));
+                toast.success("주소가 좌표로 변환되었습니다.");
+             } else {
+                toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
+             }
+        });
+      }
+    }).open();
+  };
+
 
   const handleStoreClick = (store: Store) => {
     // 같은 가맹점을 클릭하면 닫기, 다른 가맹점을 클릭하면 열기
-    if (selectedStore?.storeId === store.storeId) {
-      setSelectedStore(null);
+    if (selectedStoreId === store.storeId) {
+      setSelectedStoreId(null);
     } else {
-      setSelectedStore(store);
+      setSelectedStoreId(store.storeId);
     }
   };
 
-  const handleDeleteRecipient = (id: number) => {
-    setAlertRecipients(alertRecipients.filter((recipient) => recipient.id !== id));
+  const handleDeleteRecipient = (alertId: number) => {
+    if (!selectedStoreId) return;
+    
+    deleteAlertRecipient({ storeId: selectedStoreId, alertId }, {
+      onSuccess: () => {
+        toast.success("알림 수신자가 삭제되었습니다.");
+        // TODO: 목록 API가 없으므로 임시로 로컬 상태를 업데이트합니다.
+        setAlertRecipients(prev => prev.filter(r => r.id !== alertId));
+      },
+      onError: (error) => {
+        toast.error("알림 수신자 삭제에 실패했습니다.", { description: error.message });
+      }
+    });
   };
 
   const handleAddRecipient = () => {
-    if (newRecipient.name && newRecipient.position && newRecipient.email) {
-      setAlertRecipients([
-        ...alertRecipients,
-        { id: Date.now(), ...newRecipient },
-      ]);
-      setNewRecipient({ name: "", position: "", email: "" });
-      setIsAddingAlert(false);
+    if (!selectedStoreId || !newRecipient.name || !newRecipient.position || !newRecipient.email) {
+      toast.error("이름, 직위, 이메일을 모두 입력해주세요.");
+      return;
     }
+
+    registerAlertRecipient({ storeId: selectedStoreId, data: newRecipient }, {
+      onSuccess: (addedRecipient) => {
+        toast.success("알림 수신자가 추가되었습니다.");
+        // TODO: 목록 API가 없으므로 임시로 로컬 상태를 업데이트합니다.
+        setAlertRecipients(prev => [...prev, addedRecipient]);
+        setNewRecipient({ name: "", position: "", email: "" });
+        setIsAddingAlert(false);
+      },
+      onError: (error) => {
+        toast.error("알림 수신자 추가에 실패했습니다.", { description: error.message });
+      }
+    });
   };
 
   const handleAddStore = () => {
-    // TODO: API 연동 필요 (useCreateStore 훅 사용)
-    console.log('가맹점 추가 기능은 API 연동 후 사용 가능합니다.');
-    setIsAddingStore(false);
+    if (!newStoreBusinessHours) {
+      toast.error("영업시간을 설정해주세요.");
+      return;
+    }
+
+    const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours)
+      .filter(([, val]) => !val.isClosed && val.timeSlots.length > 0)
+      .map(([day, val]) => ({
+        dayOfWeek: koreanToDayOfWeek[day],
+        openTime: (val.timeSlots[0] as { start: string; end: string }).start,
+        closeTime: (val.timeSlots[0] as { start: string; end: string }).end,
+      }));
+
+    // 기본 주소와 상세 주소를 조합하여 최종 주소를 생성했음
+    const fullAddress = `${newStoreBaseAddress} ${newStoreDetailAddress}`.trim();
+
+    const newStoreData: StoreCreateRequest = {
+      name: newStoreName,
+      businessNumber: newStoreBusinessNumber,
+      businessType: newStoreType,
+      address: fullAddress, // 조합된 전체 주소를 사용함
+      phone: newStorePhone,
+      city: newStoreCity,
+      state: newStoreState,
+      postalCode: newStorePostalCode,
+      latitude: newStoreLatitude,
+      longitude: newStoreLongitude,
+      businessHours: businessHours,
+    };
+
+    createStore(newStoreData, {
+      onSuccess: () => {
+        toast.success("새 가맹점이 성공적으로 등록되었습니다.");
+        setIsAddingStore(false);
+        // 상태 초기화
+        setNewStoreName("");
+        setNewStoreBusinessNumber("");
+        setNewStoreType("RESTAURANT");
+        setNewStoreBaseAddress("");
+        setNewStoreDetailAddress("");
+        setNewStorePhone("");
+        setNewStoreCity("");
+        setNewStoreState("");
+        setNewStorePostalCode("");
+        setNewStoreLatitude(0);
+        setNewStoreLongitude(0);
+        setNewStoreBusinessHours(null);
+      },
+      onError: (error) => {
+        toast.error("가맹점 등록에 실패했습니다.", { description: error.message });
+      }
+    });
   };
+
+  const handleDeleteStore = (storeId: number) => {
+    if (window.confirm("정말로 이 가맹점을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+      deleteStore(storeId, {
+        onSuccess: () => {
+          toast.success("가맹점이 삭제되었습니다.");
+          setSelectedStoreId(null); // 상세 정보 뷰 닫기
+        },
+        onError: (error) => {
+          toast.error("가맹점 삭제에 실패했습니다.", { description: error.message });
+        }
+      });
+    }
+  };
+
+  const handleToggleAlertRecipient = (recipient: AlertRecipient) => {
+    if (!selectedStoreId) return;
+
+    const updatedData = { active: !recipient.active };
+
+    updateAlertRecipient({ storeId: selectedStoreId, alertId: recipient.id, data: updatedData }, {
+      onSuccess: (updatedRecipient) => {
+        toast.success(`알림 수신자 상태가 변경되었습니다: ${updatedRecipient.active ? '활성' : '비활성'}`);
+        // 로컬 상태 업데이트
+        setAlertRecipients(prev => prev.map(r => r.id === updatedRecipient.id ? updatedRecipient : r));
+      },
+      onError: (error) => {
+        toast.error("상태 변경에 실패했습니다.", { description: error.message });
+      }
+    });
+  };
+
+  // const handleUpdateStore = () => {
+  //   if (!selectedStore || !editingBusinessHours) return;
+  //
+  //   const businessHours: BusinessHour[] = Object.entries(editingBusinessHours)
+  //     .filter(([, val]) => !val.isClosed && val.timeSlots.length > 0)
+  //     .map(([day, val]) => ({
+  //       dayOfWeek: koreanToDayOfWeek[day],
+  //       openTime: (val.timeSlots[0] as { start: string; end: string }).start,
+  //       closeTime: (val.timeSlots[0] as { start: string; end: string }).end,
+  //     }));
+  //
+  //   const updatedData = {
+  //     phone: editingStorePhone,
+  //     address: editingStoreAddress,
+  //     businessHours: businessHours,
+  //   };
+  //
+  //   updateStore({ storeId: selectedStore.storeId, data: updatedData }, {
+  //     onSuccess: () => {
+  //       toast.success("가맹점 정보가 수정되었습니다.");
+  //     },
+  //     onError: (error) => {
+  //       toast.error("가맹점 정보 수정에 실패했습니다.", { description: error.message });
+  //     }
+  //   });
+  // };
 
   return (
     <div className="space-y-6">
@@ -194,27 +402,46 @@ export default function StoreManage() {
             <div className="grid grid-cols-2 gap-4 py-4">
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">상호명</label>
-                <Input value={newStore.name} onChange={(e) => setNewStore({...newStore, name: e.target.value})} />
+                <Input value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                <Input value={newStore.businessNumber} onChange={(e) => setNewStore({...newStore, businessNumber: e.target.value})} />
-              </div>
-              <div>
-                <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
-                <Input value={newStore.owner} onChange={(e) => setNewStore({...newStore, owner: e.target.value})} />
+                <Input value={newStoreBusinessNumber} onChange={(e) => setNewStoreBusinessNumber(e.target.value)} />
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                <Input value={newStore.type} onChange={(e) => setNewStore({...newStore, type: e.target.value})} />
-              </div>
-              <div className="col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                <Input value={newStore.address} onChange={(e) => setNewStore({...newStore, address: e.target.value})} />
+                <select
+                  value={newStoreType}
+                  onChange={(e) => setNewStoreType(e.target.value as StoreCreateRequest['businessType'])}
+                  className="w-full p-2 border rounded-md"
+                >
+                  <option value="RESTAURANT">음식점</option>
+                  <option value="CAFE">카페</option>
+                  <option value="ETC">기타</option>
+                </select>
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                <Input value={newStore.phone} onChange={(e) => setNewStore({...newStore, phone: e.target.value})} />
+                <Input value={newStorePhone} onChange={(e) => setNewStorePhone(e.target.value)} />
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                <div className="flex gap-2">
+                  <Input value={newStorePostalCode} placeholder="우편번호" readOnly />
+                  <Button type="button" variant="outline" onClick={handleAddressSearch}>
+                    우편번호 찾기
+                  </Button>
+                </div>
+              </div>
+              <div className="col-span-2">
+                <Input value={newStoreBaseAddress} placeholder="주소" readOnly />
+              </div>
+              <div className="col-span-2">
+                <Input 
+                  value={newStoreDetailAddress}
+                  onChange={(e) => setNewStoreDetailAddress(e.target.value)} 
+                  placeholder="상세주소 입력" 
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm text-[#717182] mb-2 block">영업시간</label>
@@ -231,7 +458,10 @@ export default function StoreManage() {
                         요일별 영업시간과 휴무일을 설정하세요.
                       </DialogDescription>
                     </DialogHeader>
-                    <BusinessHoursForm />
+                    <BusinessHoursForm
+                      initialState={null}
+                      onStateChange={setNewStoreBusinessHours}
+                    />
                     <DialogFooter>
                       <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
                     </DialogFooter>
@@ -241,7 +471,9 @@ export default function StoreManage() {
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setIsAddingStore(false)}>취소</Button>
-              <Button onClick={handleAddStore}>저장</Button>
+              <Button onClick={handleAddStore} disabled={isCreatingStore}>
+                {isCreatingStore ? "저장 중..." : "저장"}
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
@@ -301,11 +533,11 @@ export default function StoreManage() {
             </TableHeader>
             <TableBody>
               {stores.map((store) => (
-                <>
+                <Fragment key={store.storeId}>
                   <TableRow
                     key={store.storeId}
                     className={`border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer ${
-                      selectedStore?.storeId === store.storeId ? 'bg-[#FFFAE6]' : ''
+                      selectedStoreId === store.storeId ? 'bg-[#FFFAE6]' : ''
                     }`}
                     onClick={() => handleStoreClick(store)}
                   >
@@ -405,13 +637,15 @@ export default function StoreManage() {
                   </TableRow>
 
                   {/* Expanded Detail Row */}
-                  {selectedStore?.storeId === store.storeId && (
+                  {selectedStoreId === store.storeId && (
                     <TableRow key={`${store.storeId}-detail`}>
                       <TableCell colSpan={7} className="bg-[#FAFAFA] p-6">
-                        <div className="space-y-6">
-                          <h4 className="text-[#333333] font-semibold">{selectedStore.name} 상세 관리</h4>
-
-                          <Tabs defaultValue="basic" className="w-full">
+                        {isStoreDetailLoading ? (
+                          <div className="text-center p-8">상세 정보를 불러오는 중...</div>
+                        ) : selectedStore ? (
+                          <div className="space-y-6">
+                            <h4 className="text-[#333333] font-semibold">{selectedStore.name} 상세 관리</h4>
+                            <Tabs defaultValue="basic" className="w-full">
                             <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
                               <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
                                 기본정보
@@ -423,68 +657,72 @@ export default function StoreManage() {
 
                             <TabsContent value="basic" className="mt-6">
                               <div className="space-y-6">
-                                <div className="grid grid-cols-2 gap-6">
+                              <div className="grid grid-cols-2 gap-6">
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                                  <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                                  <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-6">
                                   <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">상호명</label>
-                                    <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                    <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                   </div>
                                   <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                                    <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                    <Input
+                                      value={
+                                        selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
+                                        selectedStore.businessType === 'CAFE' ? '카페' :
+                                        '기타'
+                                      }
+                                      className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+                                      readOnly
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                    <Input defaultValue={selectedStore.phone} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                    <Input defaultValue={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                   </div>
                                 </div>
-                                <div className="grid grid-cols-2 gap-6">
-                                  <div className="space-y-6">
-                                    <div>
-                                      <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
-                                      <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                    </div>
-                                    <div>
-                                      <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                                      <Input
-                                        value={
-                                          selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
-                                          selectedStore.businessType === 'CAFE' ? '카페' :
-                                          '기타'
-                                        }
-                                        className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-                                        readOnly
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                      <Input defaultValue={selectedStore.phone} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
-                                    </div>
-                                    <div>
-                                      <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                                      <Input defaultValue={selectedStore.address} className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]" />
-                                    </div>
-                                  </div>
-                                  <div>
+                                <div>
                                     <div className="flex items-center justify-between mb-2">
                                       <label className="text-sm text-[#717182]">영업시간</label>
                                       <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
                                         <DialogTrigger asChild>
-                                          <Button variant="outline" size="sm">수정</Button>
+                                          {/* 수정 기능 비활성화를 위해 disabled 추가 */}
+                                          <Button variant="outline" size="sm" disabled>수정</Button>
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                           <DialogHeader>
                                             <DialogTitle>영업시간 상세 설정</DialogTitle>
                                             <DialogDescription>
-                                              요일별 영업시간과 휴무일을 설정하세요.
+                                              요일별 영업시간과 휴무일을 설정하세요. (현재는 보기만 가능)
                                             </DialogDescription>
                                           </DialogHeader>
-                                          <BusinessHoursForm />
+                                          <BusinessHoursForm 
+                                            initialState={convertBusinessHours(selectedStore.businessHours)}
+                                            onStateChange={() => {}} // 수정 기능 없으므로 빈 함수 전달
+                                          />
                                           <DialogFooter>
                                             <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
                                           </DialogFooter>
                                         </DialogContent>
                                       </Dialog>
                                     </div>
-                                    <div className="border rounded-lg p-4 space-y-2 bg-white">
-                                      {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
-                                        <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
-                                          <span className="font-semibold">{day}</span>
+                                  <div className="border rounded-lg p-4 space-y-2 bg-white">
+                                    {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
+                                      <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
+                                        <span className="font-semibold">{day}</span>
                                           {hours.isClosed ? (
                                             <span className="text-gray-500">휴무일</span>
                                           ) : (
@@ -502,7 +740,7 @@ export default function StoreManage() {
                               </div>
 
                               <div className="flex justify-end mt-6">
-                                <Button>수정 완료</Button>
+                                <Button disabled>수정 완료</Button>
                               </div>
 
                               {/* Danger Zone */}
@@ -512,7 +750,7 @@ export default function StoreManage() {
                                     <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
                                     <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
                                   </div>
-                                  <Button variant="destructive" className="rounded-lg">
+                                  <Button variant="destructive" className="rounded-lg" onClick={() => handleDeleteStore(selectedStore.storeId)}>
                                     가맹점 삭제
                                   </Button>
                                 </div>
@@ -528,7 +766,10 @@ export default function StoreManage() {
                                       <p className="text-xs text-[#717182]">{recipient.email}</p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <Switch defaultChecked />
+                                      <Switch 
+                                        checked={recipient.active} 
+                                        onCheckedChange={() => handleToggleAlertRecipient(recipient)}
+                                      />
                                       <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
                                         <X className="w-4 h-4" />
                                       </Button>
@@ -582,10 +823,13 @@ export default function StoreManage() {
                             </TabsContent>
                           </Tabs>
                         </div>
+                        ) : (
+                          <div className="text-center p-8 text-red-500">상세 정보를 불러오는 데 실패했습니다.</div>
+                        )}
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
             </TableBody>
           </Table>

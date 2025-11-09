@@ -17,20 +17,33 @@ type DayOpeningHours = {
   timeSlots: TimeSlot[];
 };
 
+import { useEffect } from 'react';
+
 type BusinessHours = {
   [key: string]: DayOpeningHours;
 };
 
-const initialBusinessHours: BusinessHours = daysOfWeek.reduce((acc, day) => {
+export type BusinessHoursState = BusinessHours;
+
+const initialBusinessHours: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
   acc[day] = {
     isClosed: false,
     timeSlots: [{ start: '09:00', end: '18:00' }],
   };
   return acc;
-}, {} as BusinessHours);
+}, {} as BusinessHoursState);
 
-export function BusinessHoursForm() {
-  const [businessHours, setBusinessHours] = useState(initialBusinessHours);
+interface BusinessHoursFormProps {
+  initialState?: BusinessHoursState | null;
+  onStateChange: (newState: BusinessHoursState) => void;
+}
+
+export function BusinessHoursForm({ initialState, onStateChange }: BusinessHoursFormProps) {
+  const [businessHours, setBusinessHours] = useState(initialState ?? initialBusinessHours);
+
+  useEffect(() => {
+    onStateChange(businessHours);
+  }, [businessHours, onStateChange]);
 
   const handleHolidayToggle = (day: string) => {
     setBusinessHours((prev) => ({
