@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/orders")
 @RequiredArgsConstructor
+@Slf4j
 public class OrderController {
     //결제 내역 등록
     private final PaymentService paymentService;
@@ -47,8 +49,11 @@ public class OrderController {
             @Valid @RequestBody OrderRequestDto request,
             HttpServletRequest httpRequest) {
 
+        long start = System.currentTimeMillis();
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         OrderResponseDto response = orderService.createOrderAndPayment(memberId, storeId, request);
+        long end = System.currentTimeMillis();
+        log.info("[PERF] 주문 처리 총 소요 시간: {} ms", (end - start));
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "주문 성공", response, httpRequest.getRequestURI()));
