@@ -28,7 +28,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useBoundStore } from '@/stores/storeStore';
 import { useMyStores } from '@/lib/hooks/useStores';
-import { useMenus } from '@/lib/hooks/useMenus';
+import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu } from '@/lib/hooks/useMenus';
+import { useCreateOrder } from '@/lib/hooks/useOrders';
 import {
   Select,
   SelectContent,
@@ -54,6 +55,10 @@ const Pos = () => {
   const { data: stores, isLoading: isLoadingStores } = useMyStores();
   const { selectedStoreId, setSelectedStoreId } = useBoundStore();
   const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+  const createMenuMutation = useCreateMenu();
+  const createOrderMutation = useCreateOrder();
+  const updateMenuMutation = useUpdateMenu();
+  const deleteMenuMutation = useDeleteMenu();
 
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
@@ -65,6 +70,7 @@ const Pos = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [view, setView] = useState('products'); // 'products' or 'history'
   const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedStoreId && stores && stores.length > 0) {
@@ -97,15 +103,22 @@ const Pos = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleAddProduct = () => {
-    // TODO: addProduct API 연동 필요
-    if (newProductName && newProductPrice) {
-      console.log('Adding product:', {
-        name: newProductName,
-        price: parseInt(newProductPrice.replace(/,/g, ''), 10),
-        category: '기타',
+    if (newProductName && newProductPrice && selectedStoreId) {
+      const price = parseInt(newProductPrice.replace(/,/g, ''), 10);
+      createMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuData: {
+          menu: newProductName,
+          price: price,
+          imgUrl: '',
+        },
+      }, {
+        onSuccess: () => {
+          setNewProductName('');
+          setNewProductPrice('');
+          setIsAddProductDialogOpen(false);
+        }
       });
-      setNewProductName('');
-      setNewProductPrice('');
     }
   };
 
@@ -116,34 +129,64 @@ const Pos = () => {
   };
 
   const handlePayment = () => {
-    // TODO: addTransaction API 연동 필요
-    console.log('Payment processing:', {
-      items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
-      total: totalAmount,
-      orderType,
-      paymentMethod,
-      status: 'completed',
-    });
-    addTransaction({
-      items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
-      total: totalAmount,
-      orderType,
-      paymentMethod,
-      status: 'completed',
-    });
-    clearCart();
+    if (cart.length > 0 && selectedStoreId) {
+      const orderData = {
+        orderMenus: cart.map(item => ({
+          menuId: item.id,
+          amount: item.quantity,
+          name: item.name,
+          price: item.price,
+        })),
+        paymentMethod: paymentMethod.toUpperCase(),
+        orderType: orderType.toUpperCase(),
+      };
+
+      createOrderMutation.mutate({
+        storeId: Number(selectedStoreId),
+        orderData,
+      }, {
+        onSuccess: () => {
+          // TODO: 로컬 상태 addTransaction은 임시 데이터이므로 API 연동 후 제거 필요
+          addTransaction({
+            items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
+            total: totalAmount,
+            orderType,
+            paymentMethod,
+            status: 'completed',
+          });
+          clearCart();
+        },
+        onError: (error) => {
+          console.error("Order creation failed:", error);
+          // TODO: 사용자에게 오류 메시지 표시
+        }
+      });
+    }
   };
 
   const handleDeleteProduct = (productId) => {
-    // TODO: deleteProduct API 연동 필요
-    console.log('Deleting product:', productId);
+    if (selectedStoreId) {
+      deleteMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuId: productId,
+      });
+    }
   };
 
   const handleUpdateProduct = () => {
-    // TODO: updateProduct API 연동 필요
-    if (editingProduct) {
-      console.log('Updating product:', editingProduct);
-      setEditingProduct(null);
+    if (editingProduct && selectedStoreId) {
+      updateMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuId: editingProduct.id,
+        menuData: {
+          menu: editingProduct.name,
+          price: editingProduct.price,
+        },
+      }, {
+        onSuccess: () => {
+          setEditingProduct(null);
+        }
+      });
     }
   };
 
@@ -190,7 +233,7 @@ const Pos = () => {
                         </div>
                       )}
                       <p className="text-gray-800">{product.name}</p>
-                      <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}</p>
+                      <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}원</p>
                     </Card>
                   ))
                 ) : (
@@ -240,7 +283,7 @@ const Pos = () => {
                   <Button variant={isEditMode ? "default" : "outline"} className="h-12 text-base px-6 font-bold" onClick={() => setIsEditMode(!isEditMode)}>
                     <Edit className="mr-2 h-5 w-5" /> {isEditMode ? "편집 완료" : "상품 편집"}
                   </Button>
-                  <Dialog>
+                  <Dialog open={isAddProductDialogOpen} onOpenChange={setIsAddProductDialogOpen}>
                     <DialogTrigger asChild>
                       <Button variant="outline" className="h-12 text-base px-6 font-bold"><Plus className="mr-2 h-5 w-5" /> 상품 추가</Button>
                     </DialogTrigger>
@@ -250,10 +293,13 @@ const Pos = () => {
                         <Label htmlFor="name">상품명</Label>
                         <Input id="name" value={newProductName} onChange={(e) => setNewProductName(e.target.value)} />
                         <Label htmlFor="price">가격</Label>
-                        <Input id="price" type="text" value={newProductPrice} onChange={handlePriceChange} placeholder="0" />
+                        <div className="flex items-center">
+                          <Input id="price" type="text" value={newProductPrice} onChange={handlePriceChange} placeholder="0" className="text-right" />
+                          <span className="ml-2">원</span>
+                        </div>
                       </div>
                       <DialogFooter>
-                        <DialogClose asChild><Button onClick={handleAddProduct}>추가하기</Button></DialogClose>
+                        <Button onClick={handleAddProduct}>추가하기</Button>
                       </DialogFooter>
                     </DialogContent>
                   </Dialog>
@@ -295,7 +341,7 @@ const Pos = () => {
               <Input id="edit-price" type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
             </div>
             <DialogFooter>
-              <DialogClose asChild><Button onClick={handleUpdateProduct}>수정하기</Button></DialogClose>
+              <Button onClick={handleUpdateProduct}>수정하기</Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
