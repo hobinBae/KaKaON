@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.analytics.service;
 
 import com.s310.kakaon.domain.analytics.dto.DashboardSummaryResponseDto;
+import com.s310.kakaon.domain.analytics.dto.MonthlySalesResponseDto;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
@@ -142,4 +143,38 @@ public class DashboardServiceImpl implements DashboardService {
         }
         return growthRate;
     }
+
+    @Override
+    public MonthlySalesResponseDto getMonthlySales(Long storeId, Long memberId, LocalDate date) {
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        if (!store.getMember().getId().equals(member.getId())) {
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
+
+        LocalDate firstDay = date.withDayOfMonth(1);
+        LocalDate lastDay = date.withDayOfMonth(date.lengthOfMonth());
+
+        List<MonthlySalesResponseDto.DailySales> dailSalesList =
+                paymentStatsRepository.findByStoreIdAndStatsDateBetween(storeId, firstDay, lastDay)
+                        .stream()
+                        .map(ps -> MonthlySalesResponseDto.DailySales.builder()
+                                .date(ps.getStatsDate().toString())
+                                .storeSales(ps.getTotalSales() - ps.getDeliverySales())
+                                .deliverySales(ps.getDeliverySales())
+                                .totalSales(ps.getTotalSales())
+                                .build()
+                        ).toList();
+        return MonthlySalesResponseDto.builder()
+                .storeId(storeId)
+                .month(date.getYear() + "-" + String.format("%02d", date.getMonthValue()))
+                .dailySales(dailSalesList)
+                .build();
+    }
+
+
 }
