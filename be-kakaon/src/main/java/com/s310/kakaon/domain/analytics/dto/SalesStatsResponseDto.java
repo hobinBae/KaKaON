@@ -1,4 +1,4 @@
-package com.s310.kakaon.domain.dashboard.dto;
+package com.s310.kakaon.domain.analytics.dto;
 
 import lombok.*;
 
@@ -27,6 +27,6 @@ public class SalesStatsResponseDto {
         private Integer sales; // 해당 시간대 매출액
         private Integer paymentCount;
         private Integer cancelCount;
-        private double cancelRate;
+        private Double cancelRate;
     }
 }

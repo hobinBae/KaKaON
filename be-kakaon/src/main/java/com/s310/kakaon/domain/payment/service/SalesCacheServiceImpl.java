@@ -1,6 +1,6 @@
 package com.s310.kakaon.domain.payment.service;
 
-import com.s310.kakaon.domain.dashboard.dto.SalesStatsResponseDto;
+import com.s310.kakaon.domain.analytics.dto.SalesStatsResponseDto;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
