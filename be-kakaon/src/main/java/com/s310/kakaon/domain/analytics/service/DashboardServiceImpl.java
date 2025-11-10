@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -96,16 +97,19 @@ public class DashboardServiceImpl implements DashboardService {
 
 
 
-        // 최근 7일 매출
+        // 최근 7일 매출 (과거부터 현재 순서)
         List<DashboardSummaryResponseDto.DailySalesDto> last7days = paymentStatsRepository
                 .findByStoreIdAndStatsDateBetween(storeId, weekStart, yesterday)
                 .stream()
+                .sorted(Comparator.comparing(PaymentStats::getStatsDate))  // 날짜 오름차순 정렬
                 .map(ps -> DashboardSummaryResponseDto.DailySalesDto.builder()
                         .date(ps.getStatsDate().toString())
                         .totalSales(ps.getTotalSales())
                         .build()
                 )
                 .collect(Collectors.toList());
+
+        // 오늘 데이터 마지막에 추가
         last7days.add(DashboardSummaryResponseDto.DailySalesDto.builder()
                 .date(today.toString())
                 .totalSales(todaySales)
