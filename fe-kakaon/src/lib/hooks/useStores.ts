@@ -1,7 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import type {
   Store,
+  StoreDetailResponse,
   StoreCreateRequest,
+  StoreUpdateRequest,
   OperationStatusUpdateRequest,
   OperationStatusUpdateResponse,
   AlertRecipient,
@@ -20,7 +22,7 @@ const getMyStores = async (): Promise<Store[]> => {
 };
 
 // 특정 매장 정보를 가져오는 API 호출 함수
-const getStoreById = async (storeId: number): Promise<Store> => {
+const getStoreById = async (storeId: number): Promise<StoreDetailResponse> => {
   const response = await apiClient.get(`/stores/${storeId}`);
   return response.data.data;
 };
@@ -31,12 +33,11 @@ const createStore = async (data: StoreCreateRequest): Promise<Store> => {
   return response.data.data;
 };
 
-// // 매장을 수정하는 API 호출 함수
-// // TODO: 백엔드에 StoreUpdateRequestDto 및 PATCH /stores/{storeId} API 구현 필요
-// const updateStore = async ({ storeId, data }: { storeId: number; data: Partial<StoreCreateRequest> }): Promise<Store> => {
-//   const response = await apiClient.patch(`/stores/${storeId}`, data);
-//   return response.data.data;
-// };
+// 매장을 수정하는 API 호출 함수
+const updateStore = async ({ storeId, data }: { storeId: number; data: StoreUpdateRequest }): Promise<StoreDetailResponse> => {
+  const response = await apiClient.patch(`/stores/${storeId}`, data);
+  return response.data.data;
+};
 
 // 매장을 삭제하는 API 호출 함수
 const deleteStore = async (storeId: number): Promise<void> => {
@@ -101,7 +102,7 @@ export const useMyStores = () => {
  * 특정 가맹점 정보를 조회하는 커스텀 훅
  */
 export const useStoreById = (storeId: number) => {
-  return useQuery({
+  return useQuery<StoreDetailResponse, Error>({
     queryKey: storeKeys.detail(storeId),
     queryFn: () => getStoreById(storeId),
     enabled: !!storeId, // storeId가 있을 때만 쿼리 실행
@@ -138,22 +139,21 @@ export const useDeleteStore = () => {
   });
 };
 
-// /**
-//  * 가맹점 정보를 수정하는 커스텀 훅
-//  * TODO: 백엔드 API 구현 후 주석 해제
-//  */
-// export const useUpdateStore = () => {
-//   const queryClient = useQueryClient();
-//   return useMutation({
-//     mutationFn: updateStore,
-//     onSuccess: (updatedStore) => {
-//       // 가맹점 목록 쿼리를 무효화하여 목록을 새로고침
-//       queryClient.invalidateQueries({ queryKey: storeKeys.lists() });
-//       // 수정된 가맹점의 상세 정보 캐시를 직접 업데이트
-//       queryClient.setQueryData(storeKeys.detail(updatedStore.storeId), updatedStore);
-//     },
-//   });
-// };
+/**
+ * 가맹점 정보를 수정하는 커스텀 훅
+ */
+export const useUpdateStore = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateStore,
+    onSuccess: (updatedStore) => {
+      // 가맹점 목록 쿼리를 무효화하여 목록을 새로고침
+      queryClient.invalidateQueries({ queryKey: storeKeys.lists() });
+      // 수정된 가맹점의 상세 정보 캐시를 직접 업데이트
+      queryClient.setQueryData(storeKeys.detail(updatedStore.storeId), updatedStore);
+    },
+  });
+};
 
 // ================== 영업 상태 관련 훅 ==================
 

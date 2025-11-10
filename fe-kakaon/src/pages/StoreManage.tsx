@@ -52,14 +52,14 @@ import {
   useCreateStore, 
   useDeleteStore,
   useStoreById, // 상세 조회를 위해 추가
-  // useUpdateStore, // TODO: 백엔드 API 구현 후 주석 해제
+  useUpdateStore,
   useRegisterAlertRecipient,
   useDeleteAlertRecipient,
   useUpdateAlertRecipient,
 } from "@/lib/hooks/useStores";
-import type { Store, StoreCreateRequest, BusinessHour, AlertRecipient } from "@/types/api";
+import type { Store, StoreDetailResponse, StoreCreateRequest, StoreUpdateRequest, BusinessHour, AlertRecipient, BusinessType } from "@/types/api";
 import { toast } from "sonner";
-// import { useEffect } from "react"; // 수정 기능 비활성화로 미사용
+import { useEffect } from "react";
 
 // 전역 window 객체에 daum과 kakao 타입 선언했음
 declare global {
@@ -71,11 +71,6 @@ declare global {
   }
 }
 
-// TODO: 알림 수신자 목록 API 연동 후 이 더미 데이터는 제거해야 합니다.
-const initialAlertRecipients: AlertRecipient[] = [
-  { id: 1, name: "김사장", position: "대표", email: "owner@kakaopay.com", active: true },
-  { id: 2, name: "김직원", position: "점장", email: "manager@kakaopay.com", active: true },
-];
 
 // 요일 변환 헬퍼 함수
 const dayOfWeekToKorean: Record<string, string> = {
@@ -98,24 +93,29 @@ const koreanToDayOfWeek: Record<string, BusinessHour['dayOfWeek']> = {
   '일': 'SUNDAY',
 };
 
-// BusinessHour[] 배열을 화면 표시용 객체로 변환
-const convertBusinessHours = (businessHours: Store['businessHours']) => {
-  const converted: Record<string, { isClosed: boolean; timeSlots: { start: string; end: string }[] }> = {
-    '월': { isClosed: true, timeSlots: [] },
-    '화': { isClosed: true, timeSlots: [] },
-    '수': { isClosed: true, timeSlots: [] },
-    '목': { isClosed: true, timeSlots: [] },
-    '금': { isClosed: true, timeSlots: [] },
-    '토': { isClosed: true, timeSlots: [] },
-    '일': { isClosed: true, timeSlots: [] },
+const daysOfWeek = ['월', '화', '수', '목', '금', '토', '일'];
+
+const defaultBusinessHours: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
+  acc[day] = {
+    isClosed: false,
+    timeSlots: [{ start: '09:00', end: '18:00' }],
   };
+  return acc;
+}, {} as BusinessHoursState);
+
+// BusinessHour[] 배열을 화면 표시용 객체로 변환
+const convertBusinessHours = (businessHours: StoreDetailResponse['businessHours']) => {
+  const converted: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
+    acc[day] = { isClosed: true, timeSlots: [{ start: '09:00', end: '18:00' }] };
+    return acc;
+  }, {} as BusinessHoursState);
 
   businessHours?.forEach((hour) => {
     const koreanDay = dayOfWeekToKorean[hour.dayOfWeek];
     if (koreanDay) {
       converted[koreanDay] = {
-        isClosed: false,
-        timeSlots: [{ start: hour.openTime, end: hour.closeTime }],
+        isClosed: hour.closed,
+        timeSlots: [{ start: hour.openTime || '00:00', end: hour.closeTime || '00:00' }],
       };
     }
   });
@@ -130,7 +130,7 @@ export default function StoreManage() {
   const { data: stores, isLoading, isError } = useMyStores();
   const { mutate: createStore, isPending: isCreatingStore } = useCreateStore();
   const { mutate: deleteStore } = useDeleteStore();
-  // const { mutate: updateStore } = useUpdateStore(); // TODO: 백엔드 API 구현 후 주석 해제
+  const { mutate: updateStore } = useUpdateStore();
   const { mutate: registerAlertRecipient } = useRegisterAlertRecipient();
   const { mutate: deleteAlertRecipient } = useDeleteAlertRecipient();
   const { mutate: updateAlertRecipient } = useUpdateAlertRecipient();
@@ -138,7 +138,7 @@ export default function StoreManage() {
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
 
   // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
-  const getSalesData = (store: Store, period: SalesPeriod) => {
+  const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
     const totalSales = store.totalSales ?? 0;
     switch (period) {
       case "일별":
@@ -160,8 +160,18 @@ export default function StoreManage() {
   const { data: selectedStore, isLoading: isStoreDetailLoading } = useStoreById(selectedStoreId!);
 
   const [isAddingAlert, setIsAddingAlert] = useState(false);
-  const [alertRecipients, setAlertRecipients] = useState<AlertRecipient[]>(initialAlertRecipients);
+  const [alertRecipients, setAlertRecipients] = useState<AlertRecipient[]>([]);
   const [newRecipient, setNewRecipient] = useState({ name: "", position: "", email: "" });
+
+  // selectedStore 데이터가 변경될 때 알림 수신자 목록 상태를 API 응답값으로 업데이트했음
+  useEffect(() => {
+    if (selectedStore) {
+      setAlertRecipients(selectedStore.alertRecipientResponse || []);
+    } else {
+      // 상세 뷰가 닫히면 목록을 초기화했음
+      setAlertRecipients([]);
+    }
+  }, [selectedStore]);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
   
@@ -177,20 +187,22 @@ export default function StoreManage() {
   const [newStorePostalCode, setNewStorePostalCode] = useState("");
   const [newStoreLatitude, setNewStoreLatitude] = useState(0);
   const [newStoreLongitude, setNewStoreLongitude] = useState(0);
-  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState | null>(null);
+  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState>(defaultBusinessHours);
 
-  // // 가맹점 정보 수정을 위한 상태 (TODO: 백엔드 API 구현 후 주석 해제)
-  // const [editingStorePhone, setEditingStorePhone] = useState("");
-  // const [editingStoreAddress, setEditingStoreAddress] = useState("");
-  // const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
+  // 가맹점 정보 수정을 위한 상태
+  const [editingStoreName, setEditingStoreName] = useState("");
+  const [editingStorePhone, setEditingStorePhone] = useState("");
+  const [editingStoreType, setEditingStoreType] = useState<BusinessType>('RESTAURANT');
+  const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
 
-  // useEffect(() => {
-  //   if (selectedStore) {
-  //     setEditingStorePhone(selectedStore.phone);
-  //     setEditingStoreAddress(selectedStore.address);
-  //     setEditingBusinessHours(convertBusinessHours(selectedStore.businessHours));
-  //   }
-  // }, [selectedStore]);
+  useEffect(() => {
+    if (selectedStore) {
+      setEditingStoreName(selectedStore.name);
+      setEditingStorePhone(selectedStore.phone);
+      setEditingStoreType(selectedStore.businessType);
+      setEditingBusinessHours(convertBusinessHours(selectedStore.businessHours));
+    }
+  }, [selectedStore]);
 
   // Daum 우편번호 검색 및 Kakao 좌표 변환을 처리하는 함수를 작성했음
   const handleAddressSearch = () => {
@@ -227,7 +239,7 @@ export default function StoreManage() {
   };
 
 
-  const handleStoreClick = (store: Store) => {
+  const handleStoreClick = (store: Store | StoreDetailResponse) => {
     // 같은 가맹점을 클릭하면 닫기, 다른 가맹점을 클릭하면 열기
     if (selectedStoreId === store.storeId) {
       setSelectedStoreId(null);
@@ -278,11 +290,11 @@ export default function StoreManage() {
     }
 
     const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours)
-      .filter(([, val]) => !val.isClosed && val.timeSlots.length > 0)
       .map(([day, val]) => ({
         dayOfWeek: koreanToDayOfWeek[day],
-        openTime: (val.timeSlots[0] as { start: string; end: string }).start,
-        closeTime: (val.timeSlots[0] as { start: string; end: string }).end,
+        openTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).start,
+        closeTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).end,
+        closed: val.isClosed,
       }));
 
     // 기본 주소와 상세 주소를 조합하여 최종 주소를 생성했음
@@ -338,6 +350,34 @@ export default function StoreManage() {
         }
       });
     }
+  };
+
+  const handleUpdateStore = () => {
+    if (!selectedStore || !editingBusinessHours) return;
+  
+    const businessHours: BusinessHour[] = Object.entries(editingBusinessHours)
+      .map(([day, val]) => ({
+        dayOfWeek: koreanToDayOfWeek[day],
+        openTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).start,
+        closeTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).end,
+        closed: val.isClosed,
+      }));
+  
+    const updatedData: StoreUpdateRequest = {
+      name: editingStoreName,
+      phone: editingStorePhone,
+      businessType: editingStoreType,
+      businessHours: businessHours,
+    };
+  
+    updateStore({ storeId: selectedStore.storeId, data: updatedData }, {
+      onSuccess: () => {
+        toast.success("가맹점 정보가 수정되었습니다.");
+      },
+      onError: (error) => {
+        toast.error("가맹점 정보 수정에 실패했습니다.", { description: error.message });
+      }
+    });
   };
 
   const handleToggleAlertRecipient = (recipient: AlertRecipient) => {
@@ -470,7 +510,7 @@ export default function StoreManage() {
                       </DialogDescription>
                     </DialogHeader>
                     <BusinessHoursForm
-                      initialState={null}
+                      initialState={newStoreBusinessHours}
                       onStateChange={setNewStoreBusinessHours}
                     />
                     <DialogFooter className="sm:justify-center">
@@ -562,22 +602,7 @@ export default function StoreManage() {
                         <p className="text-sm text-[#333333]">
                           ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
                         </p>
-                        {store.changeRate !== undefined && (
-                          <div
-                            className={`flex items-center gap-1 text-xs justify-center ${
-                              store.changeRate > 0
-                                ? "text-[#4CAF50]"
-                                : "text-[#FF4D4D]"
-                            }`}
-                          >
-                            {store.changeRate > 0 ? (
-                              <TrendingUp className="w-3 h-3" />
-                            ) : (
-                              <TrendingDown className="w-3 h-3" />
-                            )}
-                            <span>{Math.abs(store.changeRate)}%</span>
-                          </div>
-                        )}
+                        {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -597,12 +622,13 @@ export default function StoreManage() {
                       )}
                     </TableCell>
                     <TableCell className="text-center">
-                      {(store.alertCount ?? 0) > 0 ? (
+                      {/* 목록 조회 시에는 unreadCount를 사용 */}
+                      {(store.unreadCount ?? 0) > 0 ? (
                         <Badge
                           variant="destructive"
                           className="rounded"
                         >
-                          {store.alertCount}건
+                          {store.unreadCount}건
                         </Badge>
                       ) : (
                         <span className="text-xs text-[#717182]">없음</span>
@@ -668,7 +694,7 @@ export default function StoreManage() {
                               <div className="grid grid-cols-2 gap-6">
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">상호명</label>
-                                  <Input value={selectedStore.name} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  <Input value={editingStoreName} onChange={(e) => setEditingStoreName(e.target.value)} className="rounded-lg" />
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
@@ -683,23 +709,24 @@ export default function StoreManage() {
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                                    <Input
-                                      value={
-                                        selectedStore.businessType === 'RESTAURANT' ? '음식점업' :
-                                        selectedStore.businessType === 'CAFE' ? '카페' :
-                                        '기타'
-                                      }
-                                      className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
-                                      readOnly
-                                    />
+                                    <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
+                                      <SelectTrigger className="w-full">
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="RESTAURANT">음식점</SelectItem>
+                                        <SelectItem value="CAFE">카페</SelectItem>
+                                        <SelectItem value="ETC">기타</SelectItem>
+                                      </SelectContent>
+                                    </Select>
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                    <Input defaultValue={selectedStore.phone} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(e.target.value)} className="rounded-lg" />
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                                    <Input defaultValue={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                    <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                   </div>
                                 </div>
                                 <div>
@@ -707,19 +734,18 @@ export default function StoreManage() {
                                       <label className="text-sm text-[#717182]">영업시간</label>
                                       <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
                                         <DialogTrigger asChild>
-                                          {/* 수정 기능 비활성화를 위해 disabled 추가 */}
-                                          <Button variant="outline" size="sm" disabled>수정</Button>
+                                          <Button variant="outline" size="sm">수정</Button>
                                         </DialogTrigger>
                                         <DialogContent className="max-w-2xl">
                                           <DialogHeader>
                                             <DialogTitle>영업시간 상세 설정</DialogTitle>
                                             <DialogDescription>
-                                              요일별 영업시간과 휴무일을 설정하세요. (현재는 보기만 가능)
+                                              요일별 영업시간과 휴무일을 설정하세요.
                                             </DialogDescription>
                                           </DialogHeader>
                                           <BusinessHoursForm 
                                             initialState={convertBusinessHours(selectedStore.businessHours)}
-                                            onStateChange={() => {}} // 수정 기능 없으므로 빈 함수 전달
+                                            onStateChange={setEditingBusinessHours}
                                           />
                                           <DialogFooter>
                                             <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
@@ -728,7 +754,7 @@ export default function StoreManage() {
                                       </Dialog>
                                     </div>
                                   <div className="border rounded-lg p-4 space-y-2 bg-white">
-                                    {Object.entries(convertBusinessHours(selectedStore.businessHours)).map(([day, hours]) => (
+                                    {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
                                       <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
                                         <span className="font-semibold">{day}</span>
                                           {hours.isClosed ? (
@@ -748,7 +774,7 @@ export default function StoreManage() {
                               </div>
 
                               <div className="flex justify-end mt-6">
-                                <Button disabled>수정 완료</Button>
+                                <Button onClick={handleUpdateStore}>수정 완료</Button>
                               </div>
 
                               {/* Danger Zone */}

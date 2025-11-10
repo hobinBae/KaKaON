@@ -13,14 +13,15 @@ const minutesOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStar
 
 // --- 커스텀 시간 선택 컴포넌트 ---
 interface TimePickerProps {
-  value: string;
+  value: string | null | undefined;
   onChange: (newTime: string) => void;
   disabled?: boolean;
 }
 
 const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
   const [isOpen, setIsOpen] = useState(false);
-  const [hour, minute] = value.split(':');
+  const time = value || '00:00'; // value가 null이나 undefined일 경우 기본값 사용
+  const [hour, minute] = time.split(':');
   
   const hourRef = useRef<HTMLDivElement>(null);
   const minuteRef = useRef<HTMLDivElement>(null);
@@ -54,7 +55,7 @@ const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
           className={cn("w-24 justify-start font-normal", disabled && "opacity-50 cursor-not-allowed")}
           disabled={disabled}
         >
-          {value}
+          {time}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0 flex">
