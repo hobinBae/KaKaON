@@ -12,6 +12,7 @@ import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
+import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
