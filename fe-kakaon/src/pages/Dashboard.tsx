@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from "lucide-reac
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
 import { DayProps } from "react-day-picker";
+import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 
 // 더미 데이터: 가게, 배달, 총 매출 포함
 const monthlySalesData: { [key: string]: { store: number; delivery: number } } = {
@@ -35,6 +36,19 @@ const formatDate = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+// 금액을 K 또는 M 단위로 축약하는 함수
+const formatSalesNumber = (num: number) => {
+  if (window.innerWidth < 800) {
+    if (num >= 1000000) {
+      return `${(num / 1000000).toFixed(1)}M`;
+    }
+    if (num >= 10000) {
+      return `${Math.floor(num / 10000)}만`;
+    }
+  }
+  return num.toLocaleString();
+};
+
 // 각 날짜 셀의 내용을 구성하는 커스텀 컴포넌트
 function DayContent({ date, displayMonth }: DayProps) {
   const isOutsideDay = date.getMonth() !== displayMonth.getMonth();
@@ -43,20 +57,20 @@ function DayContent({ date, displayMonth }: DayProps) {
   const total = data ? data.store + data.delivery : 0;
 
   return (
-    <div className="flex flex-col h-full p-2 text-left text-xs">
+    <div className="flex flex-col h-full p-1 text-left text-[10px] tablet:text-xs">
       <span
-        className={`font-medium self-start text-sm ${
+        className={`font-medium self-start text-xs tablet:text-sm ${
           isOutsideDay ? "text-muted-foreground" : ""
         }`}
       >
         {date.getDate()}
       </span>
-      <div className="flex-1 flex flex-col justify-end mt-1 space-y-0.5 text-right">
+      <div className="flex-1 flex flex-col justify-end mt-1 space-y-0 tablet:space-y-0.5 text-right leading-tight tablet:leading-normal">
         {data && !isOutsideDay ? (
           <>
-            <div className="text-orange-500 truncate">{data.store.toLocaleString()}</div>
-            <div className="text-sky-500 truncate">{data.delivery.toLocaleString()}</div>
-            <div className="text-black font-semibold truncate">{total.toLocaleString()}</div>
+            <div className="text-orange-500 truncate">{formatSalesNumber(data.store)}</div>
+            <div className="text-sky-500 truncate">{formatSalesNumber(data.delivery)}</div>
+            <div className="text-black font-semibold truncate">{formatSalesNumber(total)}</div>
           </>
         ) : (
           <>
@@ -79,6 +93,14 @@ const formatYAxis = (tick: number) => {
 
 export default function Dashboard() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+
+  React.useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
 
   // 오늘 날짜를 "YYYY년 MM월 DD일 (요일)" 형식으로 생성
   const today = new Date();
@@ -87,6 +109,14 @@ export default function Dashboard() {
   const day = today.getDate();
   const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
   const todayString = `${year}년 ${month}월 ${day}일 (${dayOfWeek})`;
+
+  const formatWeekdayName = (date: Date) => {
+    const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
+    if (windowWidth < 800) {
+      return weekdays[date.getDay()];
+    }
+    return weekdays[date.getDay()] + '요일';
+  };
 
   // 오늘 매출 계산
   const todayDateString = formatDate(today);
@@ -176,31 +206,31 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between">
         <div>
           <h1 className="text-[#333333] mb-1">대시보드</h1>
           <p className="text-sm text-[#717182]">오늘의 매출 현황을 확인하세요</p>
         </div>
-        <div className="text-sm text-[#717182]">
+        <div className="text-sm text-[#717182] mt-2 tablet:mt-0">
           {todayString}
         </div>
       </div>
 
-      <div className="flex flex-1 space-x-6">
+      <div className="flex flex-col lg:flex-row flex-1 gap-6">
         {/* Left: Calendar */}
-        <div className="w-3/4">
-          <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none h-full flex flex-col">
-            <div className="flex justify-end text-sm space-x-4 pr-4 mb-2">
+        <div className="w-full lg:w-3/4">
+          <Card className="p-2 tablet:p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none h-full flex flex-col">
+            <div className="flex justify-end text-xs tablet:text-sm space-x-2 tablet:space-x-4 pr-2 tablet:pr-4 mb-2">
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-orange-500 rounded-full" />
+                <div className="w-2 h-2 tablet:w-3 tablet:h-3 bg-orange-500 rounded-full" />
                 <span>가게</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-sky-500 rounded-full" />
+                <div className="w-2 h-2 tablet:w-3 tablet:h-3 bg-sky-500 rounded-full" />
                 <span>배달</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-3 h-3 bg-black rounded-full" />
+                <div className="w-2 h-2 tablet:w-3 tablet:h-3 bg-black rounded-full" />
                 <span>총</span>
               </div>
             </div>
@@ -212,73 +242,137 @@ export default function Dashboard() {
                 components={{
                   Day: DayContent,
                 }}
+                className="w-full"
+                formatters={{ formatWeekdayName }}
               />
             </div>
           </Card>
         </div>
 
         {/* Right: Stats Cards */}
-        <div className="w-1/4 flex flex-col space-y-4 justify-between">
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">오늘 매출</span>
-              <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
+        <div className="w-full lg:w-1/4">
+          <div className="hidden sm:grid grid-cols-2 lg:flex lg:flex-col gap-4">
+            {/* Desktop View */}
+            <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#717182]">오늘 매출</span>
+                <div className="w-8 h-8 tablet:w-10 tablet:h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 tablet:w-5 tablet:h-5 text-[#3C1E1E]" />
+                </div>
               </div>
-            </div>
-            <div className="text-2xl text-[#333333] mb-2">{todaySales.toLocaleString()}원</div>
-            <div className={`flex items-center gap-1 text-sm ${isYesterdayPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
-              {isYesterdayPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span>{Math.abs(yesterdayChangePercent).toFixed(1)}% 어제 대비</span>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">지난주 동일 요일 매출</span>
-              <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
+              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">{todaySales.toLocaleString()}원</div>
+              <div className={`flex items-center gap-1 text-xs tablet:text-sm ${isYesterdayPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                {isYesterdayPositive ? <TrendingUp className="w-3 h-3 tablet:w-4 tablet:h-4" /> : <TrendingDown className="w-3 h-3 tablet:w-4 tablet:h-4" />}
+                <span>{Math.abs(yesterdayChangePercent).toFixed(1)}% 어제 대비</span>
               </div>
-            </div>
-            <div className="text-2xl text-[#333333] mb-2">{lastWeekSales.toLocaleString()}원</div>
-            <div className={`flex items-center gap-1 text-sm ${isLastWeekPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
-              {isLastWeekPositive ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span>{Math.abs(lastWeekChangePercent).toFixed(1)}% 지난주 대비</span>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">이번 달 누적 매출</span>
-              <div className="w-10 h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-[#3C1E1E]" />
+            </Card>
+            <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#717182]">지난주 동일 요일 매출</span>
+                <div className="w-8 h-8 tablet:w-10 tablet:h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 tablet:w-5 tablet:h-5 text-[#3C1E1E]" />
+                </div>
               </div>
-            </div>
-            <div className="text-2xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
-            <div className={`flex items-center gap-1 text-sm ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
-              {isPositiveChange ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-              <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
-            </div>
-          </Card>
-
-          <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-sm text-[#717182]">이상거래</span>
-              <div className="w-10 h-10 rounded-lg bg-[#FF4D4D]/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-[#FF4D4D]" />
+              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">{lastWeekSales.toLocaleString()}원</div>
+              <div className={`flex items-center gap-1 text-xs tablet:text-sm ${isLastWeekPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                {isLastWeekPositive ? <TrendingUp className="w-3 h-3 tablet:w-4 tablet:h-4" /> : <TrendingDown className="w-3 h-3 tablet:w-4 tablet:h-4" />}
+                <span>{Math.abs(lastWeekChangePercent).toFixed(1)}% 지난주 대비</span>
               </div>
-            </div>
-            <div className="text-2xl text-[#333333] mb-2">2건</div>
-            <div className="text-sm text-[#FF4D4D]">미확인 알림 있음</div>
-          </Card>
+            </Card>
+            <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#717182]">이번 달 누적 매출</span>
+                <div className="w-8 h-8 tablet:w-10 tablet:h-10 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 tablet:w-5 tablet:h-5 text-[#3C1E1E]" />
+                </div>
+              </div>
+              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
+              <div className={`flex items-center gap-1 text-xs tablet:text-sm ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                {isPositiveChange ? <TrendingUp className="w-3 h-3 tablet:w-4 tablet:h-4" /> : <TrendingDown className="w-3 h-3 tablet:w-4 tablet:h-4" />}
+                <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
+              </div>
+            </Card>
+            <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm text-[#717182]">이상거래</span>
+                <div className="w-8 h-8 tablet:w-10 tablet:h-10 rounded-lg bg-[#FF4D4D]/10 flex items-center justify-center">
+                  <AlertTriangle className="w-4 h-4 tablet:w-5 tablet:h-5 text-[#FF4D4D]" />
+                </div>
+              </div>
+              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">2건</div>
+              <div className="text-xs tablet:text-sm text-[#FF4D4D]">미확인 알림 있음</div>
+            </Card>
+          </div>
+          <Carousel className="sm:hidden">
+            <CarouselContent>
+              <CarouselItem>
+                <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-[#717182]">오늘 매출</span>
+                    <div className="w-8 h-8 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-[#3C1E1E]" />
+                    </div>
+                  </div>
+                  <div className="text-xl text-[#333333] mb-2">{todaySales.toLocaleString()}원</div>
+                  <div className={`flex items-center gap-1 text-xs ${isYesterdayPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                    {isYesterdayPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <span>{Math.abs(yesterdayChangePercent).toFixed(1)}% 어제 대비</span>
+                  </div>
+                </Card>
+              </CarouselItem>
+              <CarouselItem>
+                <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-[#717182]">지난주 동일 요일 매출</span>
+                    <div className="w-8 h-8 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-[#3C1E1E]" />
+                    </div>
+                  </div>
+                  <div className="text-xl text-[#333333] mb-2">{lastWeekSales.toLocaleString()}원</div>
+                  <div className={`flex items-center gap-1 text-xs ${isLastWeekPositive ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                    {isLastWeekPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <span>{Math.abs(lastWeekChangePercent).toFixed(1)}% 지난주 대비</span>
+                  </div>
+                </Card>
+              </CarouselItem>
+              <CarouselItem>
+                <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-[#717182]">이번 달 누적 매출</span>
+                    <div className="w-8 h-8 rounded-lg bg-[#FEE500]/10 flex items-center justify-center">
+                      <DollarSign className="w-4 h-4 text-[#3C1E1E]" />
+                    </div>
+                  </div>
+                  <div className="text-xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
+                  <div className={`flex items-center gap-1 text-xs ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
+                    {isPositiveChange ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                    <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
+                  </div>
+                </Card>
+              </CarouselItem>
+              <CarouselItem>
+                <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm text-[#717182]">이상거래</span>
+                    <div className="w-8 h-8 rounded-lg bg-[#FF4D4D]/10 flex items-center justify-center">
+                      <AlertTriangle className="w-4 h-4 text-[#FF4D4D]" />
+                    </div>
+                  </div>
+                  <div className="text-xl text-[#333333] mb-2">2건</div>
+                  <div className="text-xs text-[#FF4D4D]">미확인 알림 있음</div>
+                </Card>
+              </CarouselItem>
+            </CarouselContent>
+            
+          </Carousel>
         </div>
       </div>
 
       {/* Sales Trend Chart */}
-      <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <h3 className="text-[#333333] mb-6">최근 7일 매출 추이</h3>
+      <Card className="p-2 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+        <h3 className="text-[#333333] mb-4 tablet:mb-6">최근 7일 매출 추이</h3>
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={salesData} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
+          <LineChart data={salesData} margin={{ top: 5, right: 20, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
             <XAxis dataKey="date" stroke="#717182" />
             <YAxis stroke="#717182" tickFormatter={formatYAxis} />

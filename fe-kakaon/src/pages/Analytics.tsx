@@ -1,7 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart } from "recharts";
-import { Calendar as CalendarIcon, RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useEffect, ReactNode, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
@@ -10,6 +10,11 @@ import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Badge } from "@/components/ui/badge";
+import { Check, ChevronsUpDown, X } from "lucide-react";
+import { cn } from "@/lib/utils";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -17,7 +22,6 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -26,8 +30,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+// import { useMyStores } from "@/lib/hooks/useStores";
 
 // --- Helper Functions & Dummy Data ---
+
+// 가맹점별 매출 그래프 X축 커스텀 틱
+const StoreComparisonTick = ({ x, y, payload }: { x: number, y: number, payload: { value: string } }) => {
+  const parts = payload.value.split('. ');
+  const index = parts[0];
+  const name = parts.slice(1).join('. ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" className="text-xs">
+        <tspan x="0" className="tablet:hidden">{index}</tspan>
+        <tspan x="0" className="hidden tablet:inline">{name}</tspan>
+      </text>
+    </g>
+  );
+};
 
 // 커스텀 달력 캡션 컴포넌트
 function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
@@ -112,7 +132,7 @@ function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; on
 
 const generateDailyData = () => {
   const data = [];
-  const endDate = new Date(2025, 9, 23); // Today
+  const endDate = new Date(); // 기준 날짜를 현재 날짜로 변경했음
   for (let i = 0; i < 365; i++) {
     const date = addDays(endDate, -i);
     const sales = Math.floor(Math.random() * 1500000) + 500000;
@@ -148,11 +168,9 @@ const generateDailyData = () => {
   return data.reverse();
 };
 
-const allSalesData = generateDailyData();
-
 const formatYAxis = (tick: number) => {
-  if (tick >= 1000000) {
-    return `${(tick / 1000000).toFixed(0)}M`;
+  if (tick >= 100000) {
+    return `${(tick / 1000000).toFixed(1)}M`;
   }
   return `${(tick / 1000).toFixed(0)}K`;
 };
@@ -160,6 +178,10 @@ const formatYAxis = (tick: number) => {
 // --- Component ---
 
 export default function Analytics() {
+  // useMemo를 사용하여 allSalesData가 컴포넌트 렌더링 시 한 번만 생성되도록 수정했음
+  // 이렇게 하면 데이터가 고정되어 그래프가 계속 바뀌는 현상을 막을 수 있음
+  const allSalesData = useMemo(() => generateDailyData(), []);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -170,18 +192,29 @@ export default function Analytics() {
   const [startDateInput, setStartDateInput] = useState<string>("");
   const [endDateInput, setEndDateInput] = useState<string>("");
   const [alertOpen, setAlertOpen] = useState(false);
-  const [alertMessage, setAlertMessage] = useState<React.ReactNode>("");
+  const [alertMessage, setAlertMessage] = useState<ReactNode>("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   // State for processed chart data
-  const [periodSales, setPeriodSales] = useState<any[]>([]);
+  // const { data: stores } = useMyStores(); // 기존 API 호출 주석 처리
+  // 여러 가맹점 선택 기능을 테스트하기 위한 더미 데이터
+  const stores = [
+    { storeId: 1, name: "강남점", totalSales: 78540000 },
+    { storeId: 2, name: "홍대점", totalSales: 69210000 },
+    { storeId: 3, name: "부산 서면점", totalSales: 85320000 },
+    { storeId: 4, name: "대구 동성로점", totalSales: 72150000 },
+    { storeId: 5, name: "제주 애월점", totalSales: 58780000 },
+    { storeId: 6, name: "광주 상무지구점", totalSales: 65430000 },
+  ];
+  const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
+  const [periodSales, setPeriodSales] = useState<{time?: string; date?: string; month?: string; sales: number}[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
   const [xAxisDataKeyCancellation, setXAxisDataKeyCancellation] = useState<string>('date');
-  const [paymentDistribution, setPaymentDistribution] = useState<any[]>([]);
-  const [salesTypeDistribution, setSalesTypeDistribution] = useState<any[]>([]);
-  const [hourlySales, setHourlySales] = useState<any[]>([]);
-  const [cancellationRate, setCancellationRate] = useState<any[]>([]);
-  const [salesVsLabor, setSalesVsLabor] = useState<any[]>([]);
+  const [paymentDistribution, setPaymentDistribution] = useState<{name: string; value: number; color: string}[]>([]);
+  const [salesTypeDistribution, setSalesTypeDistribution] = useState<{name: string; value: number; color: string}[]>([]);
+  const [hourlySales, setHourlySales] = useState<{time: string; sales: number}[]>([]);
+  const [cancellationRate, setCancellationRate] = useState<{time?: string; date?: string; month?: string; rate: number}[]>([]);
+  const [salesVsLabor, setSalesVsLabor] = useState<{month: string; sales: number; labor: number; laborRatio: number}[]>([]);
 
   useEffect(() => {
     if (!dateRange?.from || !dateRange?.to) return;
@@ -260,7 +293,7 @@ export default function Analytics() {
     // Find first and last hour with sales (operating hours)
     const sortedHours = Object.entries(hourlyTotals)
       .sort((a, b) => a[0].localeCompare(b[0]))
-      .filter(([_, sales]) => sales > 0);
+      .filter(([, sales]) => sales > 0);
 
     if (sortedHours.length > 0) {
       const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
@@ -324,7 +357,31 @@ export default function Analytics() {
       })).sort((a, b) => a.month.localeCompare(b.month)));
     }
 
-  }, [dateRange, activePeriod]);
+  }, [dateRange, activePeriod, allSalesData]);
+
+  // 가맹점별 매출 비교 데이터 처리 로직을 useMemo로 분리하여 불필요한 재실행을 방지했음
+  const storeComparisonData = useMemo(() => {
+    if (!dateRange?.from || !dateRange?.to || !stores) return [];
+
+    const filteredData = allSalesData.filter(d => {
+      const date = new Date(d.date);
+      return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
+    });
+
+    const selectedStores = stores.filter(store => selectedStoreIds.includes(store.storeId));
+    const totalPeriodSales = filteredData.reduce((acc, cur) => acc + cur.sales, 0);
+    const averageSales = selectedStores.length > 0 ? totalPeriodSales / selectedStores.length : 0;
+
+    // storeId를 기반으로 일관된 랜덤 값을 생성하여 데이터가 변하지 않도록 수정했음
+    return selectedStores.map((store, index) => {
+      const pseudoRandom = (seed: number) => {
+        const x = Math.sin(seed) * 10000;
+        return x - Math.floor(x);
+      };
+      const sales = Math.floor(averageSales * (0.8 + pseudoRandom(store.storeId) * 0.4));
+      return { name: `${index + 1}. ${store.name}`, sales };
+    });
+  }, [dateRange, selectedStoreIds, stores, allSalesData]);
 
   useEffect(() => {
     if (!dateRange?.from) return;
@@ -353,6 +410,13 @@ export default function Analytics() {
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
+  }, []);
+
+  // stores 데이터 로드 시 모든 가맹점을 기본으로 선택
+  useEffect(() => {
+    if (stores) {
+      setSelectedStoreIds(stores.map(s => s.storeId));
+    }
   }, []);
 
   // dateRange가 변경될 때 input 필드도 업데이트 (activePeriod가 없을 때만)
@@ -540,35 +604,42 @@ export default function Analytics() {
     let from: Date, to: Date = today;
 
     switch (value) {
-      case 'yesterday':
+      case 'yesterday': {
         const yesterday = addDays(today, -1);
         from = startOfDay(yesterday);
         to = endOfDay(yesterday);
         break;
-      case 'today':
+      }
+      case 'today': {
         from = startOfDay(today);
         to = endOfDay(today);
         break;
-      case 'this-week':
+      }
+      case 'this-week': {
         from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
         to = endOfWeek(today, { weekStartsOn: 1 }); // Sunday (display full week)
         break;
-      case 'this-month':
+      }
+      case 'this-month': {
         from = startOfMonth(today);
         to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
         break;
-      case 'this-year':
+      }
+      case 'this-year': {
         from = startOfYear(today);
         to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
         break;
-      case 'last-year':
+      }
+      case 'last-year': {
         from = startOfYear(subYears(today, 1));
         to = endOfYear(subYears(today, 1));
         break;
-      default:
+      }
+      default: {
         from = startOfDay(today);
         to = endOfDay(today);
         break;
+      }
     }
     setDateRange({ from, to });
   };
@@ -595,26 +666,28 @@ export default function Analytics() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="sales-trend">기간별 매출</SelectItem>
-              <SelectItem value="payment-method">결제수단별 비중</SelectItem>
               <SelectItem value="hourly-sales">시간대별 매출</SelectItem>
-              <SelectItem value="cancellation-rate">취소율 추이</SelectItem>
               <SelectItem value="sales-vs-labor">인건비 대비 매출</SelectItem>
+              <SelectItem value="store-comparison">가맹점별 매출</SelectItem>
+              <SelectItem value="cancellation-rate">취소율 추이</SelectItem>
+              <SelectItem value="payment-method">결제수단별 비중</SelectItem>
             </SelectContent>
           </Select>
         </div>
         {/* Desktop Tabs */}
-        <TabsList className="hidden tablet:grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
+        <TabsList className="hidden tablet:grid w-full grid-cols-6 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
-            <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
             <TabsTrigger value="hourly-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">시간대별 매출</TabsTrigger>
-            <TabsTrigger value="cancellation-rate" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">취소율 추이</TabsTrigger>
             <TabsTrigger value="sales-vs-labor" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">인건비 대비 매출</TabsTrigger>
+            <TabsTrigger value="store-comparison" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">가맹점별 매출</TabsTrigger>
+            <TabsTrigger value="cancellation-rate" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">취소율 추이</TabsTrigger>
+            <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
         </TabsList>
 
         {/* Filters */}
         <Card className="p-4 tablet:p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-4">
-          <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-start gap-4">
-            <div className="text-sm font-semibold text-[#333] tablet:pt-2">조회기간</div>
+          <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4">
+            <div className="text-sm font-semibold text-[#333]">조회기간</div>
             <div className="flex flex-col tablet:flex-row items-center gap-2">
               <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} tablet:flex-1`}>
                 {activeTab === "sales-vs-labor" ? (
@@ -636,7 +709,7 @@ export default function Analytics() {
                 <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
                   <Input
                     type="text"
-                    placeholder="yyyy.mm.dd"
+                    placeholder="YYYY.MM.DD"
                     value={startDateInput}
                     onChange={(e) => handleDateInputChange('start', e.target.value)}
                     onBlur={() => handleDateInputBlur('start')}
@@ -645,7 +718,7 @@ export default function Analytics() {
                   <span className="text-sm text-gray-500 text-center">~</span>
                   <Input
                     type="text"
-                    placeholder="yyyy.mm.dd"
+                    placeholder="YYYY.MM.DD"
                     value={endDateInput}
                     onChange={(e) => handleDateInputChange('end', e.target.value)}
                     onBlur={() => handleDateInputBlur('end')}
@@ -730,6 +803,94 @@ export default function Analytics() {
             </div>
           </div>
 
+          {/* 가맹점 선택 필터 (가맹점별 매출 탭에서만 보임) */}
+          {activeTab === 'store-comparison' && stores && stores.length > 1 && (
+            <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4 mt-4">
+              <div className="text-sm font-semibold text-[#333]">가맹점 선택</div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className="w-full tablet:w-[200px] justify-between"
+                    >
+                      가맹점 선택
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                    <Command>
+                      <CommandInput placeholder="가맹점 검색..." className="focus:ring-0 focus:ring-offset-0" />
+                    <CommandList>
+                      <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          onSelect={() => {
+                            if (selectedStoreIds.length === stores.length) {
+                              setSelectedStoreIds([]);
+                            } else {
+                              setSelectedStoreIds(stores.map(s => s.storeId));
+                            }
+                          }}
+                        >
+                          <Check
+                            className={cn(
+                              "mr-2 h-4 w-4",
+                              selectedStoreIds.length === stores.length ? "opacity-100" : "opacity-0"
+                            )}
+                          />
+                          전체 선택
+                        </CommandItem>
+                        {stores.map((store) => (
+                          <CommandItem
+                            key={store.storeId}
+                              value={store.name}
+                              onSelect={() => {
+                                setSelectedStoreIds(prev => 
+                                  prev.includes(store.storeId)
+                                    ? prev.filter(id => id !== store.storeId)
+                                    : [...prev, store.storeId]
+                                );
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  selectedStoreIds.includes(store.storeId) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {store.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <div className="flex gap-1 flex-wrap items-center">
+                  {stores?.filter(store => selectedStoreIds.includes(store.storeId)).map((store, index) => (
+                    <Badge
+                      variant="secondary"
+                      key={store.storeId}
+                      className="text-sm"
+                    >
+                      {index + 1}. {store.name}
+                      <button
+                        className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                        onClick={() => {
+                          setSelectedStoreIds(prev => prev.filter(id => id !== store.storeId));
+                        }}
+                      >
+                        <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* 하단 요약/버튼 */}
           <div className="flex flex-col tablet:flex-row justify-between items-start tablet:items-center pt-4 border-t border-gray-200 mt-4 gap-3">
             <div className="w-full tablet:w-auto">
@@ -772,12 +933,88 @@ export default function Analytics() {
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">기간별 매출 추이</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey={xAxisDataKey} stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
                 <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
                 <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="hourly-sales">
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">
+              {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
+            </h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey="time" stroke="#717182" />
+                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+                />
+                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
+              </BarChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="sales-vs-labor">
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">인건비 대비 매출 비율</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey="month" stroke="#717182" />
+                <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
+                <YAxis yAxisId="right" orientation="right" stroke="#FF4D4D" unit="%" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number, name: string) => {
+                    if (name === '인건비 비율') return [`${value}%`, name];
+                    return [`${value.toLocaleString()}원`, name];
+                  }}
+                />
+                <Legend />
+                <Bar yAxisId="left" dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
+                <Bar yAxisId="left" dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="laborRatio" stroke="#FF4D4D" strokeWidth={2} name="인건비 비율" dot={{ fill: '#FF4D4D', r: 4 }} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </Card>
+        </TabsContent>
+        <TabsContent value="store-comparison">
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가맹점별 매출</h3>
+            <div style={{ width: '100%', maxWidth: Math.max(1000, storeComparisonData.length * 120), margin: '0 auto' }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={storeComparisonData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                  <XAxis dataKey="name" stroke="#717182" tick={<StoreComparisonTick x={0} y={0} payload={{value: ''}} />} interval={0} />
+                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
+                <Tooltip
+                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+                />
+                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+          </Card>
+        </TabsContent>
+        <TabsContent value="cancellation-rate">
+          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">취소율 추이</h3>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
+                <YAxis stroke="#717182" />
+                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+                <Line type="linear" dataKey="rate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
               </LineChart>
             </ResponsiveContainer>
           </Card>
@@ -811,63 +1048,6 @@ export default function Analytics() {
               </ResponsiveContainer>
             </Card>
           </div>
-        </TabsContent>
-        <TabsContent value="hourly-sales">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">
-              {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="time" stroke="#717182" />
-                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
-                />
-                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
-        </TabsContent>
-        <TabsContent value="cancellation-rate">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">취소율 추이</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
-                <YAxis stroke="#717182" />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
-                <Line type="linear" dataKey="rate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
-        </TabsContent>
-        <TabsContent value="sales-vs-labor">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">인건비 대비 매출 비율</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="month" stroke="#717182" />
-                <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
-                <YAxis yAxisId="right" orientation="right" stroke="#FF4D4D" unit="%" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                  formatter={(value: number, name: string) => {
-                    if (name === '인건비 비율') return [`${value}%`, name];
-                    return [`${value.toLocaleString()}원`, name];
-                  }}
-                />
-                <Legend />
-                <Bar yAxisId="left" dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
-                <Bar yAxisId="left" dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="laborRatio" stroke="#FF4D4D" strokeWidth={2} name="인건비 비율" dot={{ fill: '#FF4D4D', r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Card>
         </TabsContent>
       </Tabs>
 

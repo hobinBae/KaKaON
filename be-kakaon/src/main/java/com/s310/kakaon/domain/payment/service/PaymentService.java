@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.payment.service;
 
+import com.s310.kakaon.domain.payment.dto.CancelRateAnomalyDto;
 import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
@@ -22,5 +23,9 @@ public interface PaymentService {
     PaymentResponseDto getPaymentById(Long memberId, Long id);
 
     byte[] downloadPaymentsCsv(Long memberId, Long storeId, PaymentSearchRequestDto request);
+
+    List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies();
+
+    PaymentResponseDto getPaymentByAuthorizationNo(Long memberId, String authorizationNo);
 
 }

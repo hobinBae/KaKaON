@@ -5,7 +5,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;
 
-public interface PaymentCancelRepository extends JpaRepository<PaymentCancel, Long> {
+public interface PaymentCancelRepository extends JpaRepository<PaymentCancel, Long> , PaymentCancelRepositoryCustom{
     Optional<PaymentCancel> findByPaymentId(Long paymentId);
 
 }

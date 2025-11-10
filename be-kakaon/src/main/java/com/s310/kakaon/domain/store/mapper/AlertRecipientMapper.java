@@ -7,7 +7,7 @@ import com.s310.kakaon.domain.store.entity.Store;
 import org.springframework.stereotype.Component;
 
 @Component
-public class AlertMapper {
+public class AlertRecipientMapper {
 
     public AlertRecipientResponseDto fromEntity(AlertRecipient alert){
         return AlertRecipientResponseDto.builder()

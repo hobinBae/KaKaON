@@ -1,9 +1,9 @@
 package com.s310.kakaon.domain.store.mapper;
 
 import com.s310.kakaon.domain.member.entity.Member;
-import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.BusinessHourDto;
 import com.s310.kakaon.domain.store.dto.StoreCreateRequestDto;
+import com.s310.kakaon.domain.store.dto.StoreDetailResponseDto;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.BusinessHour;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -15,10 +15,10 @@ import java.time.LocalTime;
 @Component
 @RequiredArgsConstructor
 public class StoreMapper {
-    private final AlertMapper alertMapper;
+    private final AlertRecipientMapper alertRecipientMapper;
 
-    public StoreResponseDto fromEntity(Store store){
-        return StoreResponseDto.builder()
+    public StoreDetailResponseDto fromEntity(Store store){
+        return StoreDetailResponseDto.builder()
                 .storeId(store.getId())
                 .ownerName(store.getMember().getName())
                 .businessType(store.getBusinessType())
@@ -40,9 +40,18 @@ public class StoreMapper {
                 )
                 .alertRecipientResponse(
                         store.getAlertRecipient().stream()
-                                .map(al -> alertMapper.fromEntity(al)
+                                .map(al -> alertRecipientMapper.fromEntity(al)
                                         ).toList()
                 )
+                .build();
+    }
+
+    public StoreResponseDto toResponseDto(Store store, Long unreadCount){
+        return StoreResponseDto.builder()
+                .storeId(store.getId())
+                .name(store.getName())
+                .status(store.getOperationStatus())
+                .unreadCount(unreadCount)
                 .build();
     }
 

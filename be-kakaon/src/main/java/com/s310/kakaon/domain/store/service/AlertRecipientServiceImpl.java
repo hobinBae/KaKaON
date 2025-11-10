@@ -7,8 +7,8 @@ import com.s310.kakaon.domain.store.dto.AlertRecipientResponseDto;
 import com.s310.kakaon.domain.store.dto.AlertRecipientUpdateRequestDto;
 import com.s310.kakaon.domain.store.entity.AlertRecipient;
 import com.s310.kakaon.domain.store.entity.Store;
-import com.s310.kakaon.domain.store.mapper.AlertMapper;
-import com.s310.kakaon.domain.store.repository.AlertRepository;
+import com.s310.kakaon.domain.store.mapper.AlertRecipientMapper;
+import com.s310.kakaon.domain.store.repository.AlertRecipientRepository;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
@@ -20,12 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AlertServiceImpl implements AlertService{
+public class AlertRecipientServiceImpl implements AlertRecipientService {
 
-    private final AlertRepository alertRepository;
+    private final AlertRecipientRepository alertRepository;
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
-    private final AlertMapper alertMapper;
+    private final AlertRecipientMapper alertRecipientMapper;
 
     @Override
     @Transactional
@@ -40,11 +40,11 @@ public class AlertServiceImpl implements AlertService{
         //소유자인지 확인
         validateStoreOwner(store, member);
 
-        AlertRecipient alert = alertMapper.toEntity(request, store);
+        AlertRecipient alert = alertRecipientMapper.toEntity(request, store);
 
         alertRepository.save(alert);
 
-        return alertMapper.fromEntity(alert);
+        return alertRecipientMapper.fromEntity(alert);
     }
 
     @Override
@@ -93,7 +93,7 @@ public class AlertServiceImpl implements AlertService{
 //        }
         alert.updateFrom(request);
 
-        return alertMapper.fromEntity(alert);
+        return alertRecipientMapper.fromEntity(alert);
     }
 
 

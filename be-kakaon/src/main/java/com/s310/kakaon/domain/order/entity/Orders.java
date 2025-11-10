@@ -63,6 +63,11 @@ public class Orders extends BaseEntity {
         orderItem.setOrder(this);
     }
 
+    public void updateStatus(Integer paidAmount){
+        this.status = OrderStatus.PAID;
+        this.paidAmount = paidAmount;
+    }
+
     // ====== Business Logic ======
 
     public void softDelete() {

@@ -84,6 +84,19 @@ public class Store extends BaseEntity {
     @OneToMany(mappedBy = "store", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<AlertRecipient> alertRecipient = new ArrayList<>();
 
+    public void updateName(String name){
+        this.name = name;
+    }
+
+    public void updateBusinessType(BusinessType businessType){
+        this.businessType = businessType;
+    }
+
+    public void updatePhone(String phone){
+        this.phone = phone;
+    }
+
+
     public void updateOperationStatus(OperationStatus status) {
         this.operationStatus = status;
     }
@@ -91,6 +104,13 @@ public class Store extends BaseEntity {
     public void addBusinessHour(BusinessHour businessHour) {
         businessHours.add(businessHour);
         businessHour.setStore(this);
+    }
+
+    public void updateBusinessHours(List<BusinessHour> newBusinessHours){
+        this.businessHours.clear();
+        for(BusinessHour bh : newBusinessHours){
+            this.addBusinessHour(bh);
+        }
     }
 
     public void addAlertRecipient(AlertRecipient recipient) {

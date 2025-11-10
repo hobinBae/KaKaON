@@ -1,3 +1,13 @@
+// ===== 트리거 사용자명 계산 함수 =====
+def resolveTriggeredBy = {
+    def glUser = (env.gitlabUserName ?: env.gitlab_user_name ?: env.GITLAB_USER_NAME)
+    if (glUser && glUser.trim()) {
+        return glUser.trim()
+    }
+    return sh(script: "cd ${env.DEPLOY_PATH} && git log -1 --pretty=%an", returnStdout: true).trim()
+}
+
+
 pipeline {
     agent any
     
@@ -7,6 +17,9 @@ pipeline {
         
         // ===== Git 브랜치 =====
         GIT_BRANCH = 'develop'
+
+        // ===== 항상 배포용 compose 파일만 사용 =====
+        COMPOSE_FILE = 'docker-compose-prod.yml'
     }
     
     stages {
@@ -19,6 +32,7 @@ pipeline {
                     echo "브랜치: ${GIT_BRANCH}"
                     echo "빌드 번호: ${BUILD_NUMBER}"
                     echo "시작 시간: ${new Date()}"
+                    echo "사용 Compose 파일: ${COMPOSE_FILE}"
                     echo '================================================='
                 }
             }
@@ -108,8 +122,12 @@ pipeline {
                         docker ps
                         
                         echo ""
-                        echo "Docker Compose Down..."
-                        docker compose down || echo "실행 중인 컨테이너 없음"
+                        echo "애플리케이션 컨테이너만 중지 (Jenkins 제외)..."
+                        docker compose -f ${COMPOSE_FILE} stop fe-kakaon be-kakaon || echo "중지할 컨테이너 없음"
+                        
+                        echo ""
+                        echo "중지된 애플리케이션 컨테이너 제거..."
+                        docker compose -f ${COMPOSE_FILE} rm -f fe-kakaon be-kakaon || echo "제거할 컨테이너 없음"
                         
                         echo "컨테이너 중지 완료!"
                     """
@@ -128,11 +146,11 @@ pipeline {
                         cd ${DEPLOY_PATH}
                         
                         echo "Backend 이미지 빌드..."
-                        docker compose build --no-cache be-kakaon
+                        docker compose -f ${COMPOSE_FILE} build --no-cache be-kakaon
                         
                         echo ""
                         echo "Frontend 이미지 빌드..."
-                        docker compose build --no-cache fe-kakaon
+                        docker compose -f ${COMPOSE_FILE} build --no-cache fe-kakaon
                         
                         echo ""
                         echo "이미지 빌드 완료!"
@@ -154,8 +172,8 @@ pipeline {
                     sh """
                         cd ${DEPLOY_PATH}
                         
-                        echo "Docker Compose Up..."
-                        docker compose up -d
+                        echo "애플리케이션 컨테이너만 시작 (Jenkins 제외)..."
+                        docker compose -f ${COMPOSE_FILE} up -d fe-kakaon be-kakaon
                         
                         echo ""
                         echo "컨테이너 시작 대기 (15초)..."
@@ -165,7 +183,7 @@ pipeline {
                         echo "컨테이너 시작 완료!"
                         echo ""
                         echo "컨테이너 상태:"
-                        docker compose ps
+                        docker compose -f ${COMPOSE_FILE} ps
                     """
                 }
             }
@@ -281,8 +299,10 @@ pipeline {
                     echo '================================================='
                     
                     sh """
+                        cd ${DEPLOY_PATH}
+
                         echo "==== Docker Compose 상태 ===="
-                        docker compose ps
+                        docker compose -f ${COMPOSE_FILE} ps
                         
                         echo ""
                         echo "==== 리소스 사용량 ===="
@@ -290,7 +310,7 @@ pipeline {
                         
                         echo ""
                         echo "==== 포트 확인 ===="
-                        sudo netstat -tulpn | grep -E "80|8080|3306|6379|9090" || echo "netstat not available"
+                        sudo netstat -tulpn | grep -E "80|443|8080|3306|6379" || echo "netstat not available"
                     """
                 }
             }
@@ -300,30 +320,64 @@ pipeline {
     post {
         success {
             script {
+                
+                def commitMessage = sh(script: "cd ${DEPLOY_PATH} && git log -1 --pretty=%s", returnStdout: true).trim()
+                def commitHash    = sh(script: "cd ${DEPLOY_PATH} && git rev-parse --short HEAD", returnStdout: true).trim()
+                def triggeredBy   = resolveTriggeredBy()
+                mattermostSend(
+                    color: "good",
+                    channel: "5to0",
+                    message: """
+✅ **배포 성공**
+**브랜치:** ${env.GIT_BRANCH}
+**커밋:** ${commitHash} — ${commitMessage}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+""".stripIndent()
+      )
+
                 echo '===================================================='
                 echo '✅배포 성공!'
                 echo '===================================================='
                 echo "빌드 #${BUILD_NUMBER} 배포 완료!"
                 echo "브랜치: ${GIT_BRANCH}"
                 echo "완료 시간: ${new Date()}"
-                echo "애플리케이션 URL: http://k13s310.p.ssafy.io"
+                echo "애플리케이션 URL: https://k13s310.p.ssafy.io"
                 echo '===================================================='
                 echo ''
                 echo '접속 정보:'
-                echo "  - Frontend: http://k13s310.p.ssafy.io"
-                echo "  - Backend API: http://k13s310.p.ssafy.io:8080"
-                echo "  - Jenkins: http://k13s310.p.ssafy.io:9090"
+                echo "  - Frontend: https://k13s310.p.ssafy.io"
+                echo "  - Backend API(프록시 경유): https://k13s310.p.ssafy.io/api"
+                echo "  - Jenkins: https://k13s310.p.ssafy.io:8443/jenkins"
                 echo ''
                 echo '유용한 명령어:'
-                echo "  - 로그 확인: docker compose logs -f"
-                echo "  - 상태 확인: docker compose ps"
-                echo "  - 재시작: docker compose restart"
+                echo "  - 로그 확인: docker compose -f ${COMPOSE_FILE} logs -f"
+                echo "  - 상태 확인: docker compose -f ${COMPOSE_FILE} ps"
+                echo "  - 재시작: docker compose -f ${COMPOSE_FILE} restart"
                 echo '===================================================='
             }
         }
         
         failure {
             script {
+                def triggeredBy = resolveTriggeredBy()
+                mattermostSend(
+                    color: "danger",
+                    channel: "5to0",
+                    message: """
+❌ **배포 실패**
+**프로젝트:** ${env.JOB_NAME}
+**브랜치:** ${env.GIT_BRANCH}
+**트리거:** ${triggeredBy}
+**빌드 번호:** #${env.BUILD_NUMBER}
+**걸린 시간:** ${currentBuild.durationString}
+⚠️ 로그 확인 필요.
+🔗 <${env.BUILD_URL}|빌드 상세보기>
+""".stripIndent()
+      )
+
                 echo '===================================================='
                 echo '❌배포 실패!'
                 echo '===================================================='
@@ -332,20 +386,21 @@ pipeline {
                 echo ''
                 echo '문제 해결 방법:'
                 echo '1. Jenkins 콘솔 로그 확인'
-                echo '2. 컨테이너 로그 확인: docker compose logs'
-                echo '3. 컨테이너 상태 확인: docker ps -a'
+                echo '2. 컨테이너 로그 확인: docker compose -f ${COMPOSE_FILE} logs'
+                echo '3. 컨테이너 상태 확인: docker compose -f ${COMPOSE_FILE} ps -a'
                 echo '===================================================='
                 
                 // 실패 시 로그 수집
-                sh '''
+                sh """
+                    cd ${DEPLOY_PATH}
                     echo "에러 로그 수집 중..."
                     echo "==== Backend 로그 ===="
                     docker logs be-kakaon --tail 100 2>&1 || true
                     echo "==== Frontend 로그 ===="
                     docker logs fe-kakaon --tail 50 2>&1 || true
                     echo "==== Compose 상태 ===="
-                    docker compose ps || true
-                '''
+                    docker compose -f ${COMPOSE_FILE} ps || true
+                """
             }
         }
         
