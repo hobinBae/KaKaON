@@ -4,6 +4,7 @@ import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.store.dto.*;
 
 import com.s310.kakaon.domain.store.entity.BusinessHour;
@@ -18,6 +19,7 @@ import java.time.DayOfWeek;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -38,6 +40,7 @@ public class StoreServiceImpl implements StoreService{
     private final MemberRepository memberRepository;
     private final StoreRepository storeRepository;
     private final AlertRepository alertRepository;
+    private final PaymentRepository paymentRepository;
     private final StoreMapper storeMapper;
 
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
@@ -97,10 +100,18 @@ public class StoreServiceImpl implements StoreService{
         //영업종료를 누르면 레디스에 시작 시간 삭제
         if (request.getStatus().equals(OperationStatus.CLOSED)) {
             stringRedisTemplate.delete(redisKey);
+            log.info("[영업 종료] Redis 키 삭제: {}", redisKey);
             //여기 배치 실행 메서드 넣으면 될듯
         }else if(request.getStatus().equals(OperationStatus.OPEN)){
-            stringRedisTemplate.opsForValue().set(redisKey, LocalDateTime.now().toString());
+            Double avgAmount = paymentRepository.findAveragePaymentAmountLastMonth(store);
 
+            Map<String, String> data = new HashMap<>();
+
+            data.put("startTime", LocalDateTime.now().toString());
+            data.put("avgPaymentAmountPrevMonth", String.valueOf(avgAmount));
+
+            stringRedisTemplate.opsForHash().putAll(redisKey, data);
+            log.info("[영업 시작] storeId={}, 전월 평균 결제금액={}", store.getId(), avgAmount);
             //여기는 redis 관련 로직 넣으면 될듯
         }
 

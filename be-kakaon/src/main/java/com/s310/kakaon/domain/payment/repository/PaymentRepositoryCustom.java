@@ -20,4 +20,10 @@ public interface PaymentRepositoryCustom {
      */
     List<Payment> searchPaymentsForExport(Store store, PaymentSearchRequestDto searchDto);
 
+    /**
+     * 전월 단건 결제 평균 금액 조회
+     */
+    Double findAveragePaymentAmountLastMonth(Store store);
+
+
 }

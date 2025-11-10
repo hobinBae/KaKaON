@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @Repository
@@ -100,4 +101,28 @@ public class PaymentRepositoryImpl implements PaymentRepositoryCustom {
 
         return builder;
     }
+
+    @Override
+    public Double findAveragePaymentAmountLastMonth(Store store) {
+        QPayment payment = QPayment.payment;
+
+        LocalDate now = LocalDate.now();
+        LocalDate firstDayOfLastMonth = now.minusMonths(1).withDayOfMonth(1);
+        LocalDate lastDayOfLastMonth = now.withDayOfMonth(1).minusDays(1);
+
+        Double avgAmount = jpaQueryFactory
+                .select(payment.amount.avg())
+                .from(payment)
+                .where(
+                        payment.store.eq(store),
+                        payment.approvedAt.between(
+                                firstDayOfLastMonth.atStartOfDay(),
+                                lastDayOfLastMonth.atTime(23, 59, 59)
+                        )
+                )
+                .fetchOne();
+
+        return avgAmount != null ? avgAmount : 0.0;
+    }
+
 }
