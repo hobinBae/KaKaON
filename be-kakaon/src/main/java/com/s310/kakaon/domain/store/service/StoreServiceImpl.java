@@ -200,7 +200,7 @@ public class StoreServiceImpl implements StoreService{
             var todayStats = salesCacheService.getSalesStats(storeId, redisDate);
             salesCacheService.getSalesStats(storeId, redisDate);
             int todaySales = todayStats.getTotalSales();
-            double todayCancelRate = todayStats.getCancelRate();
+            double todayCancelRate = todayStats.getCancelRate() != null ? todayStats.getCancelRate() : 0.0;
             // 어제 매출
             int yesterdaySales = paymentStatsRepository
                     .findByStoreIdAndStatsDate(storeId, yesterday)
