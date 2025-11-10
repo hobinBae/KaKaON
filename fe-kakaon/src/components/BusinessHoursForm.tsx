@@ -1,11 +1,96 @@
-import { useState, ChangeEvent } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 const daysOfWeek = ['월', '화', '수', '목', '금', '토', '일'];
+
+// 시간/분 옵션 생성
+const hoursOptions = Array.from({ length: 24 }, (_, i) => i.toString().padStart(2, '0'));
+const minutesOptions = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+
+// --- 커스텀 시간 선택 컴포넌트 ---
+interface TimePickerProps {
+  value: string;
+  onChange: (newTime: string) => void;
+  disabled?: boolean;
+}
+
+const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hour, minute] = value.split(':');
+  
+  const hourRef = useRef<HTMLDivElement>(null);
+  const minuteRef = useRef<HTMLDivElement>(null);
+
+  // Popover가 열릴 때 현재 값으로 스크롤
+  useEffect(() => {
+    if (isOpen) {
+      setTimeout(() => {
+        const selectedHour = hourRef.current?.querySelector(`[data-hour="${hour}"]`);
+        selectedHour?.scrollIntoView({ block: 'center' });
+        const selectedMinute = minuteRef.current?.querySelector(`[data-minute="${minute}"]`);
+        selectedMinute?.scrollIntoView({ block: 'center' });
+      }, 100);
+    }
+  }, [isOpen, hour, minute]);
+
+  const handleHourChange = (newHour: string) => {
+    onChange(`${newHour}:${minute}`);
+  };
+
+  const handleMinuteChange = (newMinute: string) => {
+    onChange(`${hour}:${newMinute}`);
+    setIsOpen(false); // 분을 선택하면 바로 닫기
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className={cn("w-24 justify-start font-normal", disabled && "opacity-50 cursor-not-allowed")}
+          disabled={disabled}
+        >
+          {value}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0 flex">
+        <div ref={hourRef} className="flex flex-col h-48 overflow-y-auto scrollbar-hide">
+          {hoursOptions.map((h) => (
+            <Button
+              key={h}
+              variant={h === hour ? 'default' : 'ghost'}
+              data-hour={h}
+              onClick={() => handleHourChange(h)}
+              className="rounded-none"
+            >
+              {h}
+            </Button>
+          ))}
+        </div>
+        <div ref={minuteRef} className="flex flex-col h-48 overflow-y-auto scrollbar-hide border-l">
+          {minutesOptions.map((m) => (
+            <Button
+              key={m}
+              variant={m === minute ? 'default' : 'ghost'}
+              data-minute={m}
+              onClick={() => handleMinuteChange(m)}
+              className="rounded-none"
+            >
+              {m}
+            </Button>
+          ))}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
+
+// --- BusinessHoursForm ---
 
 type TimeSlot = {
   start: string;
@@ -16,8 +101,6 @@ type DayOpeningHours = {
   isClosed: boolean;
   timeSlots: TimeSlot[];
 };
-
-import { useEffect } from 'react';
 
 type BusinessHours = {
   [key: string]: DayOpeningHours;
@@ -67,76 +150,36 @@ export function BusinessHoursForm({ initialState, onStateChange }: BusinessHours
     }));
   };
 
-  const removeTimeSlot = (day: string, index: number) => {
-    const newTimeSlots = [...businessHours[day].timeSlots];
-    if (newTimeSlots.length > 1) {
-      newTimeSlots.splice(index, 1);
-      setBusinessHours((prev) => ({
-          ...prev,
-          [day]: {
-              ...prev[day],
-              timeSlots: newTimeSlots,
-          },
-      }));
-    }
-  };
-
-
   return (
-    <div className="space-y-4 col-span-2">
+    <div className="space-y-4">
       <h3 className="text-sm text-[#717182] mb-2 block">영업시간 설정</h3>
-      <div className="space-y-2 border p-3 rounded-md">
+      <div className="space-y-3 border p-4 rounded-md">
         {daysOfWeek.map((day) => (
-          <div key={day} className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-start tablet:items-center gap-x-2 pl-2">
-            <div className="w-10 flex items-center h-10">
-                <Label htmlFor={`holiday-${day}`} className="font-semibold">{day}</Label>
+          <div key={day} className="flex items-center gap-3">
+            <Label className="w-8 flex-shrink-0 font-semibold text-base">{day}</Label>
+            <div className="flex-1 flex items-center gap-2">
+              <TimePicker
+                  value={businessHours[day].timeSlots[0].start}
+                  onChange={(value) => handleTimeChange(day, 0, 'start', value)}
+                  disabled={businessHours[day].isClosed}
+              />
+              <span>~</span>
+              <TimePicker
+                  value={businessHours[day].timeSlots[0].end}
+                  onChange={(value) => handleTimeChange(day, 0, 'end', value)}
+                  disabled={businessHours[day].isClosed}
+              />
             </div>
-            <div className="flex-grow space-y-2">
-              {businessHours[day].isClosed ? (
-                 <div className="flex items-center h-10">
-                    <Checkbox
-                        id={`holiday-${day}`}
-                        checked={businessHours[day].isClosed}
-                        onCheckedChange={() => handleHolidayToggle(day)}
-                        className="mr-2"
-                    />
-                    <Label htmlFor={`holiday-${day}`} className="text-gray-500">휴무일</Label>
-                </div>
-              ) : (
-                businessHours[day].timeSlots.map((slot, index) => (
-                    <div key={index} className="flex items-center space-x-2">
-                    {index === 0 && (
-                         <Checkbox
-                            id={`holiday-${day}`}
-                            checked={businessHours[day].isClosed}
-                            onCheckedChange={() => handleHolidayToggle(day)}
-                            className="mr-4"
-                        />
-                    )}
-                    <Input
-                        type="time"
-                        value={slot.start}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleTimeChange(day, index, 'start', e.target.value)}
-                        disabled={businessHours[day].isClosed}
-                        className="w-full"
-                        style={{ marginLeft: index > 0 ? '28px' : '0' }}
-                    />
-                    <span>~</span>
-                    <Input
-                        type="time"
-                        value={slot.end}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => handleTimeChange(day, index, 'end', e.target.value)}
-                        disabled={businessHours[day].isClosed}
-                        className="w-full"
-                    />
-                    {businessHours[day].timeSlots.length > 1 && (
-                        <Button variant="ghost" size="icon" onClick={() => removeTimeSlot(day, index)} className="h-8 w-8">
-                            <X className="h-4 w-4" />
-                        </Button>
-                    )}
-                    </div>
-                ))
-              )}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <Label htmlFor={`holiday-${day}`} className="text-sm text-gray-600">
+                <span className="sm:hidden">휴무</span>
+                <span className="hidden sm:inline">휴무일 지정</span>
+              </Label>
+              <Checkbox
+                  id={`holiday-${day}`}
+                  checked={businessHours[day].isClosed}
+                  onCheckedChange={() => handleHolidayToggle(day)}
+              />
             </div>
           </div>
         ))}

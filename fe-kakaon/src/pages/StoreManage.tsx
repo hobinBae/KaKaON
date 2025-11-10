@@ -27,6 +27,13 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -410,15 +417,19 @@ export default function StoreManage() {
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                <select
+                <Select
                   value={newStoreType}
-                  onChange={(e) => setNewStoreType(e.target.value as StoreCreateRequest['businessType'])}
-                  className="w-full p-2 border rounded-md"
+                  onValueChange={(value) => setNewStoreType(value as StoreCreateRequest['businessType'])}
                 >
-                  <option value="RESTAURANT">음식점</option>
-                  <option value="CAFE">카페</option>
-                  <option value="ETC">기타</option>
-                </select>
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="업종을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="RESTAURANT">음식점</SelectItem>
+                    <SelectItem value="CAFE">카페</SelectItem>
+                    <SelectItem value="ETC">기타</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
@@ -451,8 +462,8 @@ export default function StoreManage() {
                       영업시간 설정
                     </Button>
                   </DialogTrigger>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
+                  <DialogContent>
+                    <DialogHeader className="text-left">
                       <DialogTitle>영업시간 상세 설정</DialogTitle>
                       <DialogDescription>
                         요일별 영업시간과 휴무일을 설정하세요.
@@ -462,8 +473,8 @@ export default function StoreManage() {
                       initialState={null}
                       onStateChange={setNewStoreBusinessHours}
                     />
-                    <DialogFooter>
-                      <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
+                    <DialogFooter className="sm:justify-center">
+                      <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
@@ -481,7 +492,7 @@ export default function StoreManage() {
 
       {/* Filters */}
       <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717182]" />
             <Input
@@ -489,10 +500,7 @@ export default function StoreManage() {
               className="pl-9 rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
             />
           </div>
-          <Button variant="outline" className="rounded-lg">
-            <Filter className="w-4 h-4 mr-2" />
-            필터
-          </Button>
+          <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8">검색</Button>
         </div>
       </Card>
 
@@ -508,12 +516,12 @@ export default function StoreManage() {
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-                <TableHead className="text-[#333333] pl-6">가맹점명</TableHead>
+                <TableHead className="text-[#333333] pl-3 md:pl-6">가맹점명</TableHead>
                 <TableHead className="text-[#333333] text-center">매출</TableHead>
                 <TableHead className="text-[#333333] text-center">취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
                 <TableHead className="text-[#333333] text-center">상태</TableHead>
-                <TableHead className="text-[#333333] text-center">
+                <TableHead className="text-[#333333] text-center hidden md:table-cell">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="sm" className="flex items-center gap-1 h-8 px-2 -ml-2">
@@ -541,7 +549,7 @@ export default function StoreManage() {
                     }`}
                     onClick={() => handleStoreClick(store)}
                   >
-                    <TableCell className="pl-6">
+                    <TableCell className="pl-2 md:pl-6">
                       <div>
                         <div className="flex items-center gap-2">
                           <Star className="w-4 h-4 text-[#717182]" />
@@ -608,10 +616,10 @@ export default function StoreManage() {
                             : 'bg-[#717182] text-white'
                         }`}
                       >
-                        {store.status === 'OPEN' ? '운영중' : '마감'}
+                        {store.status === 'OPEN' ? '영업중' : '마감'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="w-[200px]">
+                    <TableCell className="w-[200px] hidden md:table-cell">
                       <div className="flex items-center gap-2">
                         <div className="w-full h-2.5 relative">
                           <div
@@ -624,7 +632,7 @@ export default function StoreManage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="text-right hidden md:table-cell">
                       <div className="flex gap-2 justify-end">
                         <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
                           <Link to="/transactions">거래내역</Link>
