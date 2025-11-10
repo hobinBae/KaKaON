@@ -139,22 +139,28 @@ export function AppLayout() {
             >
               <Menu className="w-6 h-6" />
             </Button>
-            {/* 가맹점 관리 페이지와 설정 페이지가 아니고, 매장이 2개 이상일 때만 필터를 보여줍니다. */}
-            {location.pathname !== '/stores' && location.pathname !== '/settings' && stores && stores.length > 1 && (
+            {/* 가맹점 관리 및 설정 페이지를 제외하고 항상 필터를 보여주도록 수정했음 */}
+            {location.pathname !== '/stores' && location.pathname !== '/settings' && (
               <Select
-                value={selectedStoreId ?? ""}
-                onValueChange={(val) => setSelectedStoreId(val)}
+                value={selectedStoreId || ""}
+                onValueChange={(val) => setSelectedStoreId(val || null)}
               >
                 <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
                   <SelectValue placeholder={isLoading ? "로딩 중..." : "매장 선택"} />
                 </SelectTrigger>
                 <SelectContent>
                   {isError && <SelectItem value="error" disabled>매장 목록을 불러올 수 없습니다.</SelectItem>}
-                  {stores && stores.map((store) => (
-                    <SelectItem key={store.storeId} value={String(store.storeId)}>
-                      {store.name}
+                  {stores && stores.length > 0 ? (
+                    stores.map((store) => (
+                      <SelectItem key={store.storeId} value={String(store.storeId)}>
+                        {store.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-stores" disabled>
+                      가맹점을 추가해주세요
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             )}

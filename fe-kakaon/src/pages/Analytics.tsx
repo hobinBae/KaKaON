@@ -34,6 +34,21 @@ import {
 
 // --- Helper Functions & Dummy Data ---
 
+// 가맹점별 매출 그래프 X축 커스텀 틱
+const StoreComparisonTick = ({ x, y, payload }: { x: number, y: number, payload: { value: string } }) => {
+  const parts = payload.value.split('. ');
+  const index = parts[0];
+  const name = parts.slice(1).join('. ');
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" className="text-xs">
+        <tspan x="0" className="tablet:hidden">{index}</tspan>
+        <tspan x="0" className="hidden tablet:inline">{name}</tspan>
+      </text>
+    </g>
+  );
+};
+
 // 커스텀 달력 캡션 컴포넌트
 function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
   const today = new Date();
@@ -154,8 +169,8 @@ const generateDailyData = () => {
 };
 
 const formatYAxis = (tick: number) => {
-  if (tick >= 1000000) {
-    return `${(tick / 1000000).toFixed(0)}M`;
+  if (tick >= 100000) {
+    return `${(tick / 1000000).toFixed(1)}M`;
   }
   return `${(tick / 1000).toFixed(0)}K`;
 };
@@ -358,13 +373,13 @@ export default function Analytics() {
     const averageSales = selectedStores.length > 0 ? totalPeriodSales / selectedStores.length : 0;
 
     // storeId를 기반으로 일관된 랜덤 값을 생성하여 데이터가 변하지 않도록 수정했음
-    return selectedStores.map(store => {
+    return selectedStores.map((store, index) => {
       const pseudoRandom = (seed: number) => {
         const x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
       };
       const sales = Math.floor(averageSales * (0.8 + pseudoRandom(store.storeId) * 0.4));
-      return { name: store.name, sales };
+      return { name: `${index + 1}. ${store.name}`, sales };
     });
   }, [dateRange, selectedStoreIds, stores, allSalesData]);
 
@@ -798,15 +813,15 @@ export default function Analytics() {
                     <Button
                       variant="outline"
                       role="combobox"
-                      className="w-[150px] justify-between"
+                      className="w-full tablet:w-[200px] justify-between"
                     >
                       가맹점 선택
                       <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-[300px] p-0">
+                  <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                     <Command>
-                      <CommandInput placeholder="가맹점 검색..." />
+                      <CommandInput placeholder="가맹점 검색..." className="focus:ring-0 focus:ring-offset-0" />
                     <CommandList>
                       <CommandEmpty>검색 결과가 없습니다.</CommandEmpty>
                       <CommandGroup>
@@ -853,14 +868,14 @@ export default function Analytics() {
                     </Command>
                   </PopoverContent>
                 </Popover>
-                <div className="flex gap-1 flex-wrap">
-                  {selectedStoreIds.length === 0 && <span className="text-sm text-muted-foreground">모든 가맹점이 선택되었습니다.</span>}
-                  {stores?.filter(store => selectedStoreIds.includes(store.storeId)).map(store => (
+                <div className="flex gap-1 flex-wrap items-center">
+                  {stores?.filter(store => selectedStoreIds.includes(store.storeId)).map((store, index) => (
                     <Badge
                       variant="secondary"
                       key={store.storeId}
+                      className="text-sm"
                     >
-                      {store.name}
+                      {index + 1}. {store.name}
                       <button
                         className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
                         onClick={() => {
@@ -918,7 +933,7 @@ export default function Analytics() {
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">기간별 매출 추이</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey={xAxisDataKey} stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
@@ -934,7 +949,7 @@ export default function Analytics() {
               {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
             </h3>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="time" stroke="#717182" />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
@@ -942,7 +957,7 @@ export default function Analytics() {
                   contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
                   formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
                 />
-                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
               </BarChart>
             </ResponsiveContainer>
           </Card>
@@ -951,7 +966,7 @@ export default function Analytics() {
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">인건비 대비 매출 비율</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey="month" stroke="#717182" />
                 <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
@@ -974,25 +989,27 @@ export default function Analytics() {
         <TabsContent value="store-comparison">
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가맹점별 매출</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={storeComparisonData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="name" stroke="#717182" />
+            <div style={{ width: '100%', maxWidth: Math.max(1000, storeComparisonData.length * 120), margin: '0 auto' }}>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={storeComparisonData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                  <XAxis dataKey="name" stroke="#717182" tick={<StoreComparisonTick x={0} y={0} payload={{value: ''}} />} interval={0} />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
                   formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
                 />
-                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
               </BarChart>
             </ResponsiveContainer>
+          </div>
           </Card>
         </TabsContent>
         <TabsContent value="cancellation-rate">
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">취소율 추이</h3>
             <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
                 <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
                 <YAxis stroke="#717182" />

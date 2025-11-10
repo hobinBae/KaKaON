@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Plus, Minus, Trash2, Edit, Delete } from "lucide-react";
+import { Settings, Plus, Minus, Trash2, Edit } from "lucide-react";
 import logoImg from '@/assets/logo.png';
 import {
   Dialog,
@@ -175,9 +175,15 @@ const GeneralKiosk = () => {
                   <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "가맹점 선택"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {stores?.map((store) => (
-                    <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
-                  ))}
+                  {stores && stores.length > 0 ? (
+                    stores.map((store) => (
+                      <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="no-stores" disabled>
+                      가맹점을 추가해주세요
+                    </SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             ) : (

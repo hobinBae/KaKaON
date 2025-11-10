@@ -157,9 +157,15 @@ const Pos = () => {
               <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "가맹점 선택"} />
             </SelectTrigger>
             <SelectContent>
-              {stores?.map((store) => (
-                <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
-              ))}
+              {stores && stores.length > 0 ? (
+                stores.map((store) => (
+                  <SelectItem key={store.storeId} value={String(store.storeId)}>{store.name}</SelectItem>
+                ))
+              ) : (
+                <SelectItem value="no-stores" disabled>
+                  가맹점을 추가해주세요
+                </SelectItem>
+              )}
             </SelectContent>
           </Select>
           <div className="text-lg text-right">
