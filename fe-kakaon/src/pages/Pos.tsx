@@ -29,7 +29,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useBoundStore } from '@/stores/storeStore';
 import { useMyStores } from '@/lib/hooks/useStores';
 import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu } from '@/lib/hooks/useMenus';
-import { useCreateOrder } from '@/lib/hooks/useOrders';
+import { useCreateOrder, useCancelOrder, useOrders, useOrderDetail } from '@/lib/hooks/useOrders';
 import {
   Select,
   SelectContent,
@@ -42,7 +42,6 @@ const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
   const {
-    transactions,
     addTransaction,
     cancelTransaction,
     cart,
@@ -55,21 +54,25 @@ const Pos = () => {
   const { data: stores, isLoading: isLoadingStores } = useMyStores();
   const { selectedStoreId, setSelectedStoreId } = useBoundStore();
   const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+  const { data: transactions, isLoading: isLoadingTransactions } = useOrders(selectedStoreId ? Number(selectedStoreId) : null);
   const createMenuMutation = useCreateMenu();
   const createOrderMutation = useCreateOrder();
   const updateMenuMutation = useUpdateMenu();
   const deleteMenuMutation = useDeleteMenu();
+  const cancelOrderMutation = useCancelOrder();
 
   const [time, setTime] = useState(new Date());
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('card');
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [orderType, setOrderType] = useState('store');
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [view, setView] = useState('products'); // 'products' or 'history'
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
+  const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
+  const { data: selectedTransaction, isLoading: isLoadingTransactionDetail } = useOrderDetail(selectedTransactionId);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
 
   useEffect(() => {
@@ -79,13 +82,10 @@ const Pos = () => {
   }, [stores, selectedStoreId, setSelectedStoreId]);
 
   const recentTransactions = useMemo(() => {
-    // TODO: 주문 내역 API 연동 후 필터링 로직 수정 필요
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    return transactions
-      .filter(t => new Date(t.date) > sevenDaysAgo && t.storeId === selectedStoreId)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions, selectedStoreId]);
+    if (!transactions) return [];
+    // API에서 이미 최근 7일 데이터를 반환한다고 가정하고 추가 필터링은 제거
+    return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions]);
 
   const totalPages = Math.ceil((products?.length || 0) / ITEMS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
@@ -129,36 +129,56 @@ const Pos = () => {
   };
 
   const handlePayment = () => {
-    if (cart.length > 0 && selectedStoreId) {
+    if (cart.length > 0 && selectedStoreId && products && paymentMethod) {
+      const paymentMethodMap = {
+        '카드': 'CARD',
+        '계좌': 'TRANSFER',
+        '카카오페이': 'KAKAOPAY',
+        '현금': 'CASH',
+      };
+      const convertedPaymentMethod = paymentMethodMap[paymentMethod] || paymentMethod.toUpperCase();
+
+      const validCartItems = cart.filter(item => products.some(p => p.id === item.id));
+      
+      if (validCartItems.length !== cart.length) {
+        console.error("Cart contains items not found in products list.");
+        return;
+      }
+
+      const calculatedTotalAmount = validCartItems.reduce((sum, item) => {
+        const product = products.find(p => p.id === item.id)!;
+        return sum + product.price * item.quantity;
+      }, 0);
+
       const orderData = {
-        orderMenus: cart.map(item => ({
-          menuId: item.id,
-          amount: item.quantity,
-          name: item.name,
-          price: item.price,
-        })),
-        paymentMethod: paymentMethod.toUpperCase(),
+        items: validCartItems.map(item => {
+          const product = products.find(p => p.id === item.id)!;
+          return {
+            menuId: item.id,
+            price: product.price,
+            quantity: item.quantity,
+          };
+        }),
+        totalAmount: calculatedTotalAmount,
+        paymentMethod: convertedPaymentMethod,
         orderType: orderType.toUpperCase(),
       };
+
+      console.log("Creating order with data:", orderData);
 
       createOrderMutation.mutate({
         storeId: Number(selectedStoreId),
         orderData,
       }, {
         onSuccess: () => {
-          // TODO: 로컬 상태 addTransaction은 임시 데이터이므로 API 연동 후 제거 필요
-          addTransaction({
-            items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
-            total: totalAmount,
-            orderType,
-            paymentMethod,
-            status: 'completed',
-          });
           clearCart();
+          setIsPaymentDialogOpen(false);
         },
-        onError: (error) => {
+        onError: (error: any) => {
           console.error("Order creation failed:", error);
-          // TODO: 사용자에게 오류 메시지 표시
+          if (error.response) {
+            console.error("Server response:", error.response.data);
+          }
         }
       });
     }
@@ -257,7 +277,7 @@ const Pos = () => {
               {recentTransactions.length > 0 ? (
                 <div className="space-y-4">
                   {recentTransactions.map(tx => (
-                    <div key={tx.id} className="border p-4 rounded-lg bg-white cursor-pointer hover:bg-gray-50" onClick={() => setSelectedTransaction(tx)}>
+                    <div key={tx.id} className="border p-4 rounded-lg bg-white cursor-pointer hover:bg-gray-50" onClick={() => setSelectedTransactionId(tx.id)}>
                       <div className="flex justify-between items-start">
                         <div>
                           <p className="font-bold">{new Date(tx.date).toLocaleString()}</p>
@@ -315,11 +335,7 @@ const Pos = () => {
                 <Button variant="outline" className="h-12 text-base px-6 font-bold" onClick={() => setView('history')}>
                   <History className="mr-2 h-5 w-5" /> 주문내역 조회
                 </Button>
-              ) : (
-                <Button variant="outline" className="h-12 text-base px-6 font-bold" onClick={() => setView('products')}>
-                  <Package className="mr-2 h-5 w-5" /> 상품 목록으로
-                </Button>
-              )}
+              ) : null}
               <Link to="/dashboard">
                 <Button className="h-12 text-lg bg-yellow-300 hover:bg-yellow-400 text-gray-700 rounded-3xl">
                   매출관리 화면으로 전환
@@ -347,44 +363,56 @@ const Pos = () => {
         </Dialog>
       )}
 
-      {selectedTransaction && (
-        <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+      {selectedTransactionId && (
+        <Dialog open={!!selectedTransactionId} onOpenChange={() => setSelectedTransactionId(null)}>
           <DialogContent>
             <DialogHeader><DialogTitle>주문 상세 내역</DialogTitle></DialogHeader>
-            <div className="py-4 space-y-4">
-              <p><span className="font-semibold">주문 번호:</span> {selectedTransaction.id}</p>
-              <p><span className="font-semibold">주문 시간:</span> {new Date(selectedTransaction.date).toLocaleString()}</p>
-              <p><span className="font-semibold">주문 항목:</span> {selectedTransaction.items.map(i => `${i.name} x ${i.quantity}`).join(', ')}</p>
-              <p className="text-lg font-bold"><span className="font-semibold">총 금액:</span> {selectedTransaction.total.toLocaleString()}원</p>
-              <p><span className="font-semibold">상태:</span> {selectedTransaction.status === 'completed' ? '완료' : '취소됨'}</p>
-            </div>
-            <DialogFooter>
-              {selectedTransaction.status === 'completed' && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="destructive">결제 취소</Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>결제를 취소하시겠습니까?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        이 작업은 되돌릴 수 없습니다. 해당 주문의 결제가 취소됩니다.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>닫기</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => {
-                        // TODO: cancelTransaction API 연동 필요
-                        console.log('Cancelling transaction:', selectedTransaction.id);
-                        cancelTransaction(selectedTransaction.id);
-                        setSelectedTransaction(null);
-                      }}>확인</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-              <Button variant="outline" onClick={() => setSelectedTransaction(null)}>닫기</Button>
-            </DialogFooter>
+            {isLoadingTransactionDetail ? (
+              <p>로딩 중...</p>
+            ) : selectedTransaction ? (
+              <>
+                <div className="py-4 space-y-4">
+                  <p><span className="font-semibold">주문 번호:</span> {selectedTransaction.id}</p>
+                  <p><span className="font-semibold">주문 시간:</span> {new Date(selectedTransaction.date).toLocaleString()}</p>
+                  <p><span className="font-semibold">주문 항목:</span> {selectedTransaction.items.map(i => `${i.name} x ${i.quantity}`).join(', ')}</p>
+                  <p className="text-lg font-bold"><span className="font-semibold">총 금액:</span> {selectedTransaction.total.toLocaleString()}원</p>
+                  <p><span className="font-semibold">상태:</span> {selectedTransaction.status === 'completed' ? '완료' : '취소됨'}</p>
+                </div>
+                <DialogFooter>
+                  {selectedTransaction.status === 'completed' && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive">결제 취소</Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>결제를 취소하시겠습니까?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            이 작업은 되돌릴 수 없습니다. 해당 주문의 결제가 취소됩니다.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>닫기</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => {
+                            if (selectedStoreId) {
+                              cancelOrderMutation.mutate({
+                                storeId: Number(selectedStoreId),
+                                orderId: selectedTransaction.id,
+                              }, {
+                                onSuccess: () => {
+                                  setSelectedTransactionId(null);
+                                }
+                              });
+                            }
+                          }}>확인</AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
+                  <Button variant="outline" onClick={() => setSelectedTransactionId(null)}>닫기</Button>
+                </DialogFooter>
+              </>
+            ) : <p>주문 정보를 불러오는데 실패했습니다.</p>}
           </DialogContent>
         </Dialog>
       )}
@@ -416,7 +444,7 @@ const Pos = () => {
             ))}
           </div>
           <footer className="mt-auto pt-4 border-t space-y-3">
-            <Dialog>
+            <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full h-16 text-xl" disabled={cart.length === 0}>
                   <span className="bg-white text-blue-600 rounded-full h-7 w-7 flex items-center justify-center mr-3">{totalItems}</span>
@@ -443,10 +471,10 @@ const Pos = () => {
                   </div>
                   <div>
                     <Label className="text-xl font-semibold">결제 수단</Label>
-                    <RadioGroup defaultValue="card" onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4 mt-4">
+                    <RadioGroup onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4 mt-4">
                       {['카드', '계좌', '카카오페이', '현금'].map(method => (
                         <Label key={method} htmlFor={method} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-yellow-400 [&:has([data-state=checked])]:bg-yellow-300">
-                          <RadioGroupItem value={method.toLowerCase()} id={method} className="sr-only" />
+                          <RadioGroupItem value={method} id={method} className="sr-only" />
                           <span className="text-lg font-medium">{method}</span>
                         </Label>
                       ))}
@@ -458,9 +486,7 @@ const Pos = () => {
                   </div>
                 </div>
                 <DialogFooter>
-                  <DialogClose asChild>
-                    <Button onClick={handlePayment} className="w-full h-14 text-xl">결제 완료</Button>
-                  </DialogClose>
+                  <Button onClick={handlePayment} className="w-full h-14 text-xl" disabled={!paymentMethod}>결제 완료</Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
