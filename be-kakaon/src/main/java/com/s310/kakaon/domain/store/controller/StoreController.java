@@ -45,6 +45,7 @@ public class StoreController {
                 .body(ApiResponse.of(HttpStatus.CREATED, "가맹점 등록 성공", response, httpRequest.getRequestURI()));
     }
 
+    @Operation(summary = "가맹점 수정", description = "로그인한 회원이 자신의 가맹점을 수정합니다.")
     @PatchMapping("/{storeId}")
     public ResponseEntity<ApiResponse<StoreDetailResponseDto>> updateStore(
             @AuthenticationPrincipal String kakaoId,
