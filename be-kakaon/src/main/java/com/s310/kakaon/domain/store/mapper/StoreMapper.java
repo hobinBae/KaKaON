@@ -46,12 +46,17 @@ public class StoreMapper {
                 .build();
     }
 
-    public StoreResponseDto toResponseDto(Store store, Long unreadCount){
+    public StoreResponseDto toResponseDto(Store store, Long unreadCount, int todaySales, double yesterdayGrowthRate, int weeklySales, int monthlySales, double todayCancelRate){
         return StoreResponseDto.builder()
                 .storeId(store.getId())
                 .name(store.getName())
                 .status(store.getOperationStatus())
                 .unreadCount(unreadCount)
+                .todaySales(todaySales)
+                .yesterdayGrowthRate(yesterdayGrowthRate)
+                .weeklySales(weeklySales)
+                .monthlySales(monthlySales)
+                .todayCancelRate(todayCancelRate)
                 .build();
     }
 

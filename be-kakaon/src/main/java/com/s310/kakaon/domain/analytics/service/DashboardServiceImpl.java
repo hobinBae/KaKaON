@@ -60,8 +60,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .orElse(0);
 
         // 어제 대비 증감률
-        double yesterdayGrowthRate = yesterdaySales == 0 ? 0.0 :
-                ((double) (todaySales - yesterdaySales) / yesterdaySales) * 100;
+        double yesterdayGrowthRate = calcGrowthRate(yesterdaySales, todaySales);
 
         // 저번 주 동일 요일 매출
         int lastWeekSales = paymentStatsRepository
@@ -70,8 +69,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .orElse(0);
 
         // 전주 동요일 대비 증감률
-        double lastWeekGrowthRate = lastWeekSales == 0 ? 0.0 :
-                ((double) (todaySales - lastWeekSales) / lastWeekSales) * 100;
+        double lastWeekGrowthRate = calcGrowthRate(lastWeekSales, todaySales);
 
         // 이번 달 누적 매출
         int monthlyTotalSales = paymentStatsRepository
@@ -91,8 +89,7 @@ public class DashboardServiceImpl implements DashboardService {
                 .sum();
 
         // 전달 대비 증감률
-        double lastMonthGrowthRate = lastMonthTotalSales == 0 ? 0.0 :
-                ((double) (monthlyTotalSales - lastMonthTotalSales) / lastMonthTotalSales) * 100;
+        double lastMonthGrowthRate = calcGrowthRate(lastMonthTotalSales, monthlyTotalSales);
 
 
 
@@ -128,5 +125,21 @@ public class DashboardServiceImpl implements DashboardService {
                 .monthlyGrowthRate(lastMonthGrowthRate)
                 .recent7Days(last7days)
                 .build();
+    }
+
+    /**
+     * first 대비 second 증감률
+     * @param firstSales second와 비교할 이전 매출 데이터
+     * @param secondSales 현재 매출 데이터
+     * @return 증감률(-100%~999%)
+     */
+    public Double calcGrowthRate(int firstSales, int secondSales) {
+        Double growthRate = 0.0;
+        if (firstSales == 0) {
+            growthRate = secondSales > 0 ? 999.0 : 0.0;  // 전 비교 데이터 없고 현재 데이터만 있음 → 999% (무한대)
+        } else {
+            growthRate = ((double) (secondSales - firstSales) / firstSales) * 100;
+        }
+        return growthRate;
     }
 }

@@ -26,10 +26,4 @@ public class StoreDetailResponseDto {
 
     private List<AlertRecipientResponseDto> alertRecipientResponse;
 
-//    private Long totalSales;          // 오늘 매출
-//    private Double cancelRate;        // 취소율 (%)
-//    private Double changeRate;        // 전일 대비 매출 증감률 (%)
-//    private Integer alertCount;       // 이상거래 알림 수
-
-
 }
