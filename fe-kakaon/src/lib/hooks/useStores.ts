@@ -15,7 +15,8 @@ import apiClient from '@/lib/apiClient';
 // 내 매장 목록을 가져오는 API 호출 함수
 const getMyStores = async (): Promise<Store[]> => {
   const response = await apiClient.get('/stores');
-  return response.data.data;
+  // PageResponse 객체에서 실제 매장 목록인 content 배열을 반환하도록 수정했음
+  return response.data.data.content;
 };
 
 // 특정 매장 정보를 가져오는 API 호출 함수
@@ -203,10 +204,10 @@ export const useRegisterAlertRecipient = () => {
  * 알림 수신자를 수정하는 커스텀 훅
  */
 export const useUpdateAlertRecipient = () => {
-  const queryClient = useQueryClient();
+  // const queryClient = useQueryClient(); // 현재 사용하지 않으므로 주석 처리했음
   return useMutation({
     mutationFn: updateAlertRecipient,
-    onSuccess: (data, variables) => {
+    onSuccess: () => {
       // 알림 수신자 목록 API가 있다면 아래 코드로 캐시를 무효화해야 합니다.
       // queryClient.invalidateQueries({ queryKey: storeKeys.alertRecipients(variables.storeId) });
     },
