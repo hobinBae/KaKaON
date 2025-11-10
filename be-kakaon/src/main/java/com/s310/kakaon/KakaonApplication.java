@@ -6,8 +6,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaAuditing;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
 @EnableJpaAuditing
-@SpringBootApplication
 @EnableScheduling
+@SpringBootApplication
 public class KakaonApplication {
 
     public static void main(String[] args) {

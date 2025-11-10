@@ -46,6 +46,7 @@ public class RedisConfig {
         redisTemplate.setValueSerializer(jsonSerializer);
         redisTemplate.setHashKeySerializer(stringSerializer);
         redisTemplate.setHashValueSerializer(jsonSerializer);
+
         return redisTemplate;
     }
 }

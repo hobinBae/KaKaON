@@ -42,10 +42,19 @@ public class PaymentStatsHourly {
 
     //0 ~ 23시
     @Column(name = "hour", nullable = false)
-    private Integer hour;
+    private int hour;
 
-    @Column(name = "hourly_total_sales", nullable = false, precision = 14, scale = 2)
-    private BigDecimal hourlyTotalSales;
+    @Column(name = "hourly_total_sales", nullable = false)
+    private Integer hourlyTotalSales;
+
+    @Column(name = "hourly_payment_count", nullable = false)
+    private Integer hourlyPaymentCount;
+
+    @Column(name = "hourly_cancel_count", nullable = false)
+    private Integer hourlyCancelCount;
+
+    @Column(name = "hourly_cancel_rate", nullable = false)
+    private Double hourlyCancelRate;
 
 
 
