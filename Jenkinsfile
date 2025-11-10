@@ -16,7 +16,8 @@ pipeline {
         DEPLOY_PATH = '/home/ubuntu/app'
         
         // ===== Git 브랜치 =====
-        GIT_BRANCH = 'develop'
+        // GIT_BRANCH = 'develop'
+        GIT_BRANCH = 'INFRA/fix/Jenkins-https'
 
         // ===== 항상 배포용 compose 파일만 사용 =====
         COMPOSE_FILE = 'docker-compose-prod.yml'
@@ -346,7 +347,7 @@ pipeline {
                 echo '접속 정보:'
                 echo "  - Frontend: https://k13s310.p.ssafy.io"
                 echo "  - Backend API(프록시 경유): https://k13s310.p.ssafy.io/api"
-                echo "  - Jenkins: https://k13s310.p.ssafy.io/jenkins"
+                echo "  - Jenkins: https://k13s310.p.ssafy.io:8443/jenkins"
                 echo ''
                 echo '유용한 명령어:'
                 echo "  - 로그 확인: docker compose -f ${COMPOSE_FILE} logs -f"
