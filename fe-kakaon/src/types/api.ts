@@ -134,7 +134,7 @@ export type CartItem = Menu & { quantity: number };
 
 // ================== Transaction ==================
 export type Transaction = {
-  id: string;
+  id: number;
   items: { name: string; quantity: number; price: number }[];
   total: number;
   date: string;

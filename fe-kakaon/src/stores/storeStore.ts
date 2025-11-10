@@ -6,7 +6,7 @@ interface AppState {
   // --- Transaction State ---
   transactions: Transaction[];
   addTransaction: (transaction: Omit<Transaction, 'id' | 'date' | 'storeId'>) => void;
-  cancelTransaction: (transactionId: string) => void;
+  cancelTransaction: (transactionId: number) => void;
 
   // --- Auth State ---
   isLoggedIn: boolean;
@@ -35,7 +35,7 @@ export const useBoundStore = create<AppState>((set, get) => ({
     const { selectedStoreId } = get();
     const transaction: Transaction = {
       ...newTransaction,
-      id: `tran_${Date.now()}`,
+      id: Date.now(),
       date: new Date().toISOString(),
       storeId: selectedStoreId!,
     };
