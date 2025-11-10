@@ -103,6 +103,7 @@ export interface Menu {
   price: number;
   category: string;
   imageUrl?: string;
+  description?: string;
 }
 
 // ================== Cart ==================
