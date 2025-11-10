@@ -1,10 +1,12 @@
 package com.s310.kakaon.domain.analytics.service;
 
 import com.s310.kakaon.domain.analytics.dto.DashboardSummaryResponseDto;
+import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
+import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.global.exception.ApiException;
@@ -31,11 +33,15 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardSummaryResponseDto getDashboardSummary(Long storeId, Long memberId) {
-        storeRepository.findById(storeId)
+        Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        memberRepository.findById(memberId)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+        if (!store.getMember().getId().equals(member.getId())) {
+            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
+        }
 
         LocalDate today = LocalDate.now();
         LocalDate yesterday = today.minusDays(1);
