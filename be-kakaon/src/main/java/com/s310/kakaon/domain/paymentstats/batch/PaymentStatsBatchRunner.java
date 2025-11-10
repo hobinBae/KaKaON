@@ -24,7 +24,8 @@ public class PaymentStatsBatchRunner {
      * 매일 새벽 3시 실행
      * 전날 영업 통계 데이터 Redis에 가져와 저장
      */
-    @Scheduled(cron = "0 0 3 * * *", zone = "Asia/Seoul")
+//    @Scheduled(cron = "0 */1 * * * *", zone = "Asia/Seoul")
+    @Scheduled(cron = "0 0 0 * * *", zone = "Asia/Seoul")
     @Transactional
     public void runDailyStatsBatch() {
         LocalDate targetDate = LocalDate.now().minusDays(1);
@@ -32,7 +33,7 @@ public class PaymentStatsBatchRunner {
 
         List<Store> stores = storeRepository.findAll();
         if (stores.isEmpty()) {
-            log.warn("등록된 매장 없음!!!! 에러콛 추가???");
+            log.warn("등록된 매장 없음!!!! 에러코드 추가???");
             return;
         }
 
@@ -41,7 +42,7 @@ public class PaymentStatsBatchRunner {
                 paymentStatsService.saveDailyPaymentStats(store.getId(), targetDate);
                 log.info("[{}] {} 매장 통계 저장 완료", store.getId(), targetDate);
             } catch (Exception e) {
-                log.error("[{}] 매장 통계 젖아 시ㄹ패 : {}", store.getName(), e.getMessage());
+                log.error("[{}] 매장 통계 저장 실패 : {}", store.getName(), e.getMessage());
             }
         }
         log.info("Batch End!");
