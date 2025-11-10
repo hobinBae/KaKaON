@@ -2,13 +2,15 @@ package com.s310.kakaon.domain.store.service;
 
 
 import com.s310.kakaon.domain.store.dto.*;
+import com.s310.kakaon.global.dto.PageResponse;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 
 public interface StoreService {
-    StoreResponseDto registerStore(Long memberId, StoreCreateRequestDto request);
+    StoreDetailResponseDto registerStore(Long memberId, StoreCreateRequestDto request);
 
-    StoreResponseDto findStoreById(Long memberId, Long storeId);
+    StoreDetailResponseDto findStoreById(Long memberId, Long storeId);
 
     OperationStatusUpdateResponseDto updateOperationStatus(Long memberId, Long storeId, OperationStatusUpdateRequestDto request);
 
@@ -16,6 +18,7 @@ public interface StoreService {
 
     void deleteStore(Long memberId, Long storeId);
 
-    List<StoreResponseDto> getMyStores(Long memberId);
+    PageResponse<StoreResponseDto> getMyStores(Long memberId, Pageable pageable);
 
+    StoreDetailResponseDto updateStore(Long memberId, Long storeId, StoreUpdateRequestDto request);
 }
