@@ -1,17 +1,19 @@
 package com.s310.kakaon.domain.store.dto;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 @Getter
-public class StoreResponseDto {
-    private Long storeId;
+public class StoreUpdateRequestDto {
+
     private String name;
-    private OperationStatus status;
-    private Long unreadCount;
+    private BusinessType businessType;
+    private String phone;
+    private List<BusinessHourDto> businessHours;
+
 }

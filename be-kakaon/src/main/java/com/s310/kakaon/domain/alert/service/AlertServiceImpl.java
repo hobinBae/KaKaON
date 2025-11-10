@@ -196,15 +196,17 @@ public class AlertServiceImpl implements AlertService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        List<Alert> alerts = alertRepository.findByStore(store);
+//        List<Alert> alerts = alertRepository.findByStore(store);
 
-        int count = 0;
-
-        for (Alert alert : alerts) {
-            if(!alert.getChecked()){
-                count++;
-            }
-        }
+        // N + 1 문제 생김
+//        int count = 0;
+//
+//        for (Alert alert : alerts) {
+//            if(!alert.getChecked()){
+//                count++;
+//            }
+//        }
+        Long count = alertRepository.countUnreadByStore(store);
 
         return AlertUnreadCountResponseDto.builder()
                 .unreadCount(count)

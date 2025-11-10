@@ -1,4 +1,5 @@
-package com.s310.kakaon.domain.store.dto;
+package com.s310.kakaon.domain.alert.dto;
+
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +10,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Getter
-public class StoreResponseDto {
+public class UnreadCountProjection {
     private Long storeId;
-    private String name;
-    private OperationStatus status;
     private Long unreadCount;
 }

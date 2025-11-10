@@ -1,10 +1,12 @@
 package com.s310.kakaon.domain.alert.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.Projections;
 import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.s310.kakaon.domain.alert.dto.AlertSearchRequestDto;
+import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.entity.Alert;
 import com.s310.kakaon.domain.alert.entity.AlertType;
 import com.s310.kakaon.domain.alert.entity.QAlert;
@@ -55,6 +57,26 @@ public class AlertRepositoryImpl implements AlertRepositoryCustom{
         return PageableExecutionUtils.getPage(content, pageable, countQuery::fetchOne);
     }
 
+    @Override
+    public List<UnreadCountProjection> countUnreadByMemberIdGroupedByStore(Long memberId) {
+        QAlert alert = QAlert.alert;
+
+        return jpaQueryFactory
+                .select(Projections.constructor(
+                        UnreadCountProjection.class,
+                        alert.store.id,
+                        alert.count()
+                ))
+                .from(alert)
+                .where(
+                        alert.checked.eq(false),
+                        alert.store.member.id.eq(memberId)
+                )
+                .groupBy(alert.store.id)
+                .fetch();
+    }
+
+
     private BooleanExpression storeEq(Store store){
         return alert.store.eq(store);
     }
@@ -88,6 +110,21 @@ public class AlertRepositoryImpl implements AlertRepositoryCustom{
         return alert.checked.eq(checked);
     }
 
+    @Override
+    public Long countUnreadByStore(Store store) {
+        QAlert alert = QAlert.alert;
+
+        Long count = jpaQueryFactory
+                .select(alert.count())
+                .from(alert)
+                .where(
+                        alert.store.eq(store),
+                        alert.checked.eq(false)
+                )
+                .fetchOne();
+
+        return count != null ? count : 0L;
+    }
 
 
 }

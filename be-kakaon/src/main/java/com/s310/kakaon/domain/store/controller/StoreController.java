@@ -5,12 +5,14 @@ import com.s310.kakaon.domain.store.dto.*;
 import com.s310.kakaon.domain.store.service.AlertRecipientService;
 import com.s310.kakaon.domain.store.service.StoreService;
 import com.s310.kakaon.global.dto.ApiResponse;
+import com.s310.kakaon.global.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,15 +34,29 @@ public class StoreController {
 
     @Operation(summary = "가맹점 등록", description = "로그인한 회원이 새로운 가맹점을 등록합니다.")
     @PostMapping
-    public ResponseEntity<ApiResponse<StoreResponseDto>> registerStore(
+    public ResponseEntity<ApiResponse<StoreDetailResponseDto>> registerStore(
             @AuthenticationPrincipal String kakaoId,
             @RequestBody StoreCreateRequestDto request,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-        StoreResponseDto response = storeService.registerStore(memberId, request);
+        StoreDetailResponseDto response = storeService.registerStore(memberId, request);
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "가맹점 등록 성공", response, httpRequest.getRequestURI()));
+    }
+
+    @PatchMapping("/{storeId}")
+    public ResponseEntity<ApiResponse<StoreDetailResponseDto>> updateStore(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            @RequestBody StoreUpdateRequestDto request,
+            HttpServletRequest httpRequest
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        StoreDetailResponseDto response = storeService.updateStore(memberId, storeId, request);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "가맹점 정보 수정 성공", response, httpRequest.getRequestURI()));
     }
 
     @Operation(summary = "가맹점 영업 상태 조회", description = "해당 가맹점의 현재 영업 상태를 조회합니다.")
@@ -106,59 +122,29 @@ public class StoreController {
 
     @Operation(summary = "가맹점 상세 조회", description = "storeId로 가맹점 정보를 조회합니다.")
     @GetMapping("/{storeId}")
-    public ResponseEntity<ApiResponse<StoreResponseDto>> findStoreById(
+    public ResponseEntity<ApiResponse<StoreDetailResponseDto>> findStoreById(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-        StoreResponseDto response = storeService.findStoreById(memberId, storeId);
+        StoreDetailResponseDto response = storeService.findStoreById(memberId, storeId);
         return ResponseEntity.status(HttpStatus.OK)
                 .body(ApiResponse.of(HttpStatus.OK, "가맹점 조회 성공", response, httpRequest.getRequestURI()));
     }
 
     @Operation(summary = "내 가맹점 목록 조회", description = "로그인한 회원이 소유한 가맹점 리스트를 조회합니다.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<StoreResponseDto>>> getMyStores(
+    public ResponseEntity<ApiResponse<PageResponse<StoreResponseDto>>> getMyStores(
             @AuthenticationPrincipal String kakaoId,
+            Pageable pageable,
             HttpServletRequest httpRequest
     ) {
-//        List<StoreResponseDto> response = storeService.getMyStores(memberDetails.getId());
-//        return ResponseEntity.status(HttpStatus.OK)
-//                .body(ApiResponse.of(HttpStatus.OK, "내 가맹점 리스트 조회 성공", response, httpRequest.getRequestURI()));
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        PageResponse<StoreResponseDto> response = storeService.getMyStores(memberId, pageable);
 
-        List<StoreResponseDto> dummyStores = List.of(
-                StoreResponseDto.builder()
-                        .storeId(1L)
-                        .ownerName("홍길동")
-                        .businessType(BusinessType.RESTAURANT)
-                        .address("서울 강남구 테헤란로 123")
-                        .name("강남점")
-                        .phone("02-1234-5678")
-                        .businessNumber("123-45-67890")
-                        .status(StoreStatus.OPEN)
-                        .totalSales(6200000L)
-                        .cancelRate(3.2)
-                        .changeRate(12.5)
-                        .alertCount(2)
-                        .build(),
-                StoreResponseDto.builder()
-                        .storeId(2L)
-                        .ownerName("홍길동")
-                        .businessType(BusinessType.CAFE)
-                        .address("서울 마포구 양화로 45")
-                        .name("홍대점")
-                        .phone("02-9876-5432")
-                        .businessNumber("234-56-78901")
-                        .status(StoreStatus.OPEN)
-                        .totalSales(5800000L)
-                        .cancelRate(2.8)
-                        .changeRate(8.3)
-                        .alertCount(1)
-                        .build()
-        );
         return ResponseEntity.ok(
-                ApiResponse.of(HttpStatus.OK, "✅ 더미 데이터로 가맹점 리스트 조회 성공", dummyStores, httpRequest.getRequestURI())
+                ApiResponse.of(HttpStatus.OK, "가맹점 리스트 조회 성공", response, httpRequest.getRequestURI())
         );
     }
 
