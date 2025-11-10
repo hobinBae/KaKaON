@@ -4,6 +4,9 @@ import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.payment.service.SalesCacheService;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.dto.*;
 
 import com.s310.kakaon.domain.store.entity.BusinessHour;
@@ -15,8 +18,11 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
 import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Map;
@@ -39,6 +45,8 @@ public class StoreServiceImpl implements StoreService{
     private final StoreRepository storeRepository;
     private final AlertRepository alertRepository;
     private final StoreMapper storeMapper;
+    private final PaymentStatsRepository paymentStatsRepository;
+    private final SalesCacheService salesCacheService;
 
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
 
@@ -176,12 +184,56 @@ public class StoreServiceImpl implements StoreService{
                         UnreadCountProjection::getUnreadCount
                 ));
 
+        // 매출 내역 조회
+        LocalDate today = LocalDate.now();
+        LocalDate yesterday = today.minusDays(1);
+        LocalDate weekStart = today.minusDays(6);
+        LocalDate monthStart = today.withDayOfMonth(1);
+        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+
+
         Page<StoreResponseDto> responsePage = stores.map(store -> {
-            Long unreadCount = unreadCountMap.getOrDefault(store.getId(), 0L);
-            return storeMapper.toResponseDto(store, unreadCount);
+            Long storeId = store.getId();
+            Long unreadCount = unreadCountMap.getOrDefault(storeId, 0L);
+
+            // 오늘 매출 및 취소율 (Redis)
+            var todayStats = salesCacheService.getSalesStats(storeId, redisDate);
+            salesCacheService.getSalesStats(storeId, redisDate);
+            int todaySales = todayStats.getTotalSales();
+            double todayCancelRate = todayStats.getCancelRate();
+            // 어제 매출
+            int yesterdaySales = paymentStatsRepository
+                    .findByStoreIdAndStatsDate(storeId, yesterday)
+                    .map(PaymentStats::getTotalSales)
+                    .orElse(0);
+            // 전일 대비 증감률
+            double yesterdayGrowthRate = calcGrowthRate(yesterdaySales, todaySales);
+            // 이번주 누적 매출
+            int weeklySales = paymentStatsRepository
+                    .findByStoreIdAndStatsDateBetween(storeId, weekStart, yesterday)
+                    .stream()
+                    .mapToInt(PaymentStats::getTotalSales)
+                    .sum() + todaySales;
+            // 이번달 누적 매출
+            int monthlySales = paymentStatsRepository
+                    .findByStoreIdAndStatsDateBetween(storeId, monthStart, yesterday)
+                    .stream()
+                    .mapToInt(PaymentStats::getTotalSales)
+                    .sum() + todaySales;
+            return storeMapper.toResponseDto(store, unreadCount, todaySales, yesterdayGrowthRate, weeklySales, monthlySales, todayCancelRate);
         });
 
         return PageResponse.from(responsePage);
+    }
+
+    private double calcGrowthRate(int yesterdaySales, int todaySales) {
+        Double growthRate = 0.0;
+        if (yesterdaySales == 0) {
+            growthRate = todaySales > 0 ? 999.0 : 0.0;  // 전 비교 데이터 없고 현재 데이터만 있음 → 999% (무한대)
+        } else {
+            growthRate = ((double) (todaySales - yesterdaySales) / yesterdaySales) * 100;
+        }
+        return growthRate;
     }
 
     @Override
