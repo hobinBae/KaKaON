@@ -122,8 +122,12 @@ pipeline {
                         docker ps
                         
                         echo ""
-                        echo "Docker Compose Down..."
-                        docker compose -f ${COMPOSE_FILE} down || echo "실행 중인 컨테이너 없음"
+                        echo "애플리케이션 컨테이너만 중지 (Jenkins 제외)..."
+                        docker compose -f ${COMPOSE_FILE} stop fe-kakaon be-kakaon || echo "중지할 컨테이너 없음"
+                        
+                        echo ""
+                        echo "중지된 애플리케이션 컨테이너 제거..."
+                        docker compose -f ${COMPOSE_FILE} rm -f fe-kakaon be-kakaon || echo "제거할 컨테이너 없음"
                         
                         echo "컨테이너 중지 완료!"
                     """
@@ -168,8 +172,8 @@ pipeline {
                     sh """
                         cd ${DEPLOY_PATH}
                         
-                        echo "Docker Compose Up..."
-                        docker compose -f ${COMPOSE_FILE} up -d
+                        echo "애플리케이션 컨테이너만 시작 (Jenkins 제외)..."
+                        docker compose -f ${COMPOSE_FILE} up -d fe-kakaon be-kakaon
                         
                         echo ""
                         echo "컨테이너 시작 대기 (15초)..."
