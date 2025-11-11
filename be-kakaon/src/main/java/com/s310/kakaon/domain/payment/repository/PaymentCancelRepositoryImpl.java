@@ -39,21 +39,21 @@ public class PaymentCancelRepositoryImpl implements PaymentCancelRepositoryCusto
 
         // ✅ 이번주 최근 1시간 취소율
         List<Tuple> thisHour = query
-                .select(p.store.id, s.name, pc.id.count().doubleValue(), p.id.count().doubleValue())
+                .select(p.store.id, s.name, pc.id.countDistinct().doubleValue(), p.id.count().doubleValue())
                 .from(p)
                 .join(p.store, s)
                 .leftJoin(pc).on(pc.payment.eq(p))
-                .where(p.canceledAt.between(oneHourAgo, now))
+                .where(p.approvedAt.between(oneHourAgo, now))
                 .groupBy(p.store.id, s.name)
                 .fetch();
 
         // ✅ 전주 동일 시간대 취소율
         List<Tuple> lastWeekHour = query
-                .select(p.store.id, s.name, pc.id.count().doubleValue(), p.id.count().doubleValue())
+                .select(p.store.id, s.name, pc.id.countDistinct().doubleValue(), p.id.count().doubleValue())
                 .from(p)
                 .join(p.store, s)
                 .leftJoin(pc).on(pc.payment.eq(p))
-                .where(p.canceledAt.between(lastWeekStart, lastWeekEnd))
+                .where(p.approvedAt.between(lastWeekStart, lastWeekEnd))
                 .groupBy(p.store.id, s.name)
                 .fetch();
 
@@ -61,16 +61,27 @@ public class PaymentCancelRepositoryImpl implements PaymentCancelRepositoryCusto
         Map<Long, Double> thisHourRate = thisHour.stream()
                 .collect(Collectors.toMap(
                         t -> t.get(p.store.id),
-                        t -> (t.get(pc.id.count().doubleValue()) / t.get(p.id.count().doubleValue())) * 100
+                        t -> {
+                            Double cancelCount = t.get(pc.id.countDistinct().doubleValue());
+                            Double totalCount = t.get(p.id.count().doubleValue());
+                            if (totalCount == null || totalCount == 0) return 0.0;
+                            if (cancelCount == null) cancelCount = 0.0;
+                            return (cancelCount / totalCount) * 100.0;
+                        }
                 ));
 
         Map<Long, Double> lastWeekRate = lastWeekHour.stream()
                 .collect(Collectors.toMap(
                         t -> t.get(p.store.id),
-                        t -> (t.get(pc.id.count().doubleValue()) / t.get(p.id.count().doubleValue())) * 100
+                        t -> {
+                            Double cancelCount = t.get(pc.id.countDistinct().doubleValue());
+                            Double totalCount = t.get(p.id.count().doubleValue());
+                            if (totalCount == null || totalCount == 0) return 0.0;
+                            if (cancelCount == null) cancelCount = 0.0;
+                            return (cancelCount / totalCount) * 100.0;
+                        }
                 ));
-
-        // ✅ DTO 변환
+// ✅ DTO 변환
         return thisHourRate.keySet().stream()
                 .map(storeId -> new CancelRateAnomalyDto(
                         storeId,

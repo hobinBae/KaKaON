@@ -33,4 +33,10 @@ public interface PaymentRepositoryCustom {
      */
     Integer getDeliverySales(Store store, LocalDate date);
 
+    /**
+     * 전월 단건 결제 평균 금액 조회
+     */
+    Double findAveragePaymentAmountLastMonth(Store store);
+
+
 }

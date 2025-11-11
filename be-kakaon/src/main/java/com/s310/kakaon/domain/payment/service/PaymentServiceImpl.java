@@ -96,8 +96,12 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
+
+
         long t1 = System.currentTimeMillis();
-        detectAfterHoursTransaction(store, payment);
+        if(!detectAfterHoursTransaction(store, payment)){
+            detectHighValueTransaction(store, payment);
+        }
         long t2 = System.currentTimeMillis();
         log.info("[PERF] 이상거래 탐지 완료 시점: {} ms", (t2 - t1));
         return paymentMapper.fromEntity(payment);
@@ -411,11 +415,11 @@ public class PaymentServiceImpl implements PaymentService{
         }
     }
 
-    public void detectAfterHoursTransaction(Store store, Payment payment) {
+    public boolean detectAfterHoursTransaction(Store store, Payment payment) {
         String redisKey = REDIS_KEY_PREFIX + store.getId();
 
 
-        if (!Boolean.TRUE.equals(stringRedisTemplate.hasKey(redisKey))) {
+        if (!stringRedisTemplate.hasKey(redisKey)) {
             AlertEvent event = AlertEvent.builder()
                     .alertUuid(UUID.randomUUID().toString().substring(0, 20))
                     .storeId(store.getId())
@@ -427,6 +431,42 @@ public class PaymentServiceImpl implements PaymentService{
                     .build();
             publisher.publishEvent(event);
             log.info("[AlertEvent 발행] {}", event.getDescription());
+
+            return true;
+        }
+        return false;
+    }
+
+    public void detectHighValueTransaction(Store store, Payment payment) {
+
+        String redisKey = "store:operation:startTime:" + store.getId();
+        Object avgObj = stringRedisTemplate.opsForHash().get(redisKey, "avgPaymentAmountPrevMonth");
+
+
+        // 전월 평균이 0이면 비교 불가하므로 스킵
+        if (avgObj != null) {
+            double avgAmount = Double.parseDouble(avgObj.toString());
+            double currentAmount = payment.getAmount();
+
+            if (avgAmount > 0 && currentAmount >= avgAmount * 10) {
+                AlertEvent event = AlertEvent.builder()
+                        .alertUuid(UUID.randomUUID().toString().substring(0, 20))
+                        .storeId(store.getId())
+                        .storeName(store.getName())
+                        .alertType(AlertType.HIGH_AMOUNT_SPIKE)
+                        .description(String.format(
+                                "결제 금액 %,d원이 전월 평균(%,.0f원)의 10배이상을 초과했습니다.",
+                                (long) currentAmount, avgAmount))
+                        .detectedAt(LocalDateTime.now())
+                        .paymentId(payment.getId())
+                        .build();
+
+                publisher.publishEvent(event);
+                log.info("[AlertEvent 발행 - 고액결제 급증] storeId={}, current={}, avgPrevMonth={}",
+                        store.getId(), currentAmount, avgAmount);
+            }
         }
     }
+
+
 }

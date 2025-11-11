@@ -59,7 +59,6 @@ public class AlertRepositoryImpl implements AlertRepositoryCustom{
 
     @Override
     public List<UnreadCountProjection> countUnreadByMemberIdGroupedByStore(Long memberId) {
-        QAlert alert = QAlert.alert;
 
         return jpaQueryFactory
                 .select(Projections.constructor(

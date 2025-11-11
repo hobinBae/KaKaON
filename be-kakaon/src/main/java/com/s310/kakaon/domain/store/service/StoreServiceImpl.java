@@ -4,6 +4,7 @@ import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
@@ -24,6 +25,7 @@ import java.time.LocalTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -44,6 +46,7 @@ public class StoreServiceImpl implements StoreService{
     private final MemberRepository memberRepository;
     private final StoreRepository storeRepository;
     private final AlertRepository alertRepository;
+    private final PaymentRepository paymentRepository;
     private final StoreMapper storeMapper;
     private final PaymentStatsRepository paymentStatsRepository;
     private final SalesCacheService salesCacheService;
@@ -97,19 +100,30 @@ public class StoreServiceImpl implements StoreService{
         validateStoreOwner(store, member);
 
         OperationStatus newStatus = request.getStatus();
+
         store.updateOperationStatus(newStatus);
 
         String redisKey = REDIS_KEY_PREFIX + storeId;
 
         //레디스에 영업 시작 시간을 저장
         //영업종료를 누르면 레디스에 시작 시간 삭제
-        if (request.getStatus().equals(OperationStatus.CLOSED)) {
-            stringRedisTemplate.delete(redisKey);
-            //여기 배치 실행 메서드 넣으면 될듯
-        }else if(request.getStatus().equals(OperationStatus.OPEN)){
-            stringRedisTemplate.opsForValue().set(redisKey, LocalDateTime.now().toString());
+        if (newStatus.equals(OperationStatus.CLOSED)) {
 
-            //여기는 redis 관련 로직 넣으면 될듯
+            stringRedisTemplate.delete(redisKey);
+            log.info("[영업 종료] Redis 키 삭제: {}", redisKey);
+
+        }else if(newStatus.equals(OperationStatus.OPEN)){
+
+            Double avgAmount = paymentRepository.findAveragePaymentAmountLastMonth(store);
+
+            Map<String, String> data = new HashMap<>();
+
+            data.put("startTime", LocalDateTime.now().toString());
+            data.put("avgPaymentAmountPrevMonth", String.valueOf(avgAmount));
+
+            stringRedisTemplate.opsForHash().putAll(redisKey, data);
+            log.info("[영업 시작] storeId={}, 전월 평균 결제금액={}", store.getId(), avgAmount);
+
         }
 
         return OperationStatusUpdateResponseDto.builder()
@@ -131,7 +145,7 @@ public class StoreServiceImpl implements StoreService{
                     .build();
         }else{
             String redisKey = REDIS_KEY_PREFIX + storeId;
-            String startTimeStr = stringRedisTemplate.opsForValue().get(redisKey);
+            String startTimeStr= stringRedisTemplate.opsForHash().get(redisKey, "startTime").toString();
 
             LocalDateTime updatedAt;
             try {
