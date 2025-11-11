@@ -7,16 +7,19 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Delete } from "lucide-react";
+import { useMyInfo } from '@/lib/hooks/useMember';
+import { toast } from 'sonner';
 
 const AdminPinModal = ({ onPinVerified }) => {
+  const { data: member } = useMyInfo();
   const [pin, setPin] = useState('');
-  const correctPin = '1234';
 
   const handlePinSubmit = () => {
-    if (pin === correctPin) {
+    if (member && pin === member.adminPin) {
       onPinVerified();
+      toast.success("관리자 인증에 성공했습니다.");
     } else {
-      alert('PIN 번호가 올바르지 않습니다.');
+      toast.error('PIN 번호가 올바르지 않습니다.');
     }
     setPin('');
   };

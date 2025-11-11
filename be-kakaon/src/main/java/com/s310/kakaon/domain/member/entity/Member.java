@@ -49,7 +49,7 @@ public class Member extends BaseEntity {
 
     @Column(name = "admin_pin", nullable = false)
     @Builder.Default
-    private String adminPin = "00000";
+    private String adminPin = "0000";
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

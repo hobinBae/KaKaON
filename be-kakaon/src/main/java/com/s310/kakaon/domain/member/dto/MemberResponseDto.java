@@ -17,6 +17,7 @@ public class MemberResponseDto {
     private String provider;
     private String role;
     private boolean receiveEmail;
+    private String adminPin;
     private LocalDateTime createdDateTime;
     private LocalDateTime lastModifiedDateTime;
 
@@ -30,6 +31,7 @@ public class MemberResponseDto {
                 .provider(member.getProvider().name())
                 .role(member.getRole().name())
                 .receiveEmail(member.isReceiveEmail())
+                .adminPin(member.getAdminPin())
                 .createdDateTime(member.getCreatedDateTime())
                 .lastModifiedDateTime(member.getLastModifiedDateTime())
                 .build();
