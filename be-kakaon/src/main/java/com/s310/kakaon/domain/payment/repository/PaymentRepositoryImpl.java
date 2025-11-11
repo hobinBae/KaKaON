@@ -1,8 +1,11 @@
 package com.s310.kakaon.domain.payment.repository;
 
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.Tuple;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
+import com.s310.kakaon.domain.payment.dto.PaymentStatus;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.entity.QPayment;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -13,7 +16,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
+import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 @AllArgsConstructor
@@ -72,6 +78,61 @@ public class PaymentRepositoryImpl implements PaymentRepositoryCustom {
                 .orderBy(payment.approvedAt.desc())
                 .fetch();
     }
+
+    /**
+     * 결제수단 별 매출 합계 조회
+     *
+     * @param store
+     * @param date
+     */
+    @Override
+    public Map<PaymentMethod, Integer> getSalesSumByPamentMethod(Store store, LocalDate date) {
+        QPayment payment = QPayment.payment;
+        List<Tuple> results = jpaQueryFactory
+                .select(payment.paymentMethod, payment.amount.sum())
+                .from(payment)
+                .where(payment.store.id.eq(store.getId())
+                    .and(payment.createdDateTime.year().eq(date.getYear()))
+                    .and(payment.createdDateTime.month().eq(date.getMonthValue()))
+                    .and(payment.createdDateTime.dayOfMonth().eq(date.getDayOfMonth()))
+                    .and(payment.status.eq(PaymentStatus.APPROVED)))
+                .groupBy(payment.paymentMethod)
+                .fetch();
+
+        Map<PaymentMethod, Integer> resultMap = new EnumMap<>(PaymentMethod.class);
+        for (Tuple result : results) {
+            PaymentMethod paymentMethod = (PaymentMethod) result.get(payment.paymentMethod);
+            Integer sum = result.get(payment.amount.sum()).intValue();
+            resultMap.put(paymentMethod, sum);
+        }
+
+
+        return resultMap;
+    }
+
+    /**
+     * 배달 매출 합계 조회
+     *
+     * @param store
+     * @param date
+     */
+    @Override
+    public Integer getDeliverySales(Store store, LocalDate date) {
+        QPayment payment = QPayment.payment;
+        Integer result = jpaQueryFactory.select(payment.amount.sum().intValue())
+                .from(payment)
+                .where(payment.store.id.eq(store.getId())
+                        .and(payment.createdDateTime.year().eq(date.getYear()))
+                        .and(payment.createdDateTime.month().eq(date.getMonthValue()))
+                        .and(payment.createdDateTime.dayOfMonth().eq(date.getDayOfMonth()))
+                        .and(payment.status.eq(PaymentStatus.APPROVED))
+                        .and(payment.delivery.eq(true)))
+                .fetchOne();
+
+        return result != null ? result : 0;
+
+    }
+
 
     /**
      * 공통 조건 빌더

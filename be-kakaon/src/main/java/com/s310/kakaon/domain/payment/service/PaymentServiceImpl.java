@@ -64,6 +64,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final ApplicationEventPublisher publisher;
     private final StringRedisTemplate stringRedisTemplate;
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
+    private final SalesCacheService salesCacheService;
 
     @Override
     @Transactional
@@ -93,7 +94,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentRepository.save(payment);
 
         // ✅ Redis 통계 즉시 반영
-//        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
+        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
 
 
@@ -268,7 +269,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
-//        salesCacheService.updateCancelStats(storeId, payment.getAmount(), LocalDateTime.now());
+        salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
     }

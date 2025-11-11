@@ -9,6 +9,10 @@ import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.dto.PaymentStatus;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStatsHourly;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.dto.BusinessType;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
@@ -22,9 +26,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.Month;
-import java.util.Random;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
@@ -36,6 +41,8 @@ public class DataInitializer implements CommandLineRunner {
     private final StoreRepository storeRepository;
     private final OrderRepository orderRepository;
     private final PaymentRepository paymentRepository;
+    private final PaymentStatsRepository paymentStatsRepository;
+    private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final JwtTokenProvider jwtTokenProvider;
 
     private final Random random = new Random();
@@ -60,14 +67,17 @@ public class DataInitializer implements CommandLineRunner {
         Store store = createTestStore(member);
         log.info("테스트 매장 생성 완료: {}", store.getName());
 
-        // 3. 주문 및 결제 데이터 50개 생성 (2025년 날짜)
-        createPaymentsData(store, 50);
+        // 3. 주문 및 결제 데이터 300개 생성 (최근 60일)
+        createPaymentsData(store, 300);
 
         // 4. 테스트용 JWT 토큰 생성 및 출력
         String accessToken = jwtTokenProvider.createAccessToken(member.getProviderId(), member.getRole().name());
         String refreshToken = jwtTokenProvider.createRefreshToken(member.getProviderId());
 
-        log.info("=== 더미 데이터 생성 완료 (총 50개 결제) ===");
+        // 5. Payment 데이터를 기반으로 PaymentStats 집계 및 저장
+        createPaymentStatsFromPayments(store);
+
+        log.info("=== 더미 데이터 생성 완료 (총 300개 결제) ===");
         log.info("========================================");
         log.info("테스트 유저 정보:");
         log.info("  - Member ID: {}", member.getId());
@@ -114,8 +124,8 @@ public class DataInitializer implements CommandLineRunner {
         boolean[] deliveryOptions = {true, false};
 
         for (int i = 0; i < count; i++) {
-            // 2025년 1월 1일 ~ 2025년 11월 5일 사이의 랜덤 날짜
-            LocalDateTime approvedAt = generateRandomDate2025();
+            // 최근 60일 사이의 랜덤 날짜
+            LocalDateTime approvedAt = generateRandomDateRecent60Days();
 
             // 랜덤 금액 (5,000원 ~ 50,000원)
             int amount = (random.nextInt(46) + 5) * 1000;
@@ -159,11 +169,11 @@ public class DataInitializer implements CommandLineRunner {
     }
 
     /**
-     * 2025년 1월 1일 ~ 2025년 11월 5일 사이의 랜덤 날짜 생성
+     * 최근 60일 사이의 랜덤 날짜 생성 (오늘 제외, 어제부터 60일 전까지)
      */
-    private LocalDateTime generateRandomDate2025() {
-        LocalDateTime start = LocalDateTime.of(2025, Month.JANUARY, 1, 0, 0);
-        LocalDateTime end = LocalDateTime.of(2025, Month.NOVEMBER, 5, 23, 59);
+    private LocalDateTime generateRandomDateRecent60Days() {
+        LocalDateTime end = LocalDateTime.now().minusDays(1).withHour(23).withMinute(59).withSecond(59); // 어제 마지막 시각
+        LocalDateTime start = end.minusDays(59).withHour(0).withMinute(0).withSecond(0); // 60일 전 시작 시각
 
         long startEpochSecond = start.toEpochSecond(java.time.ZoneOffset.UTC);
         long endEpochSecond = end.toEpochSecond(java.time.ZoneOffset.UTC);
@@ -171,6 +181,132 @@ public class DataInitializer implements CommandLineRunner {
         long randomEpochSecond = startEpochSecond + (long) (random.nextDouble() * (endEpochSecond - startEpochSecond));
 
         return LocalDateTime.ofEpochSecond(randomEpochSecond, 0, java.time.ZoneOffset.UTC);
+    }
+
+    /**
+     * Payment 데이터를 기반으로 날짜별 PaymentStats 집계 및 저장
+     */
+    private void createPaymentStatsFromPayments(Store store) {
+        log.info("Payment 데이터를 집계하여 PaymentStats 생성 중...");
+
+        // 해당 Store의 모든 Payment 조회
+        List<Payment> payments = paymentRepository.findAll().stream()
+                .filter(p -> p.getStore().getId().equals(store.getId()))
+                .collect(Collectors.toList());
+
+        // 날짜별로 그룹핑 (approvedAt 기준)
+        Map<LocalDate, List<Payment>> paymentsByDate = payments.stream()
+                .collect(Collectors.groupingBy(p -> p.getApprovedAt().toLocalDate()));
+
+        // 각 날짜별로 PaymentStats 생성
+        int statsCount = 0;
+        for (Map.Entry<LocalDate, List<Payment>> entry : paymentsByDate.entrySet()) {
+            LocalDate date = entry.getKey();
+            List<Payment> dailyPayments = entry.getValue();
+
+            // 승인된 결제와 취소된 결제 분리
+            List<Payment> approved = dailyPayments.stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.APPROVED)
+                    .collect(Collectors.toList());
+
+            List<Payment> canceled = dailyPayments.stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.CANCELED)
+                    .collect(Collectors.toList());
+
+            // 총 매출 및 취소 매출 계산
+            int totalSales = approved.stream().mapToInt(Payment::getAmount).sum();
+            int totalCancelSales = canceled.stream().mapToInt(Payment::getAmount).sum();
+
+            // 결제수단별 매출 계산 (승인된 것만)
+            int cardSales = approved.stream()
+                    .filter(p -> p.getPaymentMethod() == PaymentMethod.CARD)
+                    .mapToInt(Payment::getAmount).sum();
+
+            int kakaoSales = approved.stream()
+                    .filter(p -> p.getPaymentMethod() == PaymentMethod.KAKAOPAY)
+                    .mapToInt(Payment::getAmount).sum();
+
+            int cashSales = approved.stream()
+                    .filter(p -> p.getPaymentMethod() == PaymentMethod.CASH)
+                    .mapToInt(Payment::getAmount).sum();
+
+            int transferSales = approved.stream()
+                    .filter(p -> p.getPaymentMethod() == PaymentMethod.TRANSFER)
+                    .mapToInt(Payment::getAmount).sum();
+
+            // 배달 매출 계산 (승인된 것 중 delivery=true)
+            int deliverySales = approved.stream()
+                    .filter(Payment::getDelivery)
+                    .mapToInt(Payment::getAmount).sum();
+
+            // PaymentStats 엔티티 생성
+            PaymentStats stats = PaymentStats.builder()
+                    .store(store)
+                    .statsDate(date)
+                    .totalSales(totalSales)
+                    .totalCancelSales(totalCancelSales)
+                    .salesCnt((long) approved.size())
+                    .cancelCnt((long) canceled.size())
+                    .cardSales(cardSales)
+                    .kakaoSales(kakaoSales)
+                    .cashSales(cashSales)
+                    .transferSales(transferSales)
+                    .deliverySales(deliverySales)
+                    .build();
+
+            PaymentStats savedStats = paymentStatsRepository.save(stats);
+            statsCount++;
+
+            // 시간대별 통계 생성 (0~23시)
+            createHourlyStats(savedStats, dailyPayments);
+        }
+
+        log.info("PaymentStats 생성 완료: {}개 날짜의 통계 생성됨", statsCount);
+    }
+
+    /**
+     * 시간대별 통계 생성 (PaymentStatsHourly)
+     */
+    private void createHourlyStats(PaymentStats paymentStats, List<Payment> dailyPayments) {
+        // 시간대별로 그룹핑 (0~23시)
+        Map<Integer, List<Payment>> paymentsByHour = dailyPayments.stream()
+                .collect(Collectors.groupingBy(p -> p.getApprovedAt().getHour()));
+
+        // 0~23시까지 각 시간대별 통계 생성
+        for (int hour = 0; hour < 24; hour++) {
+            List<Payment> hourlyPayments = paymentsByHour.getOrDefault(hour, Collections.emptyList());
+
+            // 승인된 결제와 취소된 결제 분리
+            List<Payment> approved = hourlyPayments.stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.APPROVED)
+                    .collect(Collectors.toList());
+
+            List<Payment> canceled = hourlyPayments.stream()
+                    .filter(p -> p.getStatus() == PaymentStatus.CANCELED)
+                    .collect(Collectors.toList());
+
+            // 시간대별 총 매출 계산
+            int hourlyTotalSales = approved.stream().mapToInt(Payment::getAmount).sum();
+            int hourlyPaymentCount = approved.size();
+            int hourlyCancelCount = canceled.size();
+
+            // 취소율 계산
+            double hourlyCancelRate = hourlyPaymentCount > 0
+                    ? (double) hourlyCancelCount / (hourlyPaymentCount + hourlyCancelCount) * 100
+                    : 0.0;
+
+            // PaymentStatsHourly 엔티티 생성
+            PaymentStatsHourly hourlyStats = PaymentStatsHourly.builder()
+                    .paymentStats(paymentStats)
+                    .hour(hour)
+                    .hourlyTotalSales(hourlyTotalSales)
+                    .hourlyPaymentCount(hourlyPaymentCount)
+                    .hourlyCancelCount(hourlyCancelCount)
+                    .hourlyCancelRate(hourlyCancelRate)
+                    .build();
+
+            paymentStatsHourlyRepository.save(hourlyStats);
+        }
     }
 
     /**

@@ -17,7 +17,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBoundStore } from '@/stores/storeStore';
 import { useMyStores } from '@/lib/hooks/useStores';
-import { useMenus } from '@/lib/hooks/useMenus';
+import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu } from '@/lib/hooks/useMenus';
+import { useCreateOrder } from '@/lib/hooks/useOrders';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AdminPinModal from '@/components/AdminPinModal';
@@ -35,6 +36,10 @@ const GeneralKiosk = () => {
 
   const { data: stores, isLoading: isLoadingStores } = useMyStores();
   const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
+  const createMenuMutation = useCreateMenu();
+  const updateMenuMutation = useUpdateMenu();
+  const deleteMenuMutation = useDeleteMenu();
+  const createOrderMutation = useCreateOrder();
 
   const [orderType, setOrderType] = useState<string | null>(null);
   const [isAdminMode, setIsAdminMode] = useState(false);
@@ -74,18 +79,59 @@ const GeneralKiosk = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handlePayment = () => {
-    // TODO: addTransaction API 연동 필요
-    console.log('Payment processing:', {
-      items: cart.map(({ name, quantity, price }) => ({ name, quantity, price })),
-      total: totalAmount,
-      orderType,
-      paymentMethod,
-      status: 'completed',
-    });
-    clearCart();
-    setIsPaymentModalOpen(false);
-    setIsPaymentComplete(true);
-    setPaymentMethod('');
+    if (cart.length > 0 && selectedStoreId && products && paymentMethod) {
+      const paymentMethodMap = {
+        '카드': 'CARD',
+        '현금': 'CASH',
+        '카카오페이': 'KAKAOPAY',
+        '계좌': 'TRANSFER',
+      };
+      const convertedPaymentMethod = paymentMethodMap[paymentMethod] || paymentMethod.toUpperCase();
+
+      const validCartItems = cart.filter(item => products.some(p => p.id === item.id));
+
+      if (validCartItems.length !== cart.length) {
+        console.error("Cart contains items not found in products list.");
+        return;
+      }
+
+      const calculatedTotalAmount = validCartItems.reduce((sum, item) => {
+        const product = products.find(p => p.id === item.id)!;
+        return sum + product.price * item.quantity;
+      }, 0);
+
+      const orderData = {
+        items: validCartItems.map(item => {
+          const product = products.find(p => p.id === item.id)!;
+          return {
+            menuId: item.id,
+            price: product.price,
+            quantity: item.quantity,
+          };
+        }),
+        totalAmount: calculatedTotalAmount,
+        paymentMethod: convertedPaymentMethod,
+        orderType: orderType === 'dine-in' ? 'STORE' : 'DELIVERY',
+      };
+
+      createOrderMutation.mutate({
+        storeId: Number(selectedStoreId),
+        orderData,
+      }, {
+        onSuccess: () => {
+          clearCart();
+          setIsPaymentModalOpen(false);
+          setIsPaymentComplete(true);
+          setPaymentMethod('');
+        },
+        onError: (error: any) => {
+          console.error("Order creation failed:", error);
+          if (error.response) {
+            console.error("Server response:", error.response.data);
+          }
+        }
+      });
+    }
   };
 
   const handleAdminLogin = () => {
@@ -101,31 +147,49 @@ const GeneralKiosk = () => {
   };
 
   const handleAddProduct = () => {
-    // TODO: addProduct API 연동 필요
-    if (newProductName && newProductPrice) {
-      console.log('Adding product:', {
-        name: newProductName,
-        price: parseInt(newProductPrice.replace(/,/g, ''), 10),
-        category: '전체',
-        imageUrl: newProductImage ?? undefined,
+    if (newProductName && newProductPrice && selectedStoreId) {
+      createMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuData: {
+          menu: newProductName,
+          price: parseInt(newProductPrice.replace(/,/g, ''), 10),
+          imgUrl: newProductImage ?? '',
+        },
+      }, {
+        onSuccess: () => {
+          setNewProductName('');
+          setNewProductPrice('');
+          setNewProductImage(null);
+        }
       });
-      setNewProductName('');
-      setNewProductPrice('');
-      setNewProductImage(null);
     }
   };
 
   const handleUpdateProduct = () => {
-    // TODO: updateProduct API 연동 필요
-    if (editingProduct) {
-      console.log('Updating product:', editingProduct);
-      setEditingProduct(null);
+    if (editingProduct && selectedStoreId) {
+      updateMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuId: editingProduct.id,
+        menuData: {
+          menu: editingProduct.name,
+          price: editingProduct.price,
+          imgUrl: editingProduct.imageUrl,
+        },
+      }, {
+        onSuccess: () => {
+          setEditingProduct(null);
+        }
+      });
     }
   };
 
   const handleDeleteProduct = (productId: number) => {
-    // TODO: deleteProduct API 연동 필요
-    console.log('Deleting product:', productId);
+    if (selectedStoreId) {
+      deleteMenuMutation.mutate({
+        storeId: Number(selectedStoreId),
+        menuId: productId,
+      });
+    }
   }
 
   if (isPaymentComplete) {
