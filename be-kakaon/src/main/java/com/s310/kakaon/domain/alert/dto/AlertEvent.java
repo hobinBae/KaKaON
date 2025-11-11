@@ -23,4 +23,5 @@ public class AlertEvent {
 
     private Long paymentId;
 
+    private String groupId;
 }
