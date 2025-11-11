@@ -15,45 +15,43 @@ export default function BusinessHours() {
   const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
   const { mutate: updateStatus } = useUpdateOperationStatus();
 
-  const [isBusinessOpen, setIsBusinessOpen] = useState(false);
-  const [startTime, setStartTime] = useState<Date | null>(null);
-  const [endTime, setEndTime] = useState<Date | null>(null);
-  const [elapsedTime, setElapsedTime] = useState(0);
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
+  const [sessionEndTime, setSessionEndTime] = useState<Date | null>(null);
 
+  // 서버 상태가 변경될 때 세션 시간 상태를 업데이트
   useEffect(() => {
-    if (operationStatus) {
-      const isOpen = operationStatus.status === 'OPEN';
-      if (isOpen !== isBusinessOpen) {
-        setIsBusinessOpen(isOpen);
-        if (isOpen) {
-          setStartTime(new Date());
-          setEndTime(null);
-        } else {
-          setEndTime(new Date());
-        }
-      }
+    // 데이터가 없거나, 날짜 정보가 없거나, 유효하지 않은 날짜인 경우 아무것도 하지 않음
+    if (!operationStatus || !operationStatus.updatedAt || isNaN(new Date(operationStatus.updatedAt).getTime())) {
+      return;
     }
-  }, [operationStatus, isBusinessOpen]);
 
-  useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (isBusinessOpen && startTime) {
-      timer = setInterval(() => {
-        const now = new Date();
-        const elapsed = Math.floor((now.getTime() - startTime.getTime()) / 1000);
-        setElapsedTime(elapsed);
-      }, 1000);
+    const newDate = new Date(operationStatus.updatedAt);
+
+    if (operationStatus.status === 'OPEN') {
+      // 영업 시작: 세션을 새로 시작함
+      setSessionStartTime(newDate);
+      setSessionEndTime(null);
+    } else { // 'CLOSED'
+      // 영업 마감: 마감 시간을 설정함. 시작 시간은 건드리지 않음.
+      setSessionEndTime(newDate);
     }
+  }, [operationStatus]);
+
+  // 1초마다 현재 시간을 업데이트하여 경과 시간 시계가 다시 렌더링되도록 함
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
     return () => clearInterval(timer);
-  }, [isBusinessOpen, startTime]);
+  }, []);
 
-  const formatElapsedTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600).toString().padStart(2, '0');
-    const m = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
-    const s = (seconds % 60).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
-  };
+  const isBusinessOpen = operationStatus?.status === 'OPEN';
+
+  const elapsedSeconds = sessionStartTime && isBusinessOpen
+    ? Math.floor((currentTime.getTime() - sessionStartTime.getTime()) / 1000)
+    : 0;
 
   const formatDateTime = (date: Date | null) => {
     if (!date) return '-';
@@ -76,16 +74,9 @@ export default function BusinessHours() {
     }
 
     const newStatus = isBusinessOpen ? 'CLOSED' : 'OPEN';
-    updateStatus({ storeId: Number(selectedStoreId), data: { status: newStatus } }, {
-      onSuccess: () => {
-        toast.success(`영업 상태가 성공적으로 변경되었습니다: ${newStatus === 'OPEN' ? '영업 시작' : '영업 마감'}`);
-        setIsPinModalOpen(false);
-      },
-      onError: (error) => {
-        toast.error("영업 상태 변경에 실패했습니다.", { description: error.message });
-        setIsPinModalOpen(false);
-      }
-    });
+    updateStatus({ storeId: Number(selectedStoreId), data: { status: newStatus } });
+    toast.success(`영업 상태를 변경합니다: ${newStatus === 'OPEN' ? '영업 시작' : '영업 마감'}`);
+    setIsPinModalOpen(false);
   };
 
   if (isLoading) {
@@ -100,7 +91,7 @@ export default function BusinessHours() {
         {isBusinessOpen ? (
           <>
             <p className="text-gray-500 mb-6">영업 경과 시간</p>
-            <ElapsedTimeClock elapsedSeconds={elapsedTime} />
+            <ElapsedTimeClock elapsedSeconds={elapsedSeconds} />
           </>
         ) : (
           <>
@@ -131,14 +122,14 @@ export default function BusinessHours() {
               <Calendar className="w-4 h-4 mr-3 shrink-0" />
               <span>영업 시작 시간</span>
             </div>
-            <span className="font-semibold text-gray-800 w-full text-right sm:w-auto sm:text-left">{formatDateTime(startTime)}</span>
+            <span className="font-semibold text-gray-800 w-full text-right sm:w-auto sm:text-left">{formatDateTime(sessionStartTime)}</span>
           </div>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-gray-600">
             <div className="flex items-center mb-1 sm:mb-0">
               <ClockIcon className="w-4 h-4 mr-3 shrink-0" />
               <span>영업 마감 시간</span>
             </div>
-            <span className="font-semibold text-gray-800 w-full text-right sm:w-auto sm:text-left">{formatDateTime(endTime)}</span>
+            <span className="font-semibold text-gray-800 w-full text-right sm:w-auto sm:text-left">{formatDateTime(sessionEndTime)}</span>
           </div>
         </div>
 

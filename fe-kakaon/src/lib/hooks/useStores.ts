@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import type {
   Store,
   StoreDetailResponse,
@@ -169,17 +170,44 @@ export const useOperationStatus = (storeId: number) => {
 };
 
 /**
- * 가맹점의 영업 상태를 변경하는 커스텀 훅
+ * 가맹점의 영업 상태를 변경하는 커스텀 훅 (낙관적 업데이트 적용)
  */
 export const useUpdateOperationStatus = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: updateOperationStatus,
-    onSuccess: (data) => {
-      // 영업 상태 쿼리 캐시를 업데이트
-      queryClient.setQueryData(storeKeys.operationStatus(data.storeId), data);
-      // 가맹점 상세 정보 쿼리도 무효화하여 상태를 동기화
-      queryClient.invalidateQueries({ queryKey: storeKeys.detail(data.storeId) });
+    onMutate: async ({ storeId, data }) => {
+      // 쿼리 취소
+      await queryClient.cancelQueries({ queryKey: storeKeys.operationStatus(storeId) });
+
+      // 이전 상태 스냅샷
+      const previousStatus = queryClient.getQueryData<OperationStatusUpdateResponse>(storeKeys.operationStatus(storeId));
+
+      // 낙관적으로 새 값으로 업데이트
+      queryClient.setQueryData(storeKeys.operationStatus(storeId), {
+        status: data.status,
+        updatedAt: new Date().toISOString(), // 임시로 현재 시간 설정
+      });
+
+      // 컨텍스트에 스냅샷 반환
+      return { previousStatus, storeId };
+    },
+    onError: (err, variables, context) => {
+      // 에러 발생 시 스냅샷으로 롤백
+      if (context?.previousStatus) {
+        queryClient.setQueryData(storeKeys.operationStatus(context.storeId), context.previousStatus);
+      }
+      toast.error("영업 상태 변경에 실패했습니다.");
+    },
+    onSuccess: (data, variables) => {
+      // 성공 시 서버 데이터로 캐시를 다시 설정
+      queryClient.setQueryData(storeKeys.operationStatus(variables.storeId), data);
+    },
+    onSettled: (data, error, variables) => {
+      // 성공/실패 여부와 관계없이 관련 쿼리를 무효화하여 최신 상태 보장
+      queryClient.invalidateQueries({ queryKey: storeKeys.operationStatus(variables.storeId) });
+      queryClient.invalidateQueries({ queryKey: storeKeys.detail(variables.storeId) });
+      queryClient.invalidateQueries({ queryKey: storeKeys.lists() }); // 목록의 상태도 변경
     },
   });
 };
