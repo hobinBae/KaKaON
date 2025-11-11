@@ -145,3 +145,44 @@ export type Transaction = {
 };
 
 // 다른 도메인(Order, Menu 등)의 타입도 여기에 추가할 수 있음
+
+// ================== Alert ==================
+export type AlertType =
+  | 'SAME_PAYMENT_METHOD'
+  | 'OUT_OF_BUSINESS_HOUR'
+  | 'REPEATED_PAYMENT'
+  | 'HIGH_AMOUNT_SPIKE'
+  | 'TRANSACTION_FREQUENCY_SPIKE'
+  | 'CANCEL_RATE_SPIKE';
+
+export interface Alert {
+  id: number;
+  alertUuid: string;
+  alertType: AlertType;
+  description: string;
+  detectedAt: string; // ISO 8601 format
+  checked: boolean;
+  emailSent: boolean;
+}
+
+export interface PaymentSimpleInfo {
+  paymentId: number;
+  authorizationNo: string;
+  amount: number;
+  paymentMethod: string;
+}
+
+export interface AlertDetail extends Alert {
+  payments: PaymentSimpleInfo[];
+}
+
+export interface AlertSearchRequest {
+  startDate?: string; // yyyy-MM-dd
+  endDate?: string; // yyyy-MM-dd
+  alertType?: AlertType;
+  checked?: boolean;
+}
+
+export interface UnreadAlertCount {
+  unreadCount: number;
+}
