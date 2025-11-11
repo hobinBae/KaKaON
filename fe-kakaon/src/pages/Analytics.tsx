@@ -34,16 +34,16 @@ import {
 
 // --- Helper Functions & Dummy Data ---
 
-// 가맹점별 매출 그래프 X축 커스텀 틱
+// 가맹점별 매출 그래프 Y축 커스텀 틱 (가로 그래프용)
 const StoreComparisonTick = ({ x, y, payload }: { x: number, y: number, payload: { value: string } }) => {
   const parts = payload.value.split('. ');
   const index = parts[0];
   const name = parts.slice(1).join('. ');
   return (
     <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={16} textAnchor="middle" fill="#666" className="text-xs">
-        <tspan x="0" className="tablet:hidden">{index}</tspan>
-        <tspan x="0" className="hidden tablet:inline">{name}</tspan>
+      <text x={0} y={0} dy={4} textAnchor="end" fill="#666" className="text-xs">
+        <tspan x="-5" className="tablet:hidden">{index}</tspan>
+        <tspan x="-5" className="hidden tablet:inline">{name}</tspan>
       </text>
     </g>
   );
@@ -239,6 +239,22 @@ export default function Analytics() {
         });
       });
       setPeriodSales(Object.entries(hourlyTotals).map(([time, sales]) => ({ time, sales })).sort((a, b) => a.time.localeCompare(b.time)));
+    } else if (daysDiff <= 7 && activePeriod === 'this-week') { // This week - always show 7 days
+      setXAxisDataKey('date');
+      const weekStart = startOfWeek(dateRange.from, { weekStartsOn: 1 }); // Monday
+      const salesMap = new Map(filteredData.map(d => [d.date, d.sales]));
+
+      const weekData = [];
+      for (let i = 0; i < 7; i++) {
+        const currentDate = addDays(weekStart, i);
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
+        const sales = salesMap.get(dateKey) || 0;
+        weekData.push({
+          date: format(currentDate, 'MM/dd'),
+          sales: sales
+        });
+      }
+      setPeriodSales(weekData);
     } else if (daysDiff <= 31) { // Daily
       setXAxisDataKey('date');
       setPeriodSales(filteredData.map(d => ({ date: format(new Date(d.date), 'MM/dd'), sales: d.sales })));
@@ -373,14 +389,22 @@ export default function Analytics() {
     const averageSales = selectedStores.length > 0 ? totalPeriodSales / selectedStores.length : 0;
 
     // storeId를 기반으로 일관된 랜덤 값을 생성하여 데이터가 변하지 않도록 수정했음
-    return selectedStores.map((store, index) => {
+    const result = [];
+    for (let i = 0; i < selectedStores.length; i++) {
+      const store = selectedStores[i];
       const pseudoRandom = (seed: number) => {
         const x = Math.sin(seed) * 10000;
         return x - Math.floor(x);
       };
-      const sales = Math.floor(averageSales * (0.8 + pseudoRandom(store.storeId) * 0.4));
-      return { name: `${index + 1}. ${store.name}`, sales };
-    });
+      const salesValue = Math.floor(averageSales * (0.8 + pseudoRandom(store.storeId) * 0.4));
+      result.push({
+        index: i,
+        displayName: `${i + 1}. ${store.name}`,
+        name: store.name,
+        sales: salesValue
+      });
+    }
+    return result;
   }, [dateRange, selectedStoreIds, stores, allSalesData]);
 
   useEffect(() => {
@@ -418,6 +442,13 @@ export default function Analytics() {
       setSelectedStoreIds(stores.map(s => s.storeId));
     }
   }, []);
+
+  // 인건비 대비 매출 탭 선택 시 기본값으로 올해 선택
+  useEffect(() => {
+    if (activeTab === "sales-vs-labor") {
+      handlePeriodChange("this-year");
+    }
+  }, [activeTab]);
 
   // dateRange가 변경될 때 input 필드도 업데이트 (activePeriod가 없을 때만)
   useEffect(() => {
@@ -904,9 +935,11 @@ export default function Analytics() {
                   </>
                 )}
               </div>
-              <div className="text-xs text-red-500 mt-1">
-                * 오늘 매출은 영업 종료 후 반영됩니다.
-              </div>
+              {!(activeTab === "hourly-sales" && activePeriod === "today") && (
+                <div className="text-xs text-red-500 mt-1">
+                  * 오늘 매출은 영업 종료 후 반영됩니다.
+                </div>
+              )}
             </div>
             {activeTab === "sales-trend" && (
               <div className="w-full tablet:w-auto border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center justify-between gap-3">
@@ -989,20 +1022,33 @@ export default function Analytics() {
         <TabsContent value="store-comparison">
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
             <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가맹점별 매출</h3>
-            <div style={{ width: '100%', maxWidth: Math.max(1000, storeComparisonData.length * 120), margin: '0 auto' }}>
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={storeComparisonData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                  <XAxis dataKey="name" stroke="#717182" tick={<StoreComparisonTick x={0} y={0} payload={{value: ''}} />} interval={0} />
-                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+            <ResponsiveContainer width="100%" height={Math.max(300, storeComparisonData.length * 50)}>
+              <BarChart
+                data={storeComparisonData}
+                layout="horizontal"
+                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                <XAxis
+                  type="number"
+                  stroke="#717182"
+                  tickFormatter={formatYAxis}
                 />
-                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
+                <YAxis
+                  type="category"
+                  dataKey="displayName"
+                  stroke="#717182"
+                  tick={<StoreComparisonTick x={0} y={0} payload={{value: ''}} />}
+                  width={90}
+                />
+                <Bar
+                  dataKey="sales"
+                  fill="#FEE500"
+                  radius={[0, 8, 8, 0]}
+                  maxBarSize={30}
+                />
               </BarChart>
             </ResponsiveContainer>
-          </div>
           </Card>
         </TabsContent>
         <TabsContent value="cancellation-rate">
