@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { RotateCw, Calendar as CalendarIcon, Upload, Download, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
@@ -27,33 +27,55 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useBoundStore } from "@/stores/storeStore";
+import { usePayments } from "@/lib/hooks/usePayments";
+import { useOrderDetail } from "@/lib/hooks/useOrders";
+import { Transaction } from "@/types/api";
+import apiClient from "@/lib/apiClient";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+
+function TransactionDetail({ transaction }: { transaction: Transaction }) {
+  const { data: orderDetail, isLoading } = useOrderDetail(transaction.id);
+
+  return (
+    <Card className="p-4 bg-gray-50 rounded-lg">
+      <h3 className="text-sm font-semibold mb-2">주문상세내역</h3>
+      {isLoading ? (
+        <div>로딩 중...</div>
+      ) : orderDetail ? (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>상품명</TableHead>
+                <TableHead className="text-right">수량</TableHead>
+                <TableHead className="text-right">가격</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orderDetail.items.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{(item.price * item.quantity).toLocaleString()}원</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="text-right font-bold mt-2">
+            합계: {orderDetail.total.toLocaleString()}원
+          </div>
+        </>
+      ) : (
+        <div>주문 상세 내역을 불러올 수 없습니다.</div>
+      )}
+    </Card>
+  );
+}
 
 export default function Transactions() {
-  // 더미 데이터 정의
-  const dummyTransactions = [
-    { id: 'T123456805', storeId: '1', date: '2025-11-03 09:15:00', total: 5500, paymentMethod: '카드', status: '완료', time: '09:15:00', amount: 5500, method: '카드', orderType: '가게 주문', items: [{ name: '카페라떼', quantity: 1, price: 5500 }] },
-    { id: 'T123456806', storeId: '2', date: '2025-11-02 18:30:00', total: 18000, paymentMethod: '카카오페이', status: '완료', time: '18:30:00', amount: 18000, method: '카카오페이', orderType: '배달 주문', items: [{ name: '아메리카노', quantity: 2, price: 5000 }, { name: '치즈케이크', quantity: 1, price: 8000 }] },
-    { id: 'T123456807', storeId: '1', date: '2025-11-01 12:00:00', total: 7000, paymentMethod: '현금', status: '완료', time: '12:00:00', amount: 7000, method: '현금', orderType: '가게 주문', items: [{ name: '카푸치노', quantity: 1, price: 7000 }] },
-    { id: 'T123456789', storeId: '1', date: '2025-10-31 10:30:00', total: 5000, paymentMethod: '카드', status: '완료', time: '10:30:00', amount: 5000, method: '카드', orderType: '가게 주문', items: [{ name: '아메리카노', quantity: 1, price: 5000 }] },
-    { id: 'T123456790', storeId: '1', date: '2025-10-31 11:05:00', total: 12000, paymentMethod: '카카오페이', status: '완료', time: '11:05:00', amount: 12000, method: '카카오페이', orderType: '배달 주문', items: [{ name: '카페라떼', quantity: 2, price: 6000 }] },
-    { id: 'T123456791', storeId: '1', date: '2025-10-31 12:15:00', total: 7500, paymentMethod: '현금', status: '취소', time: '12:15:00', amount: 7500, method: '현금', orderType: '가게 주문', items: [{ name: '카푸치노', quantity: 1, price: 7500 }] },
-    { id: 'T123456792', storeId: '2', date: '2025-10-31 14:00:00', total: 25000, paymentMethod: '카드', status: '완료', time: '14:00:00', amount: 25000, method: '카드', orderType: '배달 주문', items: [{ name: '아메리카노', quantity: 5, price: 5000 }] },
-    { id: 'T123456793', storeId: '1', date: '2025-10-30 18:45:00', total: 8800, paymentMethod: '계좌', status: '완료', time: '18:45:00', amount: 8800, method: '계좌', orderType: '가게 주문', items: [{ name: '아메리카노', quantity: 2, price: 4400 }] },
-    { id: 'T123456794', storeId: '1', date: '2025-10-30 20:10:00', total: 15000, paymentMethod: '카드', status: '완료', time: '20:10:00', amount: 15000, method: '카드', orderType: '배달 주문', items: [{ name: '카페라떼', quantity: 3, price: 5000 }] },
-    { id: 'T123456795', storeId: '2', date: '2025-10-29 09:20:00', total: 3200, paymentMethod: '현금', status: '완료', time: '09:20:00', amount: 3200, method: '현금', orderType: '가게 주문', items: [{ name: '에스프레소', quantity: 1, price: 3200 }] },
-    { id: 'T123456796', storeId: '1', date: '2025-10-29 13:00:00', total: 18000, paymentMethod: '카카오페이', status: '취소', time: '13:00:00', amount: 18000, method: '카카오페이', orderType: '배달 주문', items: [{ name: '카페라떼', quantity: 3, price: 6000 }] },
-    { id: 'T123456797', storeId: '1', date: '2025-10-15 09:00:00', total: 3500, paymentMethod: '카드', status: '완료', time: '09:00:00', amount: 3500, method: '카드', orderType: '가게 주문', items: [{ name: '아메리카노', quantity: 1, price: 3500 }] },
-    { id: 'T123456798', storeId: '2', date: '2025-10-15 10:30:00', total: 22000, paymentMethod: '카카오페이', status: '완료', time: '10:30:00', amount: 22000, method: '카카오페이', orderType: '배달 주문', items: [{ name: '카페라떼', quantity: 4, price: 5500 }] },
-    { id: 'T123456799', storeId: '1', date: '2025-10-14 19:20:00', total: 9500, paymentMethod: '현금', status: '완료', time: '19:20:00', amount: 9500, method: '현금', orderType: '가게 주문', items: [{ name: '카푸치노', quantity: 1, price: 9500 }] },
-    { id: 'T123456800', storeId: '1', date: '2025-10-12 11:45:00', total: 12500, paymentMethod: '카드', status: '취소', time: '11:45:00', amount: 12500, method: '카드', orderType: '배달 주문', items: [{ name: '아메리카노', quantity: 2, price: 6250 }] },
-    { id: 'T123456801', storeId: '2', date: '2025-10-10 08:10:00', total: 5500, paymentMethod: '계좌', status: '완료', time: '08:10:00', amount: 5500, method: '계좌', orderType: '가게 주문', items: [{ name: '카페라떼', quantity: 1, price: 5500 }] },
-    { id: 'T123456802', storeId: '1', date: '2025-10-05 14:50:00', total: 16000, paymentMethod: '카드', status: '완료', time: '14:50:00', amount: 16000, method: '카드', orderType: '배달 주문', items: [{ name: '아메리카노', quantity: 4, price: 4000 }] },
-    { id: 'T123456803', storeId: '1', date: '2025-10-03 16:00:00', total: 7000, paymentMethod: '카카오페이', status: '완료', time: '16:00:00', amount: 7000, method: '카카오페이', orderType: '가게 주문', items: [{ name: '카푸치노', quantity: 1, price: 7000 }] },
-    { id: 'T123456804', storeId: '2', date: '2025-10-01 12:00:00', total: 30000, paymentMethod: '카드', status: '완료', time: '12:00:00', amount: 30000, method: '카드', orderType: '배달 주문', items: [{ name: '아메리카노', quantity: 6, price: 5000 }] },
-  ];
-
-  const [filteredTransactions, setFilteredTransactions] = useState(dummyTransactions);
-  const [selectedTransaction, setSelectedTransaction] = useState<(typeof dummyTransactions)[0] | null>(null);
+  const { selectedStoreId } = useBoundStore();
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfDay(new Date()),
     to: endOfDay(new Date()),
@@ -62,6 +84,7 @@ export default function Transactions() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['all']);
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDateInput, setStartDateInput] = useState<string>("");
@@ -69,37 +92,54 @@ export default function Transactions() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState<React.ReactNode>("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [currentPage, setCurrentPage] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const queryClient = useQueryClient();
 
   const paymentMethodOptions = ['카드', '계좌', '카카오페이', '현금'];
 
-  useEffect(() => {
-    let data = dummyTransactions;
-
-    if (searchTerm) {
-      data = data.filter(tx => tx.id.toLowerCase().includes(searchTerm.toLowerCase()));
+  const { data: ordersData, isLoading } = usePayments(
+    selectedStoreId ? Number(selectedStoreId) : null,
+    {
+      page: currentPage,
+      size: 10,
+      status: statusFilter,
+      paymentMethod: selectedMethods,
+      orderType: orderTypeFilter,
+      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
     }
+  );
 
+  const filteredTransactions = (ordersData?.transactions || []).filter(tx => {
+    // 날짜 필터
     if (dateRange?.from && dateRange?.to) {
-      data = data.filter(tx => {
-        const txDate = new Date(tx.date);
-        return txDate >= (dateRange.from as Date) && txDate <= (dateRange.to as Date);
-      });
+      const txDate = new Date(tx.date);
+      if (txDate < dateRange.from || txDate > dateRange.to) {
+        return false;
+      }
     }
-
+    // 결제수단 필터
+    if (!selectedMethods.includes('all') && !selectedMethods.includes(tx.paymentMethod)) {
+      return false;
+    }
+    // 결제상태 필터
+    if (statusFilter !== 'all' && tx.status !== statusFilter) {
+      return false;
+    }
+    // 주문구분 필터
     if (orderTypeFilter !== 'all') {
-      data = data.filter(tx => tx.orderType === (orderTypeFilter === 'delivery' ? '배달 주문' : '가게 주문'));
+      const isDelivery = tx.orderType === '배달 주문';
+      if (orderTypeFilter === 'delivery' && !isDelivery) return false;
+      if (orderTypeFilter === 'store' && isDelivery) return false;
     }
-
-    if (statusFilter !== 'all') {
-      data = data.filter(tx => tx.status === (statusFilter === 'completed' ? '완료' : '취소'));
+    // 승인번호 검색 필터
+    if (appliedSearchTerm && tx.id && !tx.id.toString().includes(appliedSearchTerm)) {
+      return false;
     }
-
-    if (!selectedMethods.includes('all')) {
-      data = data.filter(tx => selectedMethods.includes(tx.paymentMethod));
-    }
-
-    setFilteredTransactions(data);
-  }, [dateRange, orderTypeFilter, searchTerm, selectedMethods, statusFilter]);
+    return true;
+  });
+  const totalPages = ordersData?.totalPages || 0;
 
   const handlePeriodChange = (value: string) => {
     if (!value) return;
@@ -130,6 +170,84 @@ export default function Transactions() {
         break;
     }
     setDateRange({ from, to });
+  };
+
+  const handleReset = () => {
+    setDateRange({
+      from: startOfDay(new Date()),
+      to: endOfDay(new Date()),
+    });
+    setActivePeriod("today");
+    setOrderTypeFilter('all');
+    setSearchTerm('');
+    setAppliedSearchTerm('');
+    setSelectedMethods(['all']);
+    setStatusFilter('all');
+    setCurrentPage(0);
+  };
+
+  const handleDownloadCSV = () => {
+    if (!filteredTransactions.length) {
+      showAlert("다운로드할 데이터가 없습니다.");
+      return;
+    }
+
+    const headers = ["결제시간", "주문구분", "결제수단", "결제상태", "승인번호", "금액"];
+    const csvContent = [
+      headers.join(','),
+      ...filteredTransactions.map(tx => [
+        `"${format(new Date(tx.date), 'yyyy-MM-dd HH:mm:ss')}"`,
+        tx.orderType,
+        tx.paymentMethod,
+        tx.status === 'completed' ? '완료' : '취소',
+        tx.id,
+        tx.total
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    if (link.download !== undefined) {
+      const url = URL.createObjectURL(blob);
+      link.setAttribute("href", url);
+      link.setAttribute("download", `transactions_${format(new Date(), "yyyyMMddHHmmss")}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const uploadMutation = useMutation({
+    mutationFn: (file: File) => {
+      const formData = new FormData();
+      formData.append("file", file);
+      return apiClient.post(`/payments/stores/${selectedStoreId}/upload`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+    },
+    onSuccess: () => {
+      showAlert("CSV 파일이 성공적으로 업로드되었습니다.");
+      queryClient.invalidateQueries({ queryKey: ["payments", selectedStoreId] });
+    },
+    onError: (error) => {
+      console.error("CSV upload error:", error);
+      showAlert("CSV 파일 업로드 중 오류가 발생했습니다.");
+    },
+  });
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    uploadMutation.mutate(file);
+
+    // 동일한 파일 재업로드를 위해 value 초기화
+    if (event.target) {
+      event.target.value = '';
+    }
   };
 
   // --- Helper Functions & State from Analytics.tsx ---
@@ -289,7 +407,7 @@ export default function Transactions() {
           return;
         }
       }
-      setDateRange({ from: parsedDate, to: dateRange?.to });
+      setDateRange({ from: startOfDay(parsedDate), to: dateRange?.to });
       setActivePeriod("");
     } else {
       if (dateRange?.from && parsedDate < dateRange.from) {
@@ -307,7 +425,7 @@ export default function Transactions() {
           return;
         }
       }
-      setDateRange({ from: dateRange?.from, to: parsedDate });
+      setDateRange({ from: dateRange?.from, to: endOfDay(parsedDate) });
       setActivePeriod("");
     }
   };
@@ -315,19 +433,19 @@ export default function Transactions() {
   const handleDateSelect = (day: Date | undefined) => {
     if (!day) return;
     if (!dateRange?.from || dateRange.to) {
-      setDateRange({ from: day, to: undefined });
+      setDateRange({ from: startOfDay(day), to: undefined });
       setActivePeriod("");
     } else {
       if (format(day, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd')) {
-        setDateRange({ from: day, to: day });
+        setDateRange({ from: dateRange.from, to: endOfDay(day) });
         setShowCalendar(false);
         setActivePeriod("");
       } else if (day > dateRange.from) {
-        setDateRange({ from: dateRange.from, to: day });
+        setDateRange({ from: dateRange.from, to: endOfDay(day) });
         setShowCalendar(false);
         setActivePeriod("");
       } else {
-        setDateRange({ from: day, to: undefined });
+        setDateRange({ from: startOfDay(day), to: undefined });
         setActivePeriod("");
       }
     }
@@ -348,11 +466,18 @@ export default function Transactions() {
           <p className="text-sm text-[#717182]">결제내역을 조회하고 관리하세요</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none">
+          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4" />
             CSV 업로드
           </Button>
-          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none">
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileUpload}
+            accept=".csv"
+            style={{ display: 'none' }}
+          />
+          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={handleDownloadCSV}>
             <Download className="w-4 h-4" />
             CSV 다운로드
           </Button>
@@ -485,7 +610,7 @@ export default function Transactions() {
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="text-sm font-semibold text-[#333] shrink-0">주문구분</div>
-                  <ToggleGroup type="single" defaultValue="all" className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
+                  <ToggleGroup type="single" value={orderTypeFilter} className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
                     <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
                     <ToggleGroupItem value="delivery" className={segmentItem}>배달 주문</ToggleGroupItem>
                     <ToggleGroupItem value="store" className={segmentItem}>가게 주문</ToggleGroupItem>
@@ -500,9 +625,11 @@ export default function Transactions() {
                 {dateRange?.from && dateRange?.to && (<>{format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")} <span className="text-[#007AFF] ml-1">({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)</span></>)}
               </div>
               <div className="flex gap-2 items-center">
-                <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 w-48" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8">검색</Button>
-                <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8"><RotateCw className="w-4 h-4 mr-1" />초기화</Button>
+                <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 w-48" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+                  onKeyDown={(e) => { if (e.key === 'Enter') setAppliedSearchTerm(searchTerm); }}
+                />
+                <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
+                <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8" onClick={handleReset}><RotateCw className="w-4 h-4 mr-1" />초기화</Button>
               </div>
             </div>
           </div>
@@ -602,16 +729,23 @@ export default function Transactions() {
               </div>
             </div>
             <div>
+              <div className="text-sm font-semibold text-[#333] mb-2">결제수단</div>
+              <div className="grid grid-cols-2 gap-2">
+                <label htmlFor="all-methods-mobile" className="flex items-center gap-2 rounded-lg bg-[#F5F5F7] px-4 h-10 text-sm text-[#50505f] cursor-pointer">
+                  <Checkbox id="all-methods-mobile" checked={selectedMethods.includes('all')} onCheckedChange={(checked) => { setSelectedMethods(checked ? ['all'] : []); }} />
+                  <span>전체</span>
+                </label>
+                {paymentMethodOptions.map((method) => (
+                  <label key={method} htmlFor={`${method}-mobile`} className="flex items-center gap-2 rounded-lg bg-[#F5F5F7] px-4 h-10 text-sm text-[#50505f] cursor-pointer">
+                    <Checkbox id={`${method}-mobile`} checked={selectedMethods.includes('all') || selectedMethods.includes(method)} onCheckedChange={(checked) => { let newMethods = selectedMethods.filter((m) => m !== 'all'); if (checked) { newMethods.push(method); } else { newMethods = newMethods.filter((m) => m !== method); } if (newMethods.length === paymentMethodOptions.length) { setSelectedMethods(['all']); } else if (newMethods.length === 0) { setSelectedMethods(['all']); } else { setSelectedMethods(newMethods); } }} />
+                    <span>{method}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
               <div className="text-sm font-semibold text-[#333] mb-2">필터</div>
               <div className="space-y-2">
-                <ToggleGroup type="multiple" value={selectedMethods} onValueChange={setSelectedMethods} className={`${segmentWrap} w-full`}>
-                  <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
-                  {paymentMethodOptions.map(m => (
-                    <ToggleGroupItem key={m} value={m} className={`${segmentItem} flex-1`}>
-                      {m === '카카오페이' ? '페이' : m}
-                    </ToggleGroupItem>
-                  ))}
-                </ToggleGroup>
                 <ToggleGroup type="single" value={orderTypeFilter} onValueChange={(v) => setOrderTypeFilter(v || 'all')} className={`${segmentWrap} w-full`}>
                   <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
                   <ToggleGroupItem value="store" className={`${segmentItem} flex-1`}>가게</ToggleGroupItem>
@@ -636,14 +770,16 @@ export default function Transactions() {
                 )}
               </div>
               <div className="flex gap-2">
-                <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 rounded-lg">
+                <Button variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 rounded-lg" onClick={handleReset}>
                   <RotateCw className="w-4 h-4" />
                 </Button>
               </div>
             </div>
             <div className="flex gap-2 items-center w-full">
-              <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 flex-1" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8">검색</Button>
+              <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 flex-1" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
+                onKeyDown={(e) => { if (e.key === 'Enter') setAppliedSearchTerm(searchTerm); }}
+              />
+              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
             </div>
           </div>
         </div>
@@ -675,7 +811,7 @@ export default function Transactions() {
               {filteredTransactions.map((tx) => (
                 <TableRow
                   key={tx.id}
-                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === '취소' ? 'opacity-60' : ''}`}
+                  className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === 'cancelled' ? 'opacity-60' : ''}`}
                   onClick={() => setSelectedTransaction(tx)}
                 >
                   <TableCell className="text-[#717182] pl-6">
@@ -692,10 +828,10 @@ export default function Transactions() {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={tx.status === '취소' ? 'destructive' : 'secondary'}
+                      variant={tx.status === 'cancelled' ? 'destructive' : 'secondary'}
                       className="rounded bg-[#F5F5F5] text-[#333333]"
                     >
-                      {tx.status}
+                      {tx.status === 'completed' ? '완료' : '취소'}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-[#333333] hidden tablet:table-cell">{tx.id}</TableCell>
@@ -706,12 +842,15 @@ export default function Transactions() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-between p-4 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="text-sm text-[#717182]">총 {filteredTransactions.length}건</div>
+        <div className="flex items-center justify-end p-4 border-t border-[rgba(0,0,0,0.08)]">
           <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="rounded">이전</Button>
-            <Button size="sm" className="bg-[#FEE500] text-[#3C1E1E] rounded shadow-none">1</Button>
-            <Button size="sm" variant="outline" className="rounded">다음</Button>
+            <Button size="sm" variant="outline" className="rounded" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0}>이전</Button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <Button key={i} size="sm" variant={currentPage === i ? 'default' : 'outline'} className="rounded" onClick={() => setCurrentPage(i)}>
+                {i + 1}
+              </Button>
+            ))}
+            <Button size="sm" variant="outline" className="rounded" onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage === totalPages - 1}>다음</Button>
           </div>
         </div>
       </Card>
@@ -734,12 +873,12 @@ export default function Transactions() {
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">결제수단</div>
-                  <div className="text-[#333333]">{selectedTransaction.method}</div>
+                  <div className="text-[#333333]">{selectedTransaction.paymentMethod}</div>
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">결제 상태</div>
-                  <Badge variant={selectedTransaction.status === '취소' ? 'destructive' : 'secondary'} className="rounded">
-                    {selectedTransaction.status}
+                  <Badge variant={selectedTransaction.status === 'cancelled' ? 'destructive' : 'secondary'} className="rounded">
+                    {selectedTransaction.status === 'completed' ? '완료' : '취소'}
                   </Badge>
                 </div>
                 <div>
@@ -748,36 +887,13 @@ export default function Transactions() {
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">결제금액</div>
-                  <div className="text-[#333333]">{selectedTransaction.amount.toLocaleString()}원</div>
+                  <div className="text-[#333333]">{selectedTransaction.total.toLocaleString()}원</div>
                 </div>
               </div>
 
-              <Card className="p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-sm font-semibold mb-2">주문상세내역</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>상품명</TableHead>
-                      <TableHead className="text-right">수량</TableHead>
-                      <TableHead className="text-right">가격</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {selectedTransaction.items.map((item, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{item.name}</TableCell>
-                        <TableCell className="text-right">{item.quantity}</TableCell>
-                        <TableCell className="text-right">{(item.price * item.quantity).toLocaleString()}원</TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                <div className="text-right font-bold mt-2">
-                  합계: {selectedTransaction.total.toLocaleString()}원
-                </div>
-              </Card>
+              <TransactionDetail transaction={selectedTransaction} />
 
-              {selectedTransaction.status === '취소' && (
+              {selectedTransaction.status === 'cancelled' && (
                 <Card className="p-4 bg-[#FF4D4D]/5 border-[#FF4D4D]/20 rounded-lg">
                   <div className="text-sm text-[#FF4D4D]">⚠️ 이 거래는 취소되었습니다. 관련 이상거래 알림을 확인하세요.</div>
                 </Card>

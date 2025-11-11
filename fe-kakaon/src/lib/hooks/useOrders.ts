@@ -66,6 +66,82 @@ export const useOrders = (storeId: number | null) => {
   });
 };
 
+interface OrderFilters {
+  page?: number;
+  size?: number;
+  status?: string;
+  paymentMethod?: string[];
+  orderType?: string;
+  startDate?: string;
+  endDate?: string;
+}
+
+const getFilteredOrders = async (storeId: number, filters: OrderFilters) => {
+  const params = new URLSearchParams();
+  params.append('page', (filters.page || 0).toString());
+  params.append('size', (filters.size || 10).toString());
+
+  if (filters.status && filters.status !== 'all') {
+    params.append('status', filters.status === 'completed' ? 'PAID' : 'CANCELLED');
+  }
+  if (filters.paymentMethod && !filters.paymentMethod.includes('all')) {
+    filters.paymentMethod.forEach(method => {
+      const paymentMethodMap: { [key: string]: string } = {
+        '카드': 'CARD',
+        '계좌': 'TRANSFER',
+        '카카오페이': 'KAKAOPAY',
+        '현금': 'CASH',
+      };
+      if (paymentMethodMap[method]) {
+        params.append('paymentMethod', paymentMethodMap[method]);
+      }
+    });
+  }
+  if (filters.orderType && filters.orderType !== 'all') {
+    params.append('orderType', filters.orderType === 'delivery' ? 'DELIVERY' : 'TAKE_OUT');
+  }
+  if (filters.startDate) {
+    params.append('startDate', filters.startDate);
+  }
+  if (filters.endDate) {
+    params.append('endDate', filters.endDate);
+  }
+
+  const response = await apiClient.get(`/orders?storeId=${storeId}`, { params });
+  const { content, totalPages, totalElements, number, size } = response.data.data;
+  
+  const transactions: Transaction[] = content.map((order: any) => ({
+    id: order.orderId,
+    items: order.items.map((item: any) => ({
+      name: item.menuName,
+      quantity: item.quantity,
+      price: item.price,
+    })),
+    total: order.totalAmount,
+    date: order.createdAt,
+    storeId: String(order.storeId),
+    orderType: order.orderType === 'DELIVERY' ? '배달 주문' : '가게 주문',
+    paymentMethod: order.paymentMethod,
+    status: order.status === 'PAID' ? 'completed' : 'cancelled',
+  }));
+
+  return {
+    transactions,
+    totalPages,
+    totalElements,
+    page: number,
+    size,
+  };
+};
+
+export const useFilteredOrders = (storeId: number | null, filters: OrderFilters) => {
+  return useQuery({
+    queryKey: ["orders", storeId, filters],
+    queryFn: () => getFilteredOrders(storeId!, filters),
+    enabled: !!storeId,
+  });
+};
+
 const getOrderDetail = async (orderId: number): Promise<Transaction> => {
   const response = await apiClient.get(`/orders/${orderId}`);
   const orderDetail = response.data.data;
