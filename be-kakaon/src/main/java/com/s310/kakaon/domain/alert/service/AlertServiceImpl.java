@@ -55,18 +55,10 @@ public class AlertServiceImpl implements AlertService{
                 .emailSent(false)
                 .checked(false)
                 .build();
-        // 메일 내용 구성
-        String subject = "[이상거래 탐지 알림] " + alert.getAlertType().getDescription();
-        String text = String.format(
-                "가맹점: %s\n이상 탐지 유형: %s\n설명: %s\n발생 시각: %s",
-                store.getName(),
-                alert.getAlertType().getDescription(),
-                alert.getDescription(),
-                alert.getDetectedAt().format(DateTimeFormatter.ofPattern("yy.MM.dd HH:mm"))
-        );
-        // 가맹점 이메일로 전송 (Store 엔티티에 email 필드 있다고 가정)
-        mailService.sendAlertMail(store.getMember().getEmail(), subject, text);
+
         alertRepository.save(alert);
+
+
         if(event.getPaymentId() != null){
 
             Payment payment = paymentRepository.findById(event.getPaymentId())
@@ -80,9 +72,24 @@ public class AlertServiceImpl implements AlertService{
             alertPaymentRepository.save(alertPayment);
 
         }
+
+        // 메일 내용 구성
+        String subject = "[이상거래 탐지 알림] " + alert.getAlertType().getDescription();
+        String text = String.format(
+                "가맹점: %s%n이상 탐지 유형: %s%n설명: %s%n발생 시각: %s",
+                store.getName(),
+                alert.getAlertType().getDescription(),
+                alert.getDescription(),
+                alert.getDetectedAt().format(DateTimeFormatter.ofPattern("yy.MM.dd HH:mm"))
+        );
+
+        // 가맹점 이메일로 전송 (Store 엔티티에 email 필드 있다고 가정)
+        mailService.sendAlertMail(store.getMember().getEmail(), subject, text);
+
+
         if(!alertRecipients.isEmpty()){
             for (AlertRecipient alertRecipient : alertRecipients) {
-                if(alertRecipient.getActive()){
+                if(Boolean.TRUE.equals(alertRecipient.getActive())){
                     mailService.sendAlertMail(alertRecipient.getEmail(), subject, text);
                 }
             }
@@ -121,7 +128,7 @@ public class AlertServiceImpl implements AlertService{
 
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.ALERT_NOT_FOUND));
-        Store store = storeRepository.findById(storeId)
+      storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
         List<PaymentSimpleResponseDto> paymentDtos = alert.getAlertPayments().stream()
