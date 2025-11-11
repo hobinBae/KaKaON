@@ -94,8 +94,8 @@ export interface OperationStatusUpdateRequest {
 }
 
 export interface OperationStatusUpdateResponse {
-  storeId: number;
   status: StoreStatus;
+  updatedAt: string; // 상태 변경 시간 (ISO 8601)
 }
 
 export interface AlertRecipient {
