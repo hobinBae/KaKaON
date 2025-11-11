@@ -162,6 +162,7 @@ public class DashboardServiceImpl implements DashboardService {
         List<MonthlySalesResponseDto.DailySales> dailSalesList =
                 paymentStatsRepository.findByStoreIdAndStatsDateBetween(storeId, firstDay, lastDay)
                         .stream()
+                        .sorted(Comparator.comparing(PaymentStats::getStatsDate))
                         .map(ps -> MonthlySalesResponseDto.DailySales.builder()
                                 .date(ps.getStatsDate().toString())
                                 .storeSales(ps.getTotalSales() - ps.getDeliverySales())
