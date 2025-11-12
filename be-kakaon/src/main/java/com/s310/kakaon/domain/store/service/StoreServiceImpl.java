@@ -28,6 +28,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -284,6 +285,50 @@ public class StoreServiceImpl implements StoreService{
         }
 
         return storeMapper.fromEntity(store);
+    }
+
+    @Override
+    @Transactional
+    public FavoriteResponseDto toggleFavorite(Long memberId, Long storeId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        Store currentFavorite = member.getFavoriteStore();
+
+        if (currentFavorite != null &&  Objects.equals(currentFavorite.getId(), store.getId())) {
+            member.removeFavoriteStore();
+        }else{
+            member.setFavoriteStore(store);
+        }
+
+        boolean isFavorite = member.getFavoriteStore() != null;
+
+        return FavoriteResponseDto.builder()
+                .storeId(store.getId())
+                .isFavorite(isFavorite)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FavoriteDetailResponseDto getFavorite(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        Store favoriteStore = member.getFavoriteStore();
+        if (favoriteStore == null) {
+            return FavoriteDetailResponseDto.builder()
+                    .hasFavorite(false)
+                    .build();
+        } else {
+            return FavoriteDetailResponseDto.builder()
+                    .storeId(favoriteStore.getId())
+                    .storeName(favoriteStore.getName())
+                    .hasFavorite(true)
+                    .build();
+        }
+
     }
 
     private void validateStoreOwner(Store store, Member member) {
