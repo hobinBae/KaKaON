@@ -25,6 +25,7 @@ import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
 import { useLogout } from "@/auth/hooks/useAuth";
 import { useAllAlerts, useReadAlert, useAlertDetail } from "@/lib/hooks/useAlerts";
+import { getAlertTypeKorean } from "@/lib/utils";
 import { Alert } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -232,7 +233,7 @@ export function AppLayout() {
                         <div className="flex-1 cursor-pointer group" onClick={() => handleAlertClick(alert)}>
                           <div className="grid gap-1">
                             <p className="text-sm font-medium leading-none group-hover:underline">
-                              <span className="font-bold text-blue-500">[{alert.storeName}]</span> {alert.alertType}
+                              <span className="font-bold text-blue-500">[{alert.storeName}]</span> {getAlertTypeKorean(alert.alertType)}
                             </p>
                             <p className="text-sm text-muted-foreground truncate">{alert.description}</p>
                             <p className="text-xs text-muted-foreground">
@@ -303,7 +304,7 @@ export function AppLayout() {
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">유형</div>
-                  <div className="text-[#333333]">{selectedAlertDetail.alertType}</div>
+                  <div className="text-[#333333]">{getAlertTypeKorean(selectedAlertDetail.alertType)}</div>
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">상태</div>
