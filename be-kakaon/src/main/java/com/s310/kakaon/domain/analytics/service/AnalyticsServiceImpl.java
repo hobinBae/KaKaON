@@ -172,7 +172,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
             case "WEEK" :
 
-                start = today.minusDays(6);
+                start = today.minusDays(7);
                 end = today.minusDays(1);
                 List<HourlyAvgDto> hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
                         storeId, periodType, start, end);

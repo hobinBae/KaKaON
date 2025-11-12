@@ -46,7 +46,7 @@ public class PaymentStatsRepositoryImpl implements PaymentStatsRepositoryCustom 
                 endDate = LocalDate.now().minusDays(1);
                 break;
             case "WEEK":
-                startDate = LocalDate.now().minusDays(6);
+                startDate = LocalDate.now().minusDays(7);
                 endDate = LocalDate.now().minusDays(1);
                 break;
             case "MONTH":

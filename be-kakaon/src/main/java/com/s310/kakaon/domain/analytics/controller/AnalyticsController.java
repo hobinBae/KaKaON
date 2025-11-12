@@ -53,10 +53,10 @@ public class AnalyticsController {
     @Operation(
             summary = "시간대별 평균 매출 조회",
             description = """
+                    ** TODAY 제외한 기간타입의 오늘매출은 평균에 미포함ㅜ^ㅜ
                     기간 타입(TODAY/WEEK(최근 7일)/MONTH/YEAR/RANGE),
                     조회 시작 날짜 (기간 타입 "RANGE" 시 필수), 
                     조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
-                    ** TODAY 제외한 기간타입의 오늘매출은 평균에 미포함ㅜ^ㅜ
                     """
     )
     @GetMapping("/{storeId}/sales/hourly")
