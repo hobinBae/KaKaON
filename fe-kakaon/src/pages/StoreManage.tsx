@@ -6,8 +6,9 @@ import {
   X,
   ChevronDown,
   Pencil, // 수정 아이콘 import
+  RotateCw,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useBoundStore } from "@/stores/storeStore";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -60,6 +62,7 @@ import {
 import type { Store, StoreDetailResponse, StoreCreateRequest, StoreUpdateRequest, BusinessHour, AlertRecipient, BusinessType } from "@/types/api";
 import { toast } from "sonner";
 import { useEffect, useMemo } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 // 전역 window 객체에 daum과 kakao 타입 선언했음
 declare global {
@@ -126,6 +129,9 @@ const convertBusinessHours = (businessHours: StoreDetailResponse['businessHours'
 type SalesPeriod = "일별" | "주별" | "월별";
 
 export default function StoreManage() {
+  const navigate = useNavigate();
+  const { setSelectedStoreId: setGlobalSelectedStoreId } = useBoundStore();
+  const queryClient = useQueryClient();
   // API에서 매장 목록 가져오기
   const { data: stores, isLoading, isError } = useMyStores();
   const { mutate: createStore, isPending: isCreatingStore } = useCreateStore();
@@ -149,6 +155,17 @@ export default function StoreManage() {
   }, [stores, favoriteStore]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [appliedSearchTerm, setAppliedSearchTerm] = useState("");
+
+  const filteredStores = useMemo(() => {
+    if (!sortedStores) return [];
+    if (!appliedSearchTerm) return sortedStores;
+
+    return sortedStores.filter(store =>
+      store.name.toLowerCase().includes(appliedSearchTerm.toLowerCase())
+    );
+  }, [sortedStores, appliedSearchTerm]);
 
   // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
   const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
@@ -415,9 +432,15 @@ export default function StoreManage() {
   };
 
   const handleToggleFavorite = (storeId: number) => {
+    const currentFavoriteId = favoriteStore?.storeId;
     toggleFavorite(storeId, {
-      onSuccess: (data) => {
-        toast.success(data.isFavorite ? "대표 가맹점으로 설정되었습니다." : "대표 가맹점 설정이 해제되었습니다.");
+      onSuccess: () => {
+        // favoriteStore 쿼리를 무효화하여 최신 상태를 다시 불러옵니다.
+        queryClient.invalidateQueries({ queryKey: ['favoriteStore'] });
+        // 새로운 가맹점이 대표로 설정된 경우에만 토스트를 표시합니다.
+        if (currentFavoriteId !== storeId) {
+          toast.success("대표 가맹점으로 설정되었습니다.");
+        }
       },
       onError: (error) => {
         toast.error("대표 가맹점 설정에 실패했습니다.", { description: error.message });
@@ -584,11 +607,25 @@ export default function StoreManage() {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717182]" />
             <Input
-              placeholder="가맹점명 / 사업자번호 검색"
+              placeholder="가맹점명 검색"
               className="pl-9 rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  setAppliedSearchTerm(searchTerm);
+                }
+              }}
             />
           </div>
-          <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8">검색</Button>
+          <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
+          <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8" onClick={() => {
+            setSearchTerm("");
+            setAppliedSearchTerm("");
+          }}>
+            <RotateCw className="w-4 h-4 mr-1" />
+            초기화
+          </Button>
         </div>
       </Card>
 
@@ -598,8 +635,10 @@ export default function StoreManage() {
           <div className="p-8 text-center text-[#717182]">로딩 중...</div>
         ) : isError ? (
           <div className="p-8 text-center text-[#FF4D4D]">매장 목록을 불러올 수 없습니다.</div>
-        ) : !sortedStores || sortedStores.length === 0 ? (
-          <div className="p-8 text-center text-[#717182]">등록된 매장이 없습니다.</div>
+        ) : !filteredStores || filteredStores.length === 0 ? (
+          <div className="p-8 text-center text-[#717182]">
+            {appliedSearchTerm ? "검색 결과가 없습니다." : "등록된 매장이 없습니다."}
+          </div>
         ) : (
           <Table>
             <TableHeader>
@@ -628,7 +667,7 @@ export default function StoreManage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sortedStores.map((store) => (
+              {filteredStores.map((store) => (
                 <Fragment key={store.storeId}>
                   <TableRow
                     key={store.storeId}
@@ -711,11 +750,29 @@ export default function StoreManage() {
                     </TableCell>
                     <TableCell className="text-right hidden md:table-cell">
                       <div className="flex gap-2 justify-end">
-                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
-                          <Link to="/transactions">거래내역</Link>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-lg h-8 px-3 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation(); // 행 클릭 이벤트 전파 방지
+                            setGlobalSelectedStoreId(String(store.storeId));
+                            navigate('/transactions');
+                          }}
+                        >
+                          거래내역
                         </Button>
-                        <Button asChild variant="secondary" size="sm" className="rounded-lg h-8 px-3 text-xs">
-                          <Link to="/analytics">매출분석</Link>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="rounded-lg h-8 px-3 text-xs"
+                          onClick={(e) => {
+                            e.stopPropagation(); // 행 클릭 이벤트 전파 방지
+                            setGlobalSelectedStoreId(String(store.storeId));
+                            navigate('/analytics');
+                          }}
+                        >
+                          매출분석
                         </Button>
                       </div>
                     </TableCell>
