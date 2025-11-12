@@ -23,6 +23,7 @@ import {
 import { useBoundStore } from "@/stores/storeStore";
 import { useAlerts, useReadAlert, useReadAllAlerts, useAlertDetail } from "@/lib/hooks/useAlerts";
 import { Alert, AlertSearchRequest, AlertType as ApiAlertType } from "@/types/api";
+import { getAlertTypeKorean } from "@/lib/utils";
 
 const transactionDetails = {
   'TX-20251015-003': { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소' },
@@ -524,7 +525,7 @@ export default function Alerts() {
                 <TableCell className="pr-2">
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-4 h-4 text-[#FF4D4D] shrink-0" />
-                    <span className="text-[#333333] text-xs tablet:text-sm truncate">{alert.alertType}</span>
+                    <span className="text-[#333333] text-xs tablet:text-sm truncate">{getAlertTypeKorean(alert.alertType)}</span>
                   </div>
                 </TableCell>
                 <TableCell className="pr-6">
@@ -568,7 +569,7 @@ export default function Alerts() {
                 <div className="col-span-2 grid grid-cols-2 gap-4">
                   <div>
                     <div className="text-sm text-[#717182] mb-1">유형</div>
-                    <div className="text-[#333333]">{selectedAlertDetail.alertType}</div>
+                    <div className="text-[#333333]">{getAlertTypeKorean(selectedAlertDetail.alertType)}</div>
                   </div>
                   <div>
                     <div className="text-sm text-[#717182] mb-1">상태</div>
