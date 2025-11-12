@@ -256,4 +256,15 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }
     }
 
+    @Override
+    public PaymentMethodRatioResponseDto getPaymentMethodRatioByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period) {
+        validateOwner(storeId, memberId);
+        String periodType = period.getPeriodType();
+        LocalDate startDate = period.getStartDate();
+        LocalDate endDate = period.getEndDate();
+        PaymentMethodRatioResponseDto paymentMethodStats = paymentStatsRepository.findPaymentMethodStatsByPeriod(storeId, periodType, startDate, endDate);
+        return paymentMethodStats;
+    }
+
+
 }
