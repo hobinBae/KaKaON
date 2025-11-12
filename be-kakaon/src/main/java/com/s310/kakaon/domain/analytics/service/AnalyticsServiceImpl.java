@@ -1,12 +1,11 @@
 package com.s310.kakaon.domain.analytics.service;
 
-import com.s310.kakaon.domain.analytics.dto.MonthlySalesDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodRequestDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodResponseDto;
+import com.s310.kakaon.domain.analytics.dto.*;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
@@ -29,6 +28,7 @@ import java.util.stream.Collectors;
 public class AnalyticsServiceImpl implements AnalyticsService {
 
     private final PaymentStatsRepository paymentStatsRepository;
+    private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
     private final SalesCacheService salesCacheService;
@@ -135,6 +135,125 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .totalSales(total)
                 .saleList(list)
                 .build();
+    }
+
+    @Override
+    public SalesHourlyResponseDto getHourlyByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period) {
+        validateOwner(storeId, memberId);
+
+        String periodType = period.getPeriodType();
+        LocalDate start = period.getStartDate();
+        LocalDate end = period.getEndDate();
+        LocalDate today = LocalDate.now();
+        List<SalesHourlyResponseDto.HourlyData> hourlyList = new ArrayList<>();
+
+        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        SalesStatsResponseDto redisStats = salesCacheService.getSalesStats(storeId, redisDate);
+
+        switch (periodType.toUpperCase()) {
+
+            case "TODAY" :
+
+
+                hourlyList = redisStats.getHourlySales().stream()
+                        .map(hs -> SalesHourlyResponseDto.HourlyData.builder()
+                                .hour(hs.getHour())
+                                .avgSales(hs.getSales().doubleValue())
+                                .build()
+                        ).toList();
+
+                return SalesHourlyResponseDto.builder()
+                        .storeId(storeId)
+                        .periodType("TODAY")
+                        .startDate(today.toString())
+                        .endDate(today.toString())
+                        .hourlySales(hourlyList)
+                        .build();
+
+            case "WEEK" :
+
+                start = today.minusDays(6);
+                end = today.minusDays(1);
+                List<HourlyAvgDto> hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
+                        storeId, periodType, start, end);
+
+                hourlyList = hourlyAvgList.stream()
+                        .map(r -> SalesHourlyResponseDto.HourlyData.builder()
+                                .hour(r.getHour())
+                                .avgSales(r.getAvgTotalSales())
+                                .build()
+                        ).toList();
+                return SalesHourlyResponseDto.builder()
+                        .storeId(storeId)
+                        .periodType("WEEK")
+                        .startDate(start.toString())
+                        .endDate(end.toString())
+                        .hourlySales(hourlyList)
+                        .build();
+            case "MONTH" :
+                start = today.withDayOfMonth(1);
+                end = today.minusDays(1);
+                hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
+                        storeId, periodType, start, end);
+
+                hourlyList = hourlyAvgList.stream()
+                        .map(r -> SalesHourlyResponseDto.HourlyData.builder()
+                                .hour(r.getHour())
+                                .avgSales(r.getAvgTotalSales())
+                                .build()
+                        ).toList();
+                return SalesHourlyResponseDto.builder()
+                        .storeId(storeId)
+                        .periodType("MONTH")
+                        .startDate(start.toString())
+                        .endDate(end.toString())
+                        .hourlySales(hourlyList)
+                        .build();
+
+            case "YEAR" :
+                start = today.withDayOfYear(1);
+                end = today.minusDays(1);
+                hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(storeId, periodType, start, end);
+                hourlyList = hourlyAvgList.stream()
+                        .map(r -> SalesHourlyResponseDto.HourlyData.builder()
+                                .hour(r.getHour())
+                                .avgSales(r.getAvgTotalSales())
+                                .build()).toList();
+                return SalesHourlyResponseDto.builder()
+                        .storeId(storeId)
+                        .periodType("YEAR")
+                        .startDate(start.toString())
+                        .endDate(end.toString())
+                        .hourlySales(hourlyList)
+                        .build();
+
+
+//                hourlyList = redisStats.getHourlySales().stream()
+//                        .map(hs -> SalesHourlyResponseDto.HourlyData.builder()
+//                                .hour(hs.getHour())
+//                                .avgSales(hs.getSales().doubleValue())
+//                                .paymentCount(hs.getPaymentCount())
+//                                .build()
+//                        ).toList();
+
+            case "RANGE" :
+                hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(storeId, periodType, start, end);
+                hourlyList = hourlyAvgList.stream()
+                        .map(r -> SalesHourlyResponseDto.HourlyData.builder()
+                                .hour(r.getHour())
+                                .avgSales(r.getAvgTotalSales())
+                                .build()).toList();
+                return SalesHourlyResponseDto.builder()
+                        .storeId(storeId)
+                        .periodType("RANGE")
+                        .startDate(start.toString())
+                        .endDate(end.toString())
+                        .hourlySales(hourlyList)
+                        .build();
+            default :
+                throw new ApiException(ErrorCode.INVALID_PERIOD);
+
+        }
     }
 
 }

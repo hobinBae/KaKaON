@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.analytics.controller;
 
+import com.s310.kakaon.domain.analytics.dto.SalesHourlyResponseDto;
 import com.s310.kakaon.domain.analytics.dto.SalesPeriodRequestDto;
 import com.s310.kakaon.domain.analytics.dto.SalesPeriodResponseDto;
 import com.s310.kakaon.domain.analytics.service.AnalyticsService;
@@ -28,9 +29,10 @@ public class AnalyticsController {
     @Operation(
             summary = "기간별 매출 조회",
             description = """
-                    기간 타입(주/월/년/선택),
-                    조회 시작 날짜 (기간 타입 "선택" 시 필수), 
-                    조회 종료 날짜 (기간 타입 "선택" 시 필수)
+                    기간 타입(WEEK/MONTH/YEAR/RANGE),
+                    조회 시작 날짜 (기간 타입 "RANGE" 시 필수), 
+                    조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
+                    ** 오늘 매출 포함되어 있음
                     """
     )
     @GetMapping("/{storeId}/sales/period")
@@ -45,5 +47,28 @@ public class AnalyticsController {
         SalesPeriodResponseDto response = analyticsService.getSalesByPeriod(storeId, memberId, period);
 
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "기간별 매출 조회 성공", response, request.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "시간대별 평균 매출 조회",
+            description = """
+                    기간 타입(TODAY/WEEK/MONTH/YEAR/RANGE),
+                    조회 시작 날짜 (기간 타입 "RANGE" 시 필수), 
+                    조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
+                    ** TODAY 제외한 기간타입의 오늘매출은 평균에 미포함ㅜ^ㅜ
+                    """
+    )
+    @GetMapping("/{storeId}/sales/hourly")
+    public ResponseEntity<ApiResponse<SalesHourlyResponseDto>> getHourlyAvgSalesByPeriod(
+            @PathVariable Long storeId,
+            @AuthenticationPrincipal String kakaoId,
+            @ParameterObject @ModelAttribute SalesPeriodRequestDto period,
+            HttpServletRequest request
+    )
+    {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        SalesHourlyResponseDto response = analyticsService.getHourlyByPeriod(storeId, memberId, period);
+
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "시간대별 평균 매출 조회 성공",  response, request.getRequestURI()));
     }
 }
