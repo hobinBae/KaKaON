@@ -36,6 +36,7 @@ const getPayments = async (storeId: number, filters: PaymentFilters) => {
 
   const transactions: Transaction[] = content.map((payment: any) => ({
     id: payment.authorizationCode || payment.paymentId,
+    orderId: payment.orderId,
     items: [], // 결제 내역 API는 주문 아이템 정보를 포함하지 않음
     total: payment.amount,
     date: payment.approvedAt,
