@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X } from "lucide-react";
 import {
   DropdownMenu,
@@ -32,16 +32,10 @@ import { Card } from "@/components/ui/card";
 
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isAlertPopoverOpen, setIsAlertPopoverOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [selectedAlertId, setSelectedAlertId] = useState<{ alertId: number; storeId: number } | null>(null);
-  const [hiddenAlertIds, setHiddenAlertIds] = useState<number[]>([]);
-
-  useEffect(() => {
-    const storedHiddenIds = localStorage.getItem('hiddenAlertIds');
-    if (storedHiddenIds) {
-      setHiddenAlertIds(JSON.parse(storedHiddenIds));
-    }
-  }, []);
+  const isOpeningModal = useRef(false);
 
   const location = useLocation();
   const { selectedStoreId, setSelectedStoreId, member } = useBoundStore();
@@ -51,11 +45,11 @@ export function AppLayout() {
 
   // 전체 알림을 가져오는 훅으로 변경
   const { alerts, unreadCount } = useAllAlerts();
-  const visibleAlerts = alerts.filter(alert => !hiddenAlertIds.includes(alert.id));
   const { data: selectedAlertDetail } = useAlertDetail(selectedAlertId ? String(selectedAlertId.storeId) : null, selectedAlertId ? selectedAlertId.alertId : null);
   const { mutate: readAlert } = useReadAlert();
 
   const handleAlertClick = (alert: Alert & { storeId: number }) => {
+    isOpeningModal.current = true;
     setSelectedAlertId({ alertId: alert.id, storeId: alert.storeId });
     setIsAlertModalOpen(true);
     if (!alert.checked) {
@@ -63,16 +57,19 @@ export function AppLayout() {
     }
   };
 
-  const handleHideAlertClick = (e: React.MouseEvent, alertId: number) => {
+  const handleReadAlertClick = (e: React.MouseEvent, alert: Alert & { storeId: number }) => {
     e.stopPropagation(); // 부모 요소의 클릭 이벤트(모달 열기) 방지
-    const newHiddenIds = [...hiddenAlertIds, alertId];
-    setHiddenAlertIds(newHiddenIds);
-    localStorage.setItem('hiddenAlertIds', JSON.stringify(newHiddenIds));
+    if (!alert.checked) {
+      readAlert({ storeId: String(alert.storeId), alertId: alert.id });
+    }
   };
 
-  const handleModalClose = () => {
-    setIsAlertModalOpen(false);
-    setSelectedAlertId(null);
+  // 모달의 열림/닫힘 상태 변경을 처리하는 함수
+  const handleModalOpenChange = (open: boolean) => {
+    setIsAlertModalOpen(open);
+    if (!open) {
+      setSelectedAlertId(null);
+    }
   };
 
   const menuItems = [
@@ -211,7 +208,7 @@ export function AppLayout() {
           </div>
 
           <div className="flex items-center gap-3">
-            <Popover>
+            <Popover open={isAlertPopoverOpen} onOpenChange={setIsAlertPopoverOpen}>
               <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative rounded-lg">
                   <Bell className="w-5 h-5 text-[#717182]" />
@@ -220,15 +217,23 @@ export function AppLayout() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80 mr-4">
+              <PopoverContent
+                className="w-80 mr-4"
+                onInteractOutside={(e) => {
+                  if (isOpeningModal.current || isAlertModalOpen) {
+                    e.preventDefault();
+                    isOpeningModal.current = false;
+                  }
+                }}
+              >
                 <div className="grid gap-4">
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">
-                      {visibleAlerts.length > 0 ? `미확인 알림이 ${visibleAlerts.length}개 있습니다.` : '새로운 알림이 없습니다.'}
+                      {unreadCount > 0 ? `미확인 알림이 ${unreadCount}개 있습니다.` : '새로운 알림이 없습니다.'}
                     </p>
                   </div>
                   <div className="grid gap-2 max-h-64 overflow-y-auto">
-                    {visibleAlerts.map((alert: Alert & { storeId: number; storeName: string }) => (
+                    {alerts.map((alert: Alert & { storeId: number; storeName: string }) => (
                       <div key={alert.id} className="flex items-start justify-between gap-2 pb-4 last:pb-0">
                         <div className="flex-1 cursor-pointer group" onClick={() => handleAlertClick(alert)}>
                           <div className="grid gap-1">
@@ -241,14 +246,16 @@ export function AppLayout() {
                             </p>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 rounded-full text-gray-400 hover:text-gray-700"
-                          onClick={(e) => handleHideAlertClick(e, alert.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        {!alert.checked && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 rounded-full text-gray-400 hover:text-gray-700"
+                            onClick={(e) => handleReadAlertClick(e, alert)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -286,7 +293,7 @@ export function AppLayout() {
         </div>
       </main>
 
-      <Dialog open={isAlertModalOpen} onOpenChange={handleModalClose}>
+      <Dialog open={isAlertModalOpen} onOpenChange={handleModalOpenChange}>
         <DialogContent className="max-w-2xl rounded-xl">
           <DialogHeader>
             <DialogTitle>알림 상세정보</DialogTitle>
@@ -337,7 +344,7 @@ export function AppLayout() {
               )}
 
               <div className="flex gap-3 pt-4 border-t">
-                <Button variant="outline" className="flex-1 rounded-lg" onClick={handleModalClose}>닫기</Button>
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => handleModalOpenChange(false)}>닫기</Button>
               </div>
             </div>
           )}
