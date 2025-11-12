@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.member.entity;
 
+import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -54,6 +55,10 @@ public class Member extends BaseEntity {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "favorite_store_id", unique = true)
+    private Store favoriteStore;
+
     // ====== Business Logic ======
     public void updateName(String name) {
         this.name = name;
@@ -71,5 +76,13 @@ public class Member extends BaseEntity {
 
     public void softDelete() {
         this.deletedAt = LocalDateTime.now();
+    }
+
+    public void setFavoriteStore(Store store) {
+        this.favoriteStore = store;
+    }
+
+    public void removeFavoriteStore() {
+        this.favoriteStore = null;
     }
 }

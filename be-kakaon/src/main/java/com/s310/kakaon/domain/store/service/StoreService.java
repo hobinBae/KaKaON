@@ -21,4 +21,8 @@ public interface StoreService {
     PageResponse<StoreResponseDto> getMyStores(Long memberId, Pageable pageable);
 
     StoreDetailResponseDto updateStore(Long memberId, Long storeId, StoreUpdateRequestDto request);
+
+    FavoriteResponseDto toggleFavorite(Long memberId, Long storeId);
+
+    FavoriteDetailResponseDto getFavorite(Long memberId);
 }

@@ -286,6 +286,50 @@ public class StoreServiceImpl implements StoreService{
         return storeMapper.fromEntity(store);
     }
 
+    @Override
+    @Transactional
+    public FavoriteResponseDto toggleFavorite(Long memberId, Long storeId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        Store store = storeRepository.findById(storeId)
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        Store currentFavorite = member.getFavoriteStore();
+
+        if (currentFavorite != null && currentFavorite.getId().equals(store.getId())) {
+            member.removeFavoriteStore();
+        }else{
+            member.setFavoriteStore(store);
+        }
+
+        boolean isFavorite = member.getFavoriteStore() != null;
+
+        return FavoriteResponseDto.builder()
+                .storeId(store.getId())
+                .favorite(isFavorite)
+                .build();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public FavoriteDetailResponseDto getFavorite(Long memberId) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        Store favoriteStore = member.getFavoriteStore();
+        if (favoriteStore == null) {
+            return FavoriteDetailResponseDto.builder()
+                    .storeId(null)
+                    .storeName(null)
+                    .build();
+        } else {
+            return FavoriteDetailResponseDto.builder()
+                    .storeId(favoriteStore.getId())
+                    .storeName(favoriteStore.getName())
+                    .build();
+        }
+
+    }
+
     private void validateStoreOwner(Store store, Member member) {
         if (!store.getMember().getId().equals(member.getId())) {
             throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);

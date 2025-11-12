@@ -60,6 +60,35 @@ public class StoreController {
                 .body(ApiResponse.of(HttpStatus.OK, "가맹점 정보 수정 성공", response, httpRequest.getRequestURI()));
     }
 
+    @Operation(summary = "가맹점 즐겨찾기 등록", description = "로그인한 회원이 자신의 가맹점을 즐겨찾기에 등록합니다.")
+    @PatchMapping("/{storeId}/favorite")
+    public ResponseEntity<ApiResponse<FavoriteResponseDto>> toggleFavorite(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable Long storeId,
+            HttpServletRequest httpRequest
+    ) {
+
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        FavoriteResponseDto response = storeService.toggleFavorite(memberId, storeId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "즐겨찾기 등록에 성공했습니다.", response, httpRequest.getRequestURI()));
+    }
+    
+    @Operation(summary = "내가 등록한 즐겨찾기 가맹점 정보 조회", description = "로그인한 회원이 등록한 즐겨찾기 가맹점 정보 조회")
+    @GetMapping("/favorite")
+    public ResponseEntity<ApiResponse<FavoriteDetailResponseDto>> getFavorite(
+            @AuthenticationPrincipal String kakaoId,
+            HttpServletRequest httpRequest
+    ) {
+
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        FavoriteDetailResponseDto response = storeService.getFavorite(memberId);
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(ApiResponse.of(HttpStatus.OK, "즐겨찾기 가맹점 조회 성공", response, httpRequest.getRequestURI()));
+    }
+
     @Operation(summary = "가맹점 영업 상태 조회", description = "해당 가맹점의 현재 영업 상태를 조회합니다.")
     @GetMapping("/{storeId}/operation-status")
     public ResponseEntity<ApiResponse<OperationStatusUpdateResponseDto>> getOperationStatus(
