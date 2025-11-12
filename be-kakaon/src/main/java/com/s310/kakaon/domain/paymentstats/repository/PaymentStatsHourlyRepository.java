@@ -3,5 +3,5 @@ package com.s310.kakaon.domain.paymentstats.repository;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStatsHourly;
 import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface PaymentStatsHourlyRepository extends JpaRepository<PaymentStatsHourly, Long> {
+public interface PaymentStatsHourlyRepository extends JpaRepository<PaymentStatsHourly, Long>, PaymentStatsHourlyRepositoryCustom {
 }

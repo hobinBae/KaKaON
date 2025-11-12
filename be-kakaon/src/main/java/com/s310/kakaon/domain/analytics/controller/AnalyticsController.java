@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.analytics.controller;
 
+import com.s310.kakaon.domain.analytics.dto.SalesHourlyResponseDto;
 import com.s310.kakaon.domain.analytics.dto.SalesPeriodRequestDto;
 import com.s310.kakaon.domain.analytics.dto.SalesPeriodResponseDto;
 import com.s310.kakaon.domain.analytics.service.AnalyticsService;
@@ -45,5 +46,19 @@ public class AnalyticsController {
         SalesPeriodResponseDto response = analyticsService.getSalesByPeriod(storeId, memberId, period);
 
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "기간별 매출 조회 성공", response, request.getRequestURI()));
+    }
+
+    @GetMapping("/{storeId}/sales/hourly")
+    public ResponseEntity<ApiResponse<SalesHourlyResponseDto>> getHourlyAvgSalesByPeriod(
+            @PathVariable Long storeId,
+            @AuthenticationPrincipal String kakaoId,
+            @ParameterObject @ModelAttribute SalesPeriodRequestDto period,
+            HttpServletRequest request
+    )
+    {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        SalesHourlyResponseDto response = analyticsService.getHourlyByPeriod(storeId, memberId, period);
+
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "시간대별 평균 매출 조회 성공",  response, request.getRequestURI()));
     }
 }
