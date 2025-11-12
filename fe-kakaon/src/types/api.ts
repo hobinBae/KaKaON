@@ -217,3 +217,33 @@ export interface DashboardSummary {
     totalSales: number;
   }[];
 }
+
+export interface SalesDataPoint {
+  date: string; // "YYYY-MM-DD" or "YYYY-MM"
+  totalSales: number;
+  storeSales: number;
+  deliverySales: number;
+}
+
+export interface SalesPeriodResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  totalSales: number;
+  saleList: {
+    date: string;
+    sales: number;
+  }[];
+}
+
+export interface SalesHourlyResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  hourlySales: {
+    hour: number;
+    avgSales: number;
+  }[];
+}

@@ -30,7 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-// import { useMyStores } from "@/lib/hooks/useStores";
+import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams } from "@/lib/hooks/useAnalytics";
+import { useBoundStore } from "@/stores/storeStore";
+import { useMyStores } from "@/lib/hooks/useStores";
 
 // --- Helper Functions & Dummy Data ---
 
@@ -130,44 +132,6 @@ function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; on
   );
 }
 
-const generateDailyData = () => {
-  const data = [];
-  const endDate = new Date(); // 기준 날짜를 현재 날짜로 변경했음
-  for (let i = 0; i < 365; i++) {
-    const date = addDays(endDate, -i);
-    const sales = Math.floor(Math.random() * 1500000) + 500000;
-    const deliveryRatio = Math.random() * 0.4 + 0.3; // 30-70%
-    data.push({
-      date: format(date, 'yyyy-MM-dd'),
-      sales: sales,
-      cancellations: Math.floor(Math.random() * (sales / 100000)),
-      labor: sales * (Math.random() * 0.1 + 0.2),
-      deliverySales: sales * deliveryRatio,
-      storeSales: sales * (1 - deliveryRatio),
-      paymentMethods: {
-        card: sales * 0.6,
-        account: sales * 0.2,
-        kakaopay: sales * 0.15,
-        cash: sales * 0.05,
-      },
-      hourly: Array.from({ length: 24 }, (_, j) => {
-        const hour = j;
-        const time = `${hour.toString().padStart(2, '0')}:00`;
-        // Generate sales only for business hours (roughly 9-21), others get 0 or very small value
-        let hourlySales = 0;
-        if (hour >= 9 && hour <= 20) {
-          hourlySales = Math.floor(Math.random() * (sales / 8));
-        } else if (hour === 8 || hour === 21) {
-          // Edge hours might have some sales
-          hourlySales = Math.floor(Math.random() * (sales / 20));
-        }
-        return { time, sales: hourlySales };
-      }),
-    });
-  }
-  return data.reverse();
-};
-
 const formatYAxis = (tick: number) => {
   if (tick >= 100000) {
     return `${(tick / 1000000).toFixed(1)}M`;
@@ -178,13 +142,34 @@ const formatYAxis = (tick: number) => {
 // --- Component ---
 
 export default function Analytics() {
-  // useMemo를 사용하여 allSalesData가 컴포넌트 렌더링 시 한 번만 생성되도록 수정했음
-  // 이렇게 하면 데이터가 고정되어 그래프가 계속 바뀌는 현상을 막을 수 있음
-  const allSalesData = useMemo(() => generateDailyData(), []);
+  const { selectedStoreId, setSelectedStoreId } = useBoundStore();
+  const { data: stores } = useMyStores();
+
+  useEffect(() => {
+    if (!selectedStoreId && stores && stores.length > 0) {
+      setSelectedStoreId(String(stores[0].storeId));
+    }
+  }, [stores, selectedStoreId, setSelectedStoreId]);
+
+  const [apiParams, setApiParams] = useState<SalesPeriodParams>({ periodType: 'MONTH' });
+
+  const storeId = selectedStoreId ? parseInt(selectedStoreId, 10) : 0;
+
+  const { data: salesData, isLoading: isSalesLoading } = useSalesByPeriod(
+    storeId,
+    apiParams,
+    { enabled: storeId > 0 }
+  );
+
+  const { data: hourlySalesData, isLoading: isHourlySalesLoading } = useSalesByHourly(
+    storeId,
+    apiParams,
+    { enabled: storeId > 0 }
+  );
 
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
-    to: endOfMonth(new Date()),
+    to: endOfDay(addDays(new Date(), -1)),
   });
   const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [showCalendar, setShowCalendar] = useState(false);
@@ -196,16 +181,6 @@ export default function Analytics() {
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
 
   // State for processed chart data
-  // const { data: stores } = useMyStores(); // 기존 API 호출 주석 처리
-  // 여러 가맹점 선택 기능을 테스트하기 위한 더미 데이터
-  const stores = [
-    { storeId: 1, name: "강남점", totalSales: 78540000 },
-    { storeId: 2, name: "홍대점", totalSales: 69210000 },
-    { storeId: 3, name: "부산 서면점", totalSales: 85320000 },
-    { storeId: 4, name: "대구 동성로점", totalSales: 72150000 },
-    { storeId: 5, name: "제주 애월점", totalSales: 58780000 },
-    { storeId: 6, name: "광주 상무지구점", totalSales: 65430000 },
-  ];
   const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
   const [periodSales, setPeriodSales] = useState<{time?: string; date?: string; month?: string; sales: number}[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
@@ -217,176 +192,228 @@ export default function Analytics() {
   const [salesVsLabor, setSalesVsLabor] = useState<{month: string; sales: number; labor: number; laborRatio: number}[]>([]);
 
   useEffect(() => {
-    if (!dateRange?.from || !dateRange?.to) return;
-
-    const filteredData = allSalesData.filter(d => {
-      const date = new Date(d.date);
+    if (salesData && salesData.saleList) {
+      const salesMap = new Map(salesData.saleList.map(d => [d.date, d.sales]));
       const today = new Date();
-      const endDate = (activePeriod === 'this-week' || activePeriod === 'this-year')
-        ? endOfDay(addDays(today, -1))
-        : endOfDay(dateRange.to!);
-      return date >= startOfDay(dateRange.from!) && date <= endDate;
-    });
 
-    const daysDiff = differenceInCalendarDays(dateRange.to, dateRange.from);
-
-    if (daysDiff < 1) { // Single day
-      setXAxisDataKey('time');
-      const hourlyTotals: { [key: string]: number } = {};
-      filteredData.forEach(d => {
-        d.hourly.forEach(h => {
-          hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
+      if (activePeriod === 'this-week') {
+        setXAxisDataKey('date');
+        const weekData = Array.from({ length: 7 }).map((_, i) => {
+          const currentDate = addDays(today, -6 + i); // 오늘 포함 과거 7일
+          const dateKey = format(currentDate, 'yyyy-MM-dd');
+          return {
+            date: format(currentDate, 'MM/dd'),
+            sales: salesMap.get(dateKey) || 0,
+          };
         });
-      });
-      setPeriodSales(Object.entries(hourlyTotals).map(([time, sales]) => ({ time, sales })).sort((a, b) => a.time.localeCompare(b.time)));
-    } else if (daysDiff <= 7 && activePeriod === 'this-week') { // This week - always show 7 days
-      setXAxisDataKey('date');
-      const weekStart = startOfWeek(dateRange.from, { weekStartsOn: 1 }); // Monday
-      const salesMap = new Map(filteredData.map(d => [d.date, d.sales]));
-
-      const weekData = [];
-      for (let i = 0; i < 7; i++) {
-        const currentDate = addDays(weekStart, i);
-        const dateKey = format(currentDate, 'yyyy-MM-dd');
-        const sales = salesMap.get(dateKey) || 0;
-        weekData.push({
-          date: format(currentDate, 'MM/dd'),
-          sales: sales
+        setPeriodSales(weekData);
+      } else if (activePeriod === 'this-month') {
+        setXAxisDataKey('date');
+        const monthStart = startOfMonth(today);
+        const daysInMonth = differenceInCalendarDays(endOfMonth(today), monthStart) + 1;
+        const monthData = Array.from({ length: daysInMonth }).map((_, i) => {
+          const currentDate = addDays(monthStart, i);
+          const dateKey = format(currentDate, 'yyyy-MM-dd');
+          return {
+            date: format(currentDate, 'MM/dd'),
+            sales: salesMap.get(dateKey) || 0,
+          };
         });
+        setPeriodSales(monthData);
+      } else if (activePeriod === 'this-year') {
+        setXAxisDataKey('month');
+        const sumOfPastMonths = salesData.saleList.reduce((acc, curr) => acc + curr.sales, 0);
+        const currentMonthSales = salesData.totalSales - sumOfPastMonths;
+        const currentMonthKey = format(today, 'yyyy-MM');
+
+        const yearStart = startOfYear(today);
+        const yearData = Array.from({ length: 12 }).map((_, i) => {
+          const monthDate = addMonths(yearStart, i);
+          const monthKey = format(monthDate, 'yyyy-MM');
+          
+          let sales = salesMap.get(monthKey) || 0;
+          
+          if (monthKey === currentMonthKey) {
+            sales = currentMonthSales > 0 ? currentMonthSales : 0;
+          }
+
+          const validDateString = `${monthKey}-01`;
+          return {
+            month: format(new Date(validDateString), 'MM월'),
+            sales: sales,
+          };
+        });
+        setPeriodSales(yearData);
+      } else if (dateRange?.from && dateRange?.to) { // RANGE
+        setXAxisDataKey('date');
+        const diff = differenceInCalendarDays(dateRange.to, dateRange.from);
+        const rangeData = Array.from({ length: diff + 1 }).map((_, i) => {
+          const currentDate = addDays(dateRange.from!, i);
+          const dateKey = format(currentDate, 'yyyy-MM-dd');
+          return {
+            date: format(currentDate, 'MM/dd'),
+            sales: salesMap.get(dateKey) || 0,
+          };
+        });
+        setPeriodSales(rangeData);
       }
-      setPeriodSales(weekData);
-    } else if (daysDiff <= 31) { // Daily
-      setXAxisDataKey('date');
-      setPeriodSales(filteredData.map(d => ({ date: format(new Date(d.date), 'MM/dd'), sales: d.sales })));
-    } else { // Monthly
-      setXAxisDataKey('month');
-      const monthlySales: { [key: string]: number } = {};
-      filteredData.forEach(d => {
-        const month = format(new Date(d.date), 'yyyy-MM');
-        monthlySales[month] = (monthlySales[month] || 0) + d.sales;
-      });
-      setPeriodSales(Object.entries(monthlySales).map(([month, sales]) => ({ month: month.slice(5) + '월', sales })));
+    } else {
+      setPeriodSales([]);
     }
 
-    // Process other charts (they can aggregate over the whole selected period)
-    const totalPayments = { card: 0, account: 0, kakaopay: 0, cash: 0 };
-    filteredData.forEach(d => {
-      totalPayments.card += d.paymentMethods.card;
-      totalPayments.account += d.paymentMethods.account;
-      totalPayments.kakaopay += d.paymentMethods.kakaopay;
-      totalPayments.cash += d.paymentMethods.cash;
-    });
-    setPaymentDistribution([
-      { name: '카드결제', value: totalPayments.card, color: '#FEE500' },
-      { name: '계좌이체', value: totalPayments.account, color: '#FFB800' },
-      { name: '카카오페이', value: totalPayments.kakaopay, color: '#3C1E1E' },
-      { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
-    ]);
-
-    // Process sales type distribution (delivery vs store)
-    const totalSalesType = { delivery: 0, store: 0 };
-    filteredData.forEach(d => {
-      totalSalesType.delivery += d.deliverySales;
-      totalSalesType.store += d.storeSales;
-    });
-    setSalesTypeDistribution([
-      { name: '배달', value: totalSalesType.delivery, color: '#FEE500' },
-      { name: '가게', value: totalSalesType.store, color: '#3C1E1E' },
-    ]);
-
-    // Process hourly sales - average for period, actual for today
-    const hourlyTotals: { [key: string]: number } = {};
-    filteredData.forEach(d => {
-      d.hourly.forEach(h => {
-        hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
+    if (hourlySalesData && hourlySalesData.hourlySales) {
+      const hourlyMap = new Map(hourlySalesData.hourlySales.map(d => [d.hour, d.avgSales]));
+      const fullDayData = Array.from({ length: 24 }).map((_, i) => {
+        return {
+          time: `${i.toString().padStart(2, '0')}시`,
+          sales: hourlyMap.get(i) || 0,
+        };
       });
-    });
-
-    // Calculate average if period is more than 1 day
-    const daysInPeriod = filteredData.length;
-    const isToday = daysDiff < 1 || activePeriod === 'today';
-
-    // Find first and last hour with sales (operating hours)
-    const sortedHours = Object.entries(hourlyTotals)
-      .sort((a, b) => a[0].localeCompare(b[0]))
-      .filter(([, sales]) => sales > 0);
-
-    if (sortedHours.length > 0) {
-      const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
-      const lastHour = parseInt(sortedHours[sortedHours.length - 1][0].split(':')[0]);
-
-      // Generate all hours between first and last hour
-      const operatingHours = [];
-      for (let hour = firstHour; hour <= lastHour; hour++) {
-        const time = `${hour.toString().padStart(2, '0')}:00`;
-        const sales = hourlyTotals[time] || 0;
-
-        if (isToday) {
-          // For today, show actual hourly sales
-          operatingHours.push({ time, sales });
-        } else {
-          // For other periods, show average hourly sales
-          operatingHours.push({
-            time,
-            sales: daysInPeriod > 0 ? Math.round(sales / daysInPeriod) : sales
-          });
-        }
-      }
-      setHourlySales(operatingHours);
+      setHourlySales(fullDayData);
     } else {
       setHourlySales([]);
     }
+  }, [salesData, hourlySalesData, activePeriod]);
 
-    // Process cancellation rate based on period
-    if (daysDiff < 1) { // Single day - hourly
-      setXAxisDataKeyCancellation('time');
-      const hourlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
-      filteredData.forEach(d => {
-        d.hourly.forEach(h => {
-          if (!hourlyCancellations[h.time]) hourlyCancellations[h.time] = { sales: 0, cancellations: 0 };
-          hourlyCancellations[h.time].sales += h.sales;
-          hourlyCancellations[h.time].cancellations += Math.floor(Math.random() * (h.sales / 100000)); // Using random for demo
-        });
-      });
-      setCancellationRate(Object.entries(hourlyCancellations).map(([time, data]) => ({
-        time,
-        rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
-      })).sort((a, b) => a.time.localeCompare(b.time)));
-    } else if (daysDiff <= 31) { // Daily
-      setXAxisDataKeyCancellation('date');
-      setCancellationRate(filteredData.map(d => ({
-        date: format(new Date(d.date), 'MM/dd'),
-        rate: d.sales > 0 ? parseFloat(((d.cancellations / (d.sales / 100000)) * 100).toFixed(1)) : 0,
-      })));
-    } else { // Monthly
-      setXAxisDataKeyCancellation('month');
-      const monthlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
-      filteredData.forEach(d => {
-        const month = format(new Date(d.date), 'yyyy-MM');
-        if (!monthlyCancellations[month]) monthlyCancellations[month] = { sales: 0, cancellations: 0 };
-        monthlyCancellations[month].sales += d.sales;
-        monthlyCancellations[month].cancellations += d.cancellations;
-      });
-      setCancellationRate(Object.entries(monthlyCancellations).map(([month, data]) => ({
-        month: month.slice(5) + '월',
-        rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
-      })).sort((a, b) => a.month.localeCompare(b.month)));
+  useEffect(() => {
+    const params: SalesPeriodParams = { periodType: 'RANGE' };
+    if (activePeriod) {
+      switch (activePeriod) {
+        case 'today':
+          params.periodType = 'TODAY';
+          break;
+        case 'this-week':
+          params.periodType = 'WEEK';
+          break;
+        case 'this-month':
+          params.periodType = 'MONTH';
+          break;
+        case 'this-year':
+          params.periodType = 'YEAR';
+          break;
+      }
+    } else if (dateRange?.from && dateRange?.to) {
+      params.periodType = 'RANGE';
+      params.startDate = format(dateRange.from, 'yyyy-MM-dd');
+      params.endDate = format(dateRange.to, 'yyyy-MM-dd');
     }
+    setApiParams(params);
+  }, [dateRange, activePeriod]);
 
-  }, [dateRange, activePeriod, allSalesData]);
+  // Dummy data for other charts - will be replaced later
+  // useEffect(() => {
+  //   const totalPayments = { card: 1200000, account: 400000, kakaopay: 300000, cash: 100000 };
+  //   setPaymentDistribution([
+  //     { name: '카드결제', value: totalPayments.card, color: '#FEE500' },
+  //     { name: '계좌이체', value: totalPayments.account, color: '#FFB800' },
+  //     { name: '카카오페이', value: totalPayments.kakaopay, color: '#3C1E1E' },
+  //     { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
+  //   ]);
+  //
+  //   // Process sales type distribution (delivery vs store)
+  //   const totalSalesType = { delivery: 0, store: 0 };
+  //   filteredData.forEach(d => {
+  //     totalSalesType.delivery += d.deliverySales;
+  //     totalSalesType.store += d.storeSales;
+  //   });
+  //   setSalesTypeDistribution([
+  //     { name: '배달', value: totalSalesType.delivery, color: '#FEE500' },
+  //     { name: '가게', value: totalSalesType.store, color: '#3C1E1E' },
+  //   ]);
+  //
+  //   // Process hourly sales - average for period, actual for today
+  //   const hourlyTotals: { [key: string]: number } = {};
+  //   filteredData.forEach(d => {
+  //     d.hourly.forEach(h => {
+  //       hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
+  //     });
+  //   });
+  //
+  //   // Calculate average if period is more than 1 day
+  //   const daysInPeriod = filteredData.length;
+  //   const isToday = daysDiff < 1 || activePeriod === 'today';
+  //
+  //   // Find first and last hour with sales (operating hours)
+  //   const sortedHours = Object.entries(hourlyTotals)
+  //     .sort((a, b) => a[0].localeCompare(b[0]))
+  //     .filter(([, sales]) => sales > 0);
+  //
+  //   if (sortedHours.length > 0) {
+  //     const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
+  //     const lastHour = parseInt(sortedHours[sortedHours.length - 1][0].split(':')[0]);
+  //
+  //     // Generate all hours between first and last hour
+  //     const operatingHours = [];
+  //     for (let hour = firstHour; hour <= lastHour; hour++) {
+  //       const time = `${hour.toString().padStart(2, '0')}:00`;
+  //       const sales = hourlyTotals[time] || 0;
+  //
+  //       if (isToday) {
+  //         // For today, show actual hourly sales
+  //         operatingHours.push({ time, sales });
+  //       } else {
+  //         // For other periods, show average hourly sales
+  //         operatingHours.push({
+  //           time,
+  //           sales: daysInPeriod > 0 ? Math.round(sales / daysInPeriod) : sales
+  //         });
+  //       }
+  //     }
+  //     setHourlySales(operatingHours);
+  //   } else {
+  //     setHourlySales([]);
+  //   }
+  //
+  //   // Process cancellation rate based on period
+  //   if (daysDiff < 1) { // Single day - hourly
+  //     setXAxisDataKeyCancellation('time');
+  //     const hourlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
+  //     filteredData.forEach(d => {
+  //       d.hourly.forEach(h => {
+  //         if (!hourlyCancellations[h.time]) hourlyCancellations[h.time] = { sales: 0, cancellations: 0 };
+  //         hourlyCancellations[h.time].sales += h.sales;
+  //         hourlyCancellations[h.time].cancellations += Math.floor(Math.random() * (h.sales / 100000)); // Using random for demo
+  //       });
+  //     });
+  //     setCancellationRate(Object.entries(hourlyCancellations).map(([time, data]) => ({
+  //       time,
+  //       rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
+  //     })).sort((a, b) => a.time.localeCompare(b.time)));
+  //   } else if (daysDiff <= 31) { // Daily
+  //     setXAxisDataKeyCancellation('date');
+  //     setCancellationRate(filteredData.map(d => ({
+  //       date: format(new Date(d.date), 'MM/dd'),
+  //       rate: d.sales > 0 ? parseFloat(((d.cancellations / (d.sales / 100000)) * 100).toFixed(1)) : 0,
+  //     })));
+  //   } else { // Monthly
+  //     setXAxisDataKeyCancellation('month');
+  //     const monthlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
+  //     filteredData.forEach(d => {
+  //       const month = format(new Date(d.date), 'yyyy-MM');
+  //       if (!monthlyCancellations[month]) monthlyCancellations[month] = { sales: 0, cancellations: 0 };
+  //       monthlyCancellations[month].sales += d.sales;
+  //       monthlyCancellations[month].cancellations += d.cancellations;
+  //     });
+  //     setCancellationRate(Object.entries(monthlyCancellations).map(([month, data]) => ({
+  //       month: month.slice(5) + '월',
+  //       rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
+  //     })).sort((a, b) => a.month.localeCompare(b.month)));
+  //   }
+  //
+  // }, [dateRange, activePeriod]);
 
   // 가맹점별 매출 비교 데이터 처리 로직을 useMemo로 분리하여 불필요한 재실행을 방지했음
   const storeComparisonData = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to || !stores) return [];
 
-    const filteredData = allSalesData.filter(d => {
-      const date = new Date(d.date);
-      return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
-    });
+    // const filteredData = allSalesData.filter(d => {
+    //   const date = new Date(d.date);
+    //   return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
+    // });
 
     const selectedStores = stores.filter(store => selectedStoreIds.includes(store.storeId));
-    const totalPeriodSales = filteredData.reduce((acc, cur) => acc + cur.sales, 0);
-    const averageSales = selectedStores.length > 0 ? totalPeriodSales / selectedStores.length : 0;
+    // const totalPeriodSales = filteredData.reduce((acc, cur) => acc + cur.sales, 0);
+    const averageSales = selectedStores.length > 0 ? (salesData?.totalSales || 0) / selectedStores.length : 0;
 
     // storeId를 기반으로 일관된 랜덤 값을 생성하여 데이터가 변하지 않도록 수정했음
     const result = [];
@@ -405,32 +432,32 @@ export default function Analytics() {
       });
     }
     return result;
-  }, [dateRange, selectedStoreIds, stores, allSalesData]);
+  }, [dateRange, selectedStoreIds, stores, salesData]);
 
-  useEffect(() => {
-    if (!dateRange?.from) return;
-
-    const year = dateRange.from.getFullYear();
-    const today = new Date();
-    const yearData = allSalesData.filter(d => {
-      const date = new Date(d.date);
-      return date.getFullYear() === year && date < startOfDay(today);
-    });
-
-    const monthlySalesVsLabor: { [key: string]: { sales: number, labor: number } } = {};
-    yearData.forEach(d => {
-      const month = format(new Date(d.date), 'yyyy-MM');
-      if (!monthlySalesVsLabor[month]) monthlySalesVsLabor[month] = { sales: 0, labor: 0 };
-      monthlySalesVsLabor[month].sales += d.sales;
-      monthlySalesVsLabor[month].labor += d.labor;
-    });
-    setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({
-      month: month.slice(5) + '월',
-      sales: data.sales,
-      labor: data.labor,
-      laborRatio: data.sales > 0 ? parseFloat(((data.labor / data.sales) * 100).toFixed(1)) : 0
-    })).sort((a,b) => a.month.localeCompare(b.month)));
-  }, [dateRange]);
+  // useEffect(() => {
+  //   if (!dateRange?.from) return;
+  //
+  //   const year = dateRange.from.getFullYear();
+  //   const today = new Date();
+  //   const yearData = allSalesData.filter(d => {
+  //     const date = new Date(d.date);
+  //     return date.getFullYear() === year && date < startOfDay(today);
+  //   });
+  //
+  //   const monthlySalesVsLabor: { [key: string]: { sales: number, labor: number } } = {};
+  //   yearData.forEach(d => {
+  //     const month = format(new Date(d.date), 'yyyy-MM');
+  //     if (!monthlySalesVsLabor[month]) monthlySalesVsLabor[month] = { sales: 0, labor: 0 };
+  //     monthlySalesVsLabor[month].sales += d.sales;
+  //     monthlySalesVsLabor[month].labor += d.labor;
+  //   });
+  //   setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({
+  //     month: month.slice(5) + '월',
+  //     sales: data.sales,
+  //     labor: data.labor,
+  //     laborRatio: data.sales > 0 ? parseFloat(((data.labor / data.sales) * 100).toFixed(1)) : 0
+  //   })).sort((a,b) => a.month.localeCompare(b.month)));
+  // }, [dateRange]);
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
@@ -555,11 +582,11 @@ export default function Analytics() {
         return;
       }
 
-      // 시작일 변경 시에도 종료일과의 1년 제한 체크
+      // 시작일 변경 시에도 종료일과의 6개월 제한 체크
       if (dateRange?.to) {
-        const maxDate = addDays(parsedDate, 365);
+        const maxDate = addDays(parsedDate, 180);
         if (dateRange.to > maxDate) {
-          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          showAlert(<><span className="font-bold">최대 6개월</span>까지만 조회 가능합니다.</>);
           if (dateRange?.from) {
             setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
           } else {
@@ -583,11 +610,11 @@ export default function Analytics() {
         return;
       }
 
-      // 1년 제한 체크
+      // 6개월 제한 체크
       if (dateRange?.from) {
-        const maxDate = addDays(dateRange.from, 365);
+        const maxDate = addDays(dateRange.from, 180);
         if (parsedDate > maxDate) {
-          showAlert(<><span className="font-bold">최대 1년</span>까지만 조회 가능합니다.</>);
+          showAlert(<><span className="font-bold">최대 6개월</span>까지만 조회 가능합니다.</>);
           if (dateRange?.to) {
             setEndDateInput(format(dateRange.to, "yyyy.MM.dd"));
           } else {
@@ -800,8 +827,8 @@ export default function Analytics() {
 
                         // 시작일이 선택되고 종료일이 선택되지 않은 경우
                         if (dateRange?.from && !dateRange?.to) {
-                          // 시작일로부터 365일(1년) 이후 날짜는 선택 불가
-                          const maxDate = addDays(dateRange.from, 365);
+                          // 시작일로부터 180일(6개월) 이후 날짜는 선택 불가
+                          const maxDate = addDays(dateRange.from, 180);
                           if (date > maxDate) return true;
                         }
 
@@ -935,7 +962,7 @@ export default function Analytics() {
                   </>
                 )}
               </div>
-              {!(activeTab === "hourly-sales" && activePeriod === "today") && (
+              {activeTab !== 'sales-trend' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
                 <div className="text-xs text-red-500 mt-1">
                   * 오늘 매출은 영업 종료 후 반영됩니다.
                 </div>
@@ -945,7 +972,7 @@ export default function Analytics() {
               <div className="w-full tablet:w-auto border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center justify-between gap-3">
                 <div className="text-xs font-medium text-[#717182]">기간 누적 매출</div>
                 <div className="text-2xl font-bold text-[#333333] text-right">
-                  {periodSales.reduce((sum, item) => sum + (item.sales || 0), 0).toLocaleString()}
+                  {(salesData?.totalSales || 0).toLocaleString()}
                   <span className="text-base ml-1">원</span>
                 </div>
               </div>
@@ -968,7 +995,7 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={periodSales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey={xAxisDataKey} stroke="#717182" />
+                <XAxis dataKey={xAxisDataKey} stroke="#717182" dy={10} />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
                 <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
                 <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
@@ -984,7 +1011,7 @@ export default function Analytics() {
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="time" stroke="#717182" />
+                <XAxis dataKey="time" stroke="#717182" dy={10} />
                 <YAxis stroke="#717182" tickFormatter={formatYAxis} />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
