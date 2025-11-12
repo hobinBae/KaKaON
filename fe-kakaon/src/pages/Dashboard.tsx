@@ -7,8 +7,9 @@ import { DayProps } from "react-day-picker";
 import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
 import { useDashboardSummary, useMonthlySales } from "@/lib/hooks/useAnalytics";
 import { useUnreadAlertCount } from "@/lib/hooks/useAlerts";
+import { usePayments } from "@/lib/hooks/usePayments";
 import { useBoundStore } from "@/stores/storeStore";
-import { DailySale } from "@/types/api";
+import { DailySale, Transaction } from "@/types/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
@@ -87,29 +88,48 @@ export default function Dashboard() {
     storeId,
     formatDate(month)
   );
+  const { data: todayPaymentsData } = usePayments(storeId, {
+    startDate: formatDate(new Date()),
+    endDate: formatDate(new Date()),
+    size: 1000,
+  });
+
+  const todayRealtimeSale = React.useMemo(() => {
+    if (!todayPaymentsData?.transactions) return null;
+
+    const dailySale: DailySale = {
+      date: formatDate(new Date()),
+      storeSales: 0,
+      deliverySales: 0,
+      totalSales: 0,
+    };
+
+    todayPaymentsData.transactions.forEach((tx: Transaction) => {
+      if (tx.status !== 'completed') return;
+      if (tx.orderType === '배달 주문') {
+        dailySale.deliverySales += tx.total;
+      } else {
+        dailySale.storeSales += tx.total;
+      }
+      dailySale.totalSales += tx.total;
+    });
+
+    return dailySale;
+  }, [todayPaymentsData]);
 
   const monthlySalesData = React.useMemo(() => {
     const salesMap = new Map<string, DailySale>();
     if (monthlyResponse?.dailySales) {
       monthlyResponse.dailySales.forEach((sale) => {
-        // 오늘 날짜가 아닌 경우에만 통계 데이터를 사용
-        if (sale.date !== formatDate(new Date())) {
-          salesMap.set(sale.date, sale);
-        }
+        salesMap.set(sale.date, sale);
       });
     }
-    // 오늘 날짜 데이터는 summary API의 실시간 값으로 설정
-    if (summaryData) {
-      salesMap.set(formatDate(new Date()), {
-        date: formatDate(new Date()),
-        // summary API는 가게/배달 구분이 없으므로 totalSales에 값을 몰아넣음
-        storeSales: summaryData.todaySales,
-        deliverySales: 0,
-        totalSales: summaryData.todaySales,
-      });
+    // 오늘 날짜 데이터를 거래내역 기반의 실시간 데이터로 덮어쓰기 (또는 추가)
+    if (todayRealtimeSale) {
+      salesMap.set(formatDate(new Date()), todayRealtimeSale);
     }
     return salesMap;
-  }, [monthlyResponse, summaryData]);
+  }, [monthlyResponse, todayRealtimeSale]);
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);

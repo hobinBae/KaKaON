@@ -1,8 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
+import { addDays, differenceInCalendarDays, isToday, format } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Plus, Minus, Trash2, Edit, RotateCw, History, Package } from "lucide-react";
+import { Plus, Minus, Trash2, Edit, RotateCw, History, Package, ChevronLeft, ChevronRight } from "lucide-react";
 import { Link } from 'react-router-dom';
 import {
   Dialog,
@@ -30,6 +31,8 @@ import { useBoundStore } from '@/stores/storeStore';
 import { useMyStores } from '@/lib/hooks/useStores';
 import { useMenus, useCreateMenu, useUpdateMenu, useDeleteMenu } from '@/lib/hooks/useMenus';
 import { useCreateOrder, useCancelOrder, useOrders, useOrderDetail } from '@/lib/hooks/useOrders';
+import { Badge } from "@/components/ui/badge";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Select,
   SelectContent,
@@ -74,6 +77,8 @@ const Pos = () => {
   const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
   const { data: selectedTransaction, isLoading: isLoadingTransactionDetail } = useOrderDetail(selectedTransactionId);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
+  const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
+  const [selectedHistoryDate, setSelectedHistoryDate] = useState(new Date());
 
   useEffect(() => {
     if (!selectedStoreId && stores && stores.length > 0) {
@@ -81,11 +86,25 @@ const Pos = () => {
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
 
-  const recentTransactions = useMemo(() => {
+  const dailyTransactions = useMemo(() => {
     if (!transactions) return [];
-    // API에서 이미 최근 7일 데이터를 반환한다고 가정하고 추가 필터링은 제거
-    return transactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [transactions]);
+    return transactions
+        .filter(tx => {
+            const txDate = new Date(tx.date);
+            return txDate.getFullYear() === selectedHistoryDate.getFullYear() &&
+                   txDate.getMonth() === selectedHistoryDate.getMonth() &&
+                   txDate.getDate() === selectedHistoryDate.getDate();
+        })
+        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [transactions, selectedHistoryDate]);
+
+  const HISTORY_ITEMS_PER_PAGE = 5;
+  const historyTotalPages = Math.ceil((dailyTransactions?.length || 0) / HISTORY_ITEMS_PER_PAGE);
+  const paginatedHistory = useMemo(() => {
+    if (!dailyTransactions) return [];
+    const startIndex = (historyCurrentPage - 1) * HISTORY_ITEMS_PER_PAGE;
+    return dailyTransactions.slice(startIndex, startIndex + HISTORY_ITEMS_PER_PAGE);
+  }, [dailyTransactions, historyCurrentPage]);
 
   const totalPages = Math.ceil((products?.length || 0) / ITEMS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
@@ -272,27 +291,56 @@ const Pos = () => {
               </div>
             </>
           ) : (
-            <div className="flex-1 overflow-y-auto min-h-0">
-              <h2 className="text-2xl font-bold mb-4">최근 주문 내역 (7일)</h2>
-              {recentTransactions.length > 0 ? (
-                <div className="space-y-4">
-                  {recentTransactions.map(tx => (
-                    <div key={tx.id} className="border p-4 rounded-lg bg-white cursor-pointer hover:bg-gray-50" onClick={() => setSelectedTransactionId(tx.id)}>
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <p className="font-bold">{new Date(tx.date).toLocaleString()}</p>
-                          <p className="text-sm text-gray-600">{tx.items.map(i => `${i.name} x ${i.quantity}`).join(', ')}</p>
+            <div className="flex-1 flex flex-col min-h-0">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">주문 내역</h2>
+                <div className="flex items-center gap-2">
+                  <Button variant="outline" size="icon" onClick={() => setSelectedHistoryDate(prev => addDays(prev, -1))} disabled={differenceInCalendarDays(new Date(), selectedHistoryDate) >= 6}>
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                  <span className="font-semibold">{format(selectedHistoryDate, 'yyyy.MM.dd')}</span>
+                  <Button variant="outline" size="icon" onClick={() => setSelectedHistoryDate(prev => addDays(prev, 1))} disabled={isToday(selectedHistoryDate)}>
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              {paginatedHistory.length > 0 ? (
+                <div className="space-y-3 flex-1 overflow-y-auto pr-2">
+                  {paginatedHistory.map(tx => (
+                    <Card key={tx.id} className="p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors shadow-sm" onClick={() => setSelectedTransactionId(tx.id)}>
+                      <div className="flex justify-between items-center mb-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-gray-700">{new Date(tx.date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <Badge variant="outline" className="text-xs">{tx.orderType === 'STORE' ? '가게' : '배달'}</Badge>
                         </div>
-                        <div className="text-right">
-                          <p className="font-bold text-lg">{tx.total.toLocaleString()}원</p>
-                          {tx.status === 'cancelled' && <span className="text-red-500 font-bold mt-2 inline-block">취소됨</span>}
-                        </div>
+                        <Badge variant={tx.status === 'cancelled' ? 'destructive' : 'secondary'} className="text-xs">{tx.status === 'completed' ? '완료' : '취소'}</Badge>
                       </div>
-                    </div>
+                      <div className="flex justify-between items-end">
+                        <div>
+                          <p className="text-base font-bold text-gray-800">{tx.items[0].name} {tx.items.length > 1 ? `외 ${tx.items.length - 1}건` : ''}</p>
+                          <p className="text-xs text-gray-500">주문번호: {tx.id}</p>
+                        </div>
+                        <p className="font-bold text-lg text-gray-800">{tx.total.toLocaleString()}원</p>
+                      </div>
+                    </Card>
                   ))}
                 </div>
               ) : (
-                <p>최근 7일간의 주문 내역이 없습니다.</p>
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-gray-500">해당 날짜의 주문 내역이 없습니다.</p>
+                </div>
+              )}
+              {historyTotalPages > 1 && (
+                <div className="flex justify-center items-center gap-2 pt-4">
+                  {[...Array(historyTotalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setHistoryCurrentPage(i + 1)}
+                      className={`h-2 w-2 rounded-full transition-colors ${historyCurrentPage === i + 1 ? 'bg-gray-800' : 'bg-gray-300 hover:bg-gray-400'}`}
+                      aria-label={`Go to page ${i + 1}`}
+                    />
+                  ))}
+                </div>
               )}
             </div>
           )}
@@ -365,24 +413,74 @@ const Pos = () => {
 
       {selectedTransactionId && (
         <Dialog open={!!selectedTransactionId} onOpenChange={() => setSelectedTransactionId(null)}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>주문 상세 내역</DialogTitle></DialogHeader>
+          <DialogContent className="max-w-2xl rounded-xl">
+            <DialogHeader>
+              <DialogTitle>결제 상세정보</DialogTitle>
+            </DialogHeader>
             {isLoadingTransactionDetail ? (
               <p>로딩 중...</p>
             ) : selectedTransaction ? (
-              <>
-                <div className="py-4 space-y-4">
-                  <p><span className="font-semibold">주문 번호:</span> {selectedTransaction.id}</p>
-                  <p><span className="font-semibold">주문 시간:</span> {new Date(selectedTransaction.date).toLocaleString()}</p>
-                  <p><span className="font-semibold">주문 항목:</span> {selectedTransaction.items.map(i => `${i.name} x ${i.quantity}`).join(', ')}</p>
-                  <p className="text-lg font-bold"><span className="font-semibold">총 금액:</span> {selectedTransaction.total.toLocaleString()}원</p>
-                  <p><span className="font-semibold">상태:</span> {selectedTransaction.status === 'completed' ? '완료' : '취소됨'}</p>
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">결제시간</div>
+                    <div className="text-gray-900">{new Date(selectedTransaction.date).toLocaleString()}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">주문 구분</div>
+                    <div className="text-gray-900">{selectedTransaction.orderType === 'STORE' ? '가게 주문' : '배달 주문'}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">결제수단</div>
+                    <div className="text-gray-900">{{'CARD': '카드', 'TRANSFER': '계좌', 'KAKAOPAY': '카카오페이', 'CASH': '현금'}[selectedTransaction.paymentMethod] || selectedTransaction.paymentMethod}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">결제 상태</div>
+                    <Badge variant={selectedTransaction.status === 'cancelled' ? 'destructive' : 'secondary'} className="rounded">
+                      {selectedTransaction.status === 'completed' ? '완료' : '취소'}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">주문번호</div>
+                    <div className="text-gray-900">{selectedTransaction.id}</div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-500 mb-1">결제금액</div>
+                    <div className="text-gray-900">{selectedTransaction.total.toLocaleString()}원</div>
+                  </div>
                 </div>
-                <DialogFooter>
+
+                <Card className="p-4 bg-gray-50 rounded-lg max-h-72 overflow-y-auto">
+                  <h3 className="text-sm font-semibold mb-2">주문상세내역</h3>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>상품명</TableHead>
+                        <TableHead className="text-right">수량</TableHead>
+                        <TableHead className="text-right">가격</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedTransaction.items.map((item, index) => (
+                        <TableRow key={index}>
+                          <TableCell>{item.name}</TableCell>
+                          <TableCell className="text-right">{item.quantity}</TableCell>
+                          <TableCell className="text-right">{(item.price * item.quantity).toLocaleString()}원</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                  <div className="text-right font-bold mt-2">
+                    합계: {selectedTransaction.total.toLocaleString()}원
+                  </div>
+                </Card>
+
+                <DialogFooter className="sm:justify-between gap-2">
+                  <Button variant="outline" onClick={() => setSelectedTransactionId(null)}>닫기</Button>
                   {selectedTransaction.status === 'completed' && (
-                    <AlertDialog>
+                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive">결제 취소</Button>
+                        <Button variant="destructive" className="rounded-3xl">결제 취소</Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
@@ -409,9 +507,8 @@ const Pos = () => {
                       </AlertDialogContent>
                     </AlertDialog>
                   )}
-                  <Button variant="outline" onClick={() => setSelectedTransactionId(null)}>닫기</Button>
                 </DialogFooter>
-              </>
+              </div>
             ) : <p>주문 정보를 불러오는데 실패했습니다.</p>}
           </DialogContent>
         </Dialog>

@@ -1,6 +1,34 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
-import { DashboardSummary, MonthlySalesResponse } from "@/types/api";
+import { DashboardSummary, MonthlySalesResponse, SalesPeriodResponse, SalesHourlyResponse } from "@/types/api";
+
+export interface SalesPeriodParams {
+  periodType: 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'RANGE';
+  startDate?: string;
+  endDate?: string;
+}
+
+export const useSalesByPeriod = (storeId: number, params: SalesPeriodParams, options?: { enabled?: boolean }) => {
+  return useQuery<SalesPeriodResponse, Error>({
+    queryKey: ["salesByPeriod", storeId, params],
+    queryFn: async () => {
+      const res = await apiClient.get(`/analytics/${storeId}/sales/period`, { params });
+      return res.data.data;
+    },
+    enabled: !!storeId && storeId > 0 && (options?.enabled ?? true),
+  });
+};
+
+export const useSalesByHourly = (storeId: number, params: SalesPeriodParams, options?: { enabled?: boolean }) => {
+  return useQuery<SalesHourlyResponse, Error>({
+    queryKey: ["salesByHourly", storeId, params],
+    queryFn: async () => {
+      const res = await apiClient.get(`/analytics/${storeId}/sales/hourly`, { params });
+      return res.data.data;
+    },
+    enabled: !!storeId && storeId > 0 && (options?.enabled ?? true),
+  });
+};
 
 export const useDashboardSummary = (storeId: number) => {
   return useQuery<DashboardSummary, Error>({
