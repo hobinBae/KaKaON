@@ -11,5 +11,5 @@ import lombok.NoArgsConstructor;
 @Getter
 public class FavoriteResponseDto {
     private Long storeId;
-    private boolean favorite;
+    private boolean isFavorite;
 }

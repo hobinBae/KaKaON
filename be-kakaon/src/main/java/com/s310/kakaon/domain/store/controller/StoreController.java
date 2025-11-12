@@ -71,10 +71,14 @@ public class StoreController {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         FavoriteResponseDto response = storeService.toggleFavorite(memberId, storeId);
 
+        String message = response.isFavorite()
+                ? "즐겨찾기 등록에 성공했습니다."
+                : "즐겨찾기가 해제되었습니다.";
+
         return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "즐겨찾기 등록에 성공했습니다.", response, httpRequest.getRequestURI()));
+                .body(ApiResponse.of(HttpStatus.OK, message, response, httpRequest.getRequestURI()));
     }
-    
+
     @Operation(summary = "내가 등록한 즐겨찾기 가맹점 정보 조회", description = "로그인한 회원이 등록한 즐겨찾기 가맹점 정보 조회")
     @GetMapping("/favorite")
     public ResponseEntity<ApiResponse<FavoriteDetailResponseDto>> getFavorite(

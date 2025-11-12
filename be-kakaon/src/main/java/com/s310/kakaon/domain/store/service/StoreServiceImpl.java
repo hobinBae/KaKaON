@@ -28,6 +28,7 @@ import java.time.format.DateTimeParseException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -296,7 +297,7 @@ public class StoreServiceImpl implements StoreService{
 
         Store currentFavorite = member.getFavoriteStore();
 
-        if (currentFavorite != null && currentFavorite.getId().equals(store.getId())) {
+        if (currentFavorite != null &&  Objects.equals(currentFavorite.getId(), store.getId())) {
             member.removeFavoriteStore();
         }else{
             member.setFavoriteStore(store);
@@ -306,7 +307,7 @@ public class StoreServiceImpl implements StoreService{
 
         return FavoriteResponseDto.builder()
                 .storeId(store.getId())
-                .favorite(isFavorite)
+                .isFavorite(isFavorite)
                 .build();
     }
 
@@ -318,13 +319,13 @@ public class StoreServiceImpl implements StoreService{
         Store favoriteStore = member.getFavoriteStore();
         if (favoriteStore == null) {
             return FavoriteDetailResponseDto.builder()
-                    .storeId(null)
-                    .storeName(null)
+                    .hasFavorite(false)
                     .build();
         } else {
             return FavoriteDetailResponseDto.builder()
                     .storeId(favoriteStore.getId())
                     .storeName(favoriteStore.getName())
+                    .hasFavorite(true)
                     .build();
         }
 
