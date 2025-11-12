@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { CartItem, Menu, Transaction } from "@/types/api";
+import { CartItem, Menu, Transaction, Member } from "@/types/api";
 
 // Zustand 스토어의 상태(state)와 액션(action)에 대한 인터페이스를 정의했음
 interface AppState {
@@ -10,7 +10,8 @@ interface AppState {
 
   // --- Auth State ---
   isLoggedIn: boolean;
-  login: () => void;
+  member: Member | null; // 사용자 정보 추가
+  login: (member: Member) => void; // login 시 사용자 정보 받도록 수정
   logout: () => void;
 
   // --- UI State ---
@@ -51,10 +52,11 @@ export const useBoundStore = create<AppState>((set, get) => ({
 
   // --- Auth State ---
   isLoggedIn: false, // 기본적으로 로그아웃된 상태로 변경했음
-  login: () => set({ isLoggedIn: true }),
+  member: null,
+  login: (member) => set({ isLoggedIn: true, member }),
   logout: () => {
     // 로그아웃 시 관련 상태 초기화 로직을 추가했음
-    set({ isLoggedIn: false, selectedStoreId: null, cart: [], transactions: [] });
+    set({ isLoggedIn: false, member: null, selectedStoreId: null, cart: [], transactions: [] });
   },
 
   // --- UI State ---

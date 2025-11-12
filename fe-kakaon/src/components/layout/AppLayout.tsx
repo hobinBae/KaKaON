@@ -1,6 +1,13 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState } from "react";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { formatDistanceToNow } from "date-fns";
@@ -17,7 +24,7 @@ import {
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
 import { useLogout } from "@/auth/hooks/useAuth";
-import { useAlerts, useReadAlert, useUnreadAlertCount, useAlertDetail } from "@/lib/hooks/useAlerts";
+import { useAllAlerts, useReadAlert, useAlertDetail } from "@/lib/hooks/useAlerts";
 import { Alert } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -25,28 +32,41 @@ import { Card } from "@/components/ui/card";
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
-  const [selectedAlertId, setSelectedAlertId] = useState<number | null>(null);
+  const [selectedAlertId, setSelectedAlertId] = useState<{ alertId: number; storeId: number } | null>(null);
+  const [hiddenAlertIds, setHiddenAlertIds] = useState<number[]>([]);
+
+  useEffect(() => {
+    const storedHiddenIds = localStorage.getItem('hiddenAlertIds');
+    if (storedHiddenIds) {
+      setHiddenAlertIds(JSON.parse(storedHiddenIds));
+    }
+  }, []);
 
   const location = useLocation();
-  const { selectedStoreId, setSelectedStoreId } = useBoundStore();
+  const { selectedStoreId, setSelectedStoreId, member } = useBoundStore();
   const { mutate: logout } = useLogout();
 
   const { data: stores, isLoading: isLoadingStores, isError: isErrorStores } = useMyStores();
 
-  const { data: unreadCountData } = useUnreadAlertCount(selectedStoreId!);
-  const { data: alertsData } = useAlerts(selectedStoreId!, { checked: false }, 0, 5);
-  const { data: selectedAlertDetail } = useAlertDetail(selectedStoreId!, selectedAlertId);
+  // 전체 알림을 가져오는 훅으로 변경
+  const { alerts, unreadCount } = useAllAlerts();
+  const visibleAlerts = alerts.filter(alert => !hiddenAlertIds.includes(alert.id));
+  const { data: selectedAlertDetail } = useAlertDetail(selectedAlertId ? String(selectedAlertId.storeId) : null, selectedAlertId ? selectedAlertId.alertId : null);
   const { mutate: readAlert } = useReadAlert();
 
-  const alerts = alertsData?.content || [];
-  const unreadCount = unreadCountData?.unreadCount || 0;
-
-  const handleAlertClick = (alert: Alert) => {
-    setSelectedAlertId(alert.id);
+  const handleAlertClick = (alert: Alert & { storeId: number }) => {
+    setSelectedAlertId({ alertId: alert.id, storeId: alert.storeId });
     setIsAlertModalOpen(true);
     if (!alert.checked) {
-      readAlert({ storeId: selectedStoreId!, alertId: alert.id });
+      readAlert({ storeId: String(alert.storeId), alertId: alert.id });
     }
+  };
+
+  const handleHideAlertClick = (e: React.MouseEvent, alertId: number) => {
+    e.stopPropagation(); // 부모 요소의 클릭 이벤트(모달 열기) 방지
+    const newHiddenIds = [...hiddenAlertIds, alertId];
+    setHiddenAlertIds(newHiddenIds);
+    localStorage.setItem('hiddenAlertIds', JSON.stringify(newHiddenIds));
   };
 
   const handleModalClose = () => {
@@ -61,7 +81,6 @@ export function AppLayout() {
     { id: 'alerts', icon: Bell, label: '이상거래 관리', path: '/alerts' },
     { id: 'stores', icon: Store, label: '가맹점 관리', path: '/stores' },
     { id: 'business-hours', icon: Lock, label: '영업 시작/마감', path: '/business-hours' },
-    { id: 'settings', icon: Settings, label: '설정', path: '/settings' },
   ];
 
   return (
@@ -118,15 +137,23 @@ export function AppLayout() {
           </Button>
         </div>
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">
-          <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
-              <span className="text-[#3C1E1E] font-bold">김</span>
+          {member && (
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
+                  <span className="text-[#3C1E1E] font-bold">{member.name.charAt(0)}</span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-sm text-[#333333] font-medium">{member.name}님</div>
+                </div>
+              </div>
+              <Button asChild variant="ghost" size="icon" className="rounded-full w-8 h-8 text-gray-500 hover:text-gray-800">
+                <Link to="/settings">
+                  <Settings className="w-4 h-4" />
+                </Link>
+              </Button>
             </div>
-            <div className="flex-1">
-              <div className="text-sm text-[#333333] font-medium">김사장님</div>
-              <div className="text-xs text-[#717182]">사장님 카페</div>
-            </div>
-          </div>
+          )}
           <Button
             variant="ghost"
             className="w-full justify-start gap-2 text-[#717182] hover:text-[#333333] hover:bg-[#F5F5F5]"
@@ -195,39 +222,61 @@ export function AppLayout() {
               <PopoverContent className="w-80 mr-4">
                 <div className="grid gap-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium leading-none">이상거래 알림</h4>
                     <p className="text-sm text-muted-foreground">
-                      {unreadCount > 0 ? `미확인 알림이 ${unreadCount}개 있습니다.` : '새로운 알림이 없습니다.'}
+                      {visibleAlerts.length > 0 ? `미확인 알림이 ${visibleAlerts.length}개 있습니다.` : '새로운 알림이 없습니다.'}
                     </p>
                   </div>
-                  <div className="grid gap-2">
-                    {alerts.map((alert) => (
-                      <div
-                        key={alert.id}
-                        className="grid grid-cols-1 items-start pb-4 last:pb-0 cursor-pointer group"
-                        onClick={() => handleAlertClick(alert)}
-                      >
-                        <div className="grid gap-1">
-                          <p className="text-sm font-medium leading-none group-hover:underline">
-                            {alert.alertType}
-                          </p>
-                          <p className="text-sm text-muted-foreground truncate">{alert.description}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(alert.detectedAt), { addSuffix: true, locale: ko })}
-                          </p>
+                  <div className="grid gap-2 max-h-64 overflow-y-auto">
+                    {visibleAlerts.map((alert: Alert & { storeId: number; storeName: string }) => (
+                      <div key={alert.id} className="flex items-start justify-between gap-2 pb-4 last:pb-0">
+                        <div className="flex-1 cursor-pointer group" onClick={() => handleAlertClick(alert)}>
+                          <div className="grid gap-1">
+                            <p className="text-sm font-medium leading-none group-hover:underline">
+                              <span className="font-bold text-blue-500">[{alert.storeName}]</span> {alert.alertType}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">{alert.description}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatDistanceToNow(new Date(alert.detectedAt), { addSuffix: true, locale: ko })}
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 rounded-full text-gray-400 hover:text-gray-700"
+                          onClick={(e) => handleHideAlertClick(e, alert.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
                     ))}
                   </div>
-                  <Button variant="ghost" size="sm" className="w-full" asChild>
+                  <Button size="sm" className="w-full bg-yellow-400 text-black hover:bg-yellow-500" asChild>
                     <Link to="/alerts">모든 알림 보기</Link>
                   </Button>
                 </div>
               </PopoverContent>
             </Popover>
-            <div className="w-8 h-8 rounded-full bg-[#FEE500] flex items-center justify-center">
-              <User className="w-4 h-4 text-[#3C1E1E]" />
-            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="rounded-full w-8 h-8 bg-[#FEE500] hover:bg-[#FEE500]/90">
+                  <User className="w-4 h-4 text-[#3C1E1E]" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                <DropdownMenuItem asChild>
+                  <Link to="/settings" className="cursor-pointer">
+                    <Settings className="w-4 h-4 mr-2" />
+                    <span>설정</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => logout()} className="cursor-pointer text-red-500 focus:text-red-500">
+                  <LogOut className="w-4 h-4 mr-2" />
+                  <span>로그아웃</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 

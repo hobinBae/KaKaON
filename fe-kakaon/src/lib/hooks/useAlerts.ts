@@ -1,6 +1,7 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, useQueries } from '@tanstack/react-query';
 import apiClient from '@/lib/apiClient';
-import { Alert, AlertDetail, AlertSearchRequest, UnreadAlertCount } from '@/types/api';
+import { Alert, AlertDetail, AlertSearchRequest, UnreadAlertCount, Store } from '@/types/api';
+import { useMyStores } from './useStores';
 
 // ================== API 호출 함수 ==================
 
@@ -88,6 +89,62 @@ export const useReadAllAlerts = () => {
     onSuccess: (data, storeId) => {
       queryClient.invalidateQueries({ queryKey: ['alerts', storeId] });
       queryClient.invalidateQueries({ queryKey: ['unreadAlertCount', storeId] });
+      // 전체 알림 훅도 무효화
+      queryClient.invalidateQueries({ queryKey: ['allAlerts'] });
+      queryClient.invalidateQueries({ queryKey: ['allUnreadAlertCount'] });
     },
   });
+};
+
+// ================== 전체 가맹점 알림 관련 훅 ==================
+
+/**
+ * 모든 가맹점의 알림 목록과 읽지 않은 알림 수를 가져오는 훅
+ */
+export const useAllAlerts = () => {
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
+
+  const alertQueries = useQueries({
+    queries: (stores ?? []).map(store => ({
+      queryKey: ['alerts', String(store.storeId), { checked: false }, 0, 5],
+      queryFn: () => fetchAlerts(String(store.storeId), { checked: false }, 0, 5),
+      enabled: !!stores,
+    })),
+  });
+
+  const unreadCountQueries = useQueries({
+    queries: (stores ?? []).map(store => ({
+      queryKey: ['unreadAlertCount', String(store.storeId)],
+      queryFn: () => fetchUnreadAlertCount(String(store.storeId)),
+      enabled: !!stores,
+      refetchInterval: 30000,
+    })),
+  });
+
+  const isLoading = isLoadingStores || alertQueries.some(q => q.isLoading) || unreadCountQueries.some(q => q.isLoading);
+
+  // 모든 알림 데이터를 하나의 배열로 합치고, 가맹점 정보를 추가
+  const allAlerts = alertQueries
+    .flatMap((query, index) => {
+      const store = stores?.[index];
+      if (!query.data || !store) return [];
+      // PageResponse<Alert> 타입이므로 content를 사용
+      return query.data.content.map((alert: Alert) => ({
+        ...alert,
+        storeId: store.storeId,
+        storeName: store.name,
+      }));
+    })
+    .sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime()); // 최신순 정렬
+
+  // 모든 읽지 않은 알림 수 합산
+  const totalUnreadCount = unreadCountQueries.reduce((total, query) => {
+    return total + (query.data?.unreadCount || 0);
+  }, 0);
+
+  return {
+    alerts: allAlerts,
+    unreadCount: totalUnreadCount,
+    isLoading,
+  };
 };
