@@ -172,7 +172,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
             case "WEEK" :
 
-                start = today.minusDays(6);
+                start = today.minusDays(7);
                 end = today.minusDays(1);
                 List<HourlyAvgDto> hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
                         storeId, periodType, start, end);
@@ -255,5 +255,16 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
         }
     }
+
+    @Override
+    public PaymentMethodRatioResponseDto getPaymentMethodRatioByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period) {
+        validateOwner(storeId, memberId);
+        String periodType = period.getPeriodType();
+        LocalDate startDate = period.getStartDate();
+        LocalDate endDate = period.getEndDate();
+        PaymentMethodRatioResponseDto paymentMethodStats = paymentStatsRepository.findPaymentMethodStatsByPeriod(storeId, periodType, startDate, endDate);
+        return paymentMethodStats;
+    }
+
 
 }
