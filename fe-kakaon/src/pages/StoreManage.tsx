@@ -2,12 +2,10 @@ import { useState, Fragment } from "react";
 import {
   Plus,
   Search,
-  Filter,
   Star,
-  TrendingUp,
-  TrendingDown,
   X,
   ChevronDown,
+  Pencil, // 수정 아이콘 import
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Card } from "@/components/ui/card";
@@ -56,10 +54,12 @@ import {
   useRegisterAlertRecipient,
   useDeleteAlertRecipient,
   useUpdateAlertRecipient,
+  useFavoriteStore, // 즐겨찾기 훅 추가
+  useToggleFavoriteStore, // 즐겨찾기 훅 추가
 } from "@/lib/hooks/useStores";
 import type { Store, StoreDetailResponse, StoreCreateRequest, StoreUpdateRequest, BusinessHour, AlertRecipient, BusinessType } from "@/types/api";
 import { toast } from "sonner";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 // 전역 window 객체에 daum과 kakao 타입 선언했음
 declare global {
@@ -134,6 +134,19 @@ export default function StoreManage() {
   const { mutate: registerAlertRecipient } = useRegisterAlertRecipient();
   const { mutate: deleteAlertRecipient } = useDeleteAlertRecipient();
   const { mutate: updateAlertRecipient } = useUpdateAlertRecipient();
+  const { data: favoriteStore } = useFavoriteStore(); // 즐겨찾기 데이터 조회
+  const { mutate: toggleFavorite } = useToggleFavoriteStore(); // 즐겨찾기 토글 뮤테이션
+
+  // 대표 가맹점 우선, 나머지는 이름순으로 정렬된 목록 생성
+  const sortedStores = useMemo(() => {
+    if (!stores) return [];
+    const favoriteStoreId = favoriteStore?.storeId;
+    return [...stores].sort((a, b) => {
+      if (a.storeId === favoriteStoreId) return -1;
+      if (b.storeId === favoriteStoreId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [stores, favoriteStore]);
 
   const [selectedPeriod, setSelectedPeriod] = useState<SalesPeriod>("일별");
 
@@ -162,6 +175,10 @@ export default function StoreManage() {
   const [isAddingAlert, setIsAddingAlert] = useState(false);
   const [alertRecipients, setAlertRecipients] = useState<AlertRecipient[]>([]);
   const [newRecipient, setNewRecipient] = useState({ name: "", position: "", email: "" });
+
+  // 알림 수신자 수정을 위한 상태 추가 (ID 기반으로 변경)
+  const [editingRecipientId, setEditingRecipientId] = useState<number | null>(null);
+  const [editingRecipientData, setEditingRecipientData] = useState<{ name: string; position: string; email: string } | null>(null);
 
   // selectedStore 데이터가 변경될 때 알림 수신자 목록 상태를 API 응답값으로 업데이트했음
   useEffect(() => {
@@ -397,6 +414,37 @@ export default function StoreManage() {
     });
   };
 
+  const handleToggleFavorite = (storeId: number) => {
+    toggleFavorite(storeId, {
+      onSuccess: (data) => {
+        toast.success(data.isFavorite ? "대표 가맹점으로 설정되었습니다." : "대표 가맹점 설정이 해제되었습니다.");
+      },
+      onError: (error) => {
+        toast.error("대표 가맹점 설정에 실패했습니다.", { description: error.message });
+      }
+    });
+  };
+
+  // 알림 수신자 정보 수정을 처리하는 함수 추가
+  const handleUpdateRecipient = () => {
+    if (!selectedStoreId || !editingRecipientId || !editingRecipientData) {
+      toast.error("수정할 수신자 정보가 없습니다.");
+      return;
+    }
+
+    updateAlertRecipient({ storeId: selectedStoreId, alertId: editingRecipientId, data: editingRecipientData }, {
+      onSuccess: (updatedRecipient) => {
+        toast.success("알림 수신자 정보가 수정되었습니다.");
+        setAlertRecipients(prev => prev.map(r => r.id === updatedRecipient.id ? updatedRecipient : r));
+        setEditingRecipientId(null);
+        setEditingRecipientData(null);
+      },
+      onError: (error) => {
+        toast.error("알림 수신자 수정에 실패했습니다.", { description: error.message });
+      }
+    });
+  };
+
   // const handleUpdateStore = () => {
   //   if (!selectedStore || !editingBusinessHours) return;
   //
@@ -550,13 +598,13 @@ export default function StoreManage() {
           <div className="p-8 text-center text-[#717182]">로딩 중...</div>
         ) : isError ? (
           <div className="p-8 text-center text-[#FF4D4D]">매장 목록을 불러올 수 없습니다.</div>
-        ) : !stores || stores.length === 0 ? (
+        ) : !sortedStores || sortedStores.length === 0 ? (
           <div className="p-8 text-center text-[#717182]">등록된 매장이 없습니다.</div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
-                <TableHead className="text-[#333333] pl-3 md:pl-6">가맹점명</TableHead>
+                <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
                 <TableHead className="text-[#333333] text-center">매출</TableHead>
                 <TableHead className="text-[#333333] text-center">취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
@@ -580,7 +628,7 @@ export default function StoreManage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {stores.map((store) => (
+              {sortedStores.map((store) => (
                 <Fragment key={store.storeId}>
                   <TableRow
                     key={store.storeId}
@@ -589,12 +637,15 @@ export default function StoreManage() {
                     }`}
                     onClick={() => handleStoreClick(store)}
                   >
-                    <TableCell className="pl-2 md:pl-6">
-                      <div>
-                        <div className="flex items-center gap-2">
-                          <Star className="w-4 h-4 text-[#717182]" />
-                          <span className="text-sm text-[#333333]">{store.name}</span>
+                    <TableCell className="pl-2 md:pl-1.5">
+                      <div className="flex items-center gap-1">
+                        {/* 별 아이콘을 위한 고정 너비 컨테이너 추가 */}
+                        <div className="w-4 h-4 flex-shrink-0">
+                          {favoriteStore?.storeId === store.storeId && (
+                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          )}
                         </div>
+                        <span className="text-sm text-[#333333] truncate">{store.name}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
@@ -678,16 +729,28 @@ export default function StoreManage() {
                           <div className="text-center p-8">상세 정보를 불러오는 중...</div>
                         ) : selectedStore ? (
                           <div className="space-y-6">
-                            <h4 className="text-[#333333] font-semibold">{selectedStore.name} 상세 관리</h4>
                             <Tabs defaultValue="basic" className="w-full">
-                            <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
-                              <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
-                                기본정보
-                              </TabsTrigger>
-                              <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
-                                알림설정
-                              </TabsTrigger>
-                            </TabsList>
+                            <div className="flex items-center justify-between">
+                              <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
+                                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                  기본정보
+                                </TabsTrigger>
+                                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                  알림설정
+                                </TabsTrigger>
+                              </TabsList>
+                              {/* 대표 가맹점 설정 토글 스위치 추가 */}
+                              <div className="flex items-center space-x-2">
+                                <Switch
+                                  id="favorite-toggle"
+                                  checked={favoriteStore?.storeId === selectedStore.storeId}
+                                  onCheckedChange={() => handleToggleFavorite(selectedStore.storeId)}
+                                />
+                                <label htmlFor="favorite-toggle" className="text-sm font-medium text-gray-700">
+                                  대표 가맹점으로 설정
+                                </label>
+                              </div>
+                            </div>
 
                             <TabsContent value="basic" className="mt-6">
                               <div className="space-y-6">
@@ -794,21 +857,64 @@ export default function StoreManage() {
                             <TabsContent value="alerts" className="mt-6">
                               <div className="space-y-4">
                                 {alertRecipients.map((recipient) => (
-                                  <div key={recipient.id} className="flex items-center justify-between p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
-                                    <div>
-                                      <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
-                                      <p className="text-xs text-[#717182]">{recipient.email}</p>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                      <Switch 
-                                        checked={recipient.active} 
-                                        onCheckedChange={() => handleToggleAlertRecipient(recipient)}
-                                      />
-                                      <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
-                                        <X className="w-4 h-4" />
-                                      </Button>
-                                    </div>
-                                  </div>
+                                  <Fragment key={recipient.id}>
+                                    {editingRecipientId === recipient.id ? (
+                                      // 수정 모드 폼
+                                      <div className="p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)] space-y-4">
+                                        <Input
+                                          placeholder="이름"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.name || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, name: e.target.value })}
+                                        />
+                                        <Input
+                                          placeholder="직위"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.position || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, position: e.target.value })}
+                                        />
+                                        <Input
+                                          type="email"
+                                          placeholder="이메일 주소"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.email || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, email: e.target.value })}
+                                        />
+                                        <div className="flex justify-end gap-2">
+                                          <Button variant="ghost" onClick={() => setEditingRecipientId(null)}>취소</Button>
+                                          <Button
+                                            className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                            onClick={handleUpdateRecipient}
+                                          >
+                                            저장
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      // 일반 표시 모드
+                                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+                                        <div>
+                                          <p className="text-sm text-[#333333]">{recipient.name} ({recipient.position})</p>
+                                          <p className="text-xs text-[#717182]">{recipient.email}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <Switch
+                                            checked={recipient.active}
+                                            onCheckedChange={() => handleToggleAlertRecipient(recipient)}
+                                          />
+                                          <Button variant="ghost" size="icon" onClick={() => {
+                                            setEditingRecipientId(recipient.id);
+                                            setEditingRecipientData({ name: recipient.name, position: recipient.position, email: recipient.email });
+                                          }}>
+                                            <Pencil className="w-4 h-4" />
+                                          </Button>
+                                          <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                            <X className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Fragment>
                                 ))}
                               </div>
 
