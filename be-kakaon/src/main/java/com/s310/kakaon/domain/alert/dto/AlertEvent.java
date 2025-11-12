@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @NoArgsConstructor
 @AllArgsConstructor
@@ -24,4 +25,5 @@ public class AlertEvent {
     private Long paymentId;
 
     private String groupId;
+    private List<Long> relatedPaymentIds;
 }

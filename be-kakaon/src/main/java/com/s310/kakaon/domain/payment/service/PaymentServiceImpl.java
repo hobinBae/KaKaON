@@ -61,7 +61,8 @@ public class PaymentServiceImpl implements PaymentService{
     private final StringRedisTemplate stringRedisTemplate;
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
-    private final PaymentEventProducer  paymentEventProducer;
+//    private final PaymentEventProducer  paymentEventProducer;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -111,7 +112,9 @@ public class PaymentServiceImpl implements PaymentService{
                 .storeName(savedPayment.getStore().getName())
                 .build();
 
-        paymentEventProducer.sendPaymentEvent(event);
+//        paymentEventProducer.sendPaymentEvent(event);
+        // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
+        eventPublisher.publishEvent(event);
 
         long t1 = System.currentTimeMillis();
 //        if(!detectAfterHoursTransaction(store, payment)){

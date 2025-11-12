@@ -43,34 +43,13 @@ public class PaymentAlertConsumer {
     public void consumePaymentEvent(PaymentEventDto event) {
         log.info("Consumed payment event: paymentId={}, authorizationNo={}",
                 event.getPaymentId(), event.getAuthorizationNo());
-
         try {
-            // 모든 이상거래 탐지 룰 실행
             for (FraudDetector detector : fraudDetectors) {
                 List<AlertEvent> alertEvents = detector.detect(event);
-
-                if (!alertEvents.isEmpty()) {
-                    log.info("Detected {} alert events by {}",
-                            alertEvents.size(), detector.getClass().getSimpleName());
-
-                    // groupId로 그룹핑 (같은 이상거래 케이스는 같은 groupId를 가짐)
-                    Map<String, List<AlertEvent>> groupedAlerts = alertEvents.stream()
-                            .collect(Collectors.groupingBy(AlertEvent::getGroupId));
-
-                    // 각 그룹(이상거래 케이스)마다 처리
-                    for (Map.Entry<String, List<AlertEvent>> entry : groupedAlerts.entrySet()) {
-                        String groupId = entry.getKey();
-                        List<AlertEvent> relatedEvents = entry.getValue();
-
-                        log.info("Processing alert group: groupId={}, events count={}",
-                                groupId, relatedEvents.size());
-
-                        // Alert 및 관련 AlertPayment 저장
-                        Alert savedAlert = saveAlertWithPayments(relatedEvents);
-
-                        // 메일 발송
-                        sendAlertEmail(savedAlert);
-                    }
+                // 탐지기 1회당 보통 1개만 오지만, 혹시 여러 개여도 개별 처리
+                for (AlertEvent ae : alertEvents) {
+                    Alert savedAlert = saveAlertWithPayments(ae); // 단일 이벤트 기준
+                    sendAlertEmail(savedAlert);
                 }
             }
         } catch (Exception e) {
@@ -78,60 +57,64 @@ public class PaymentAlertConsumer {
         }
     }
 
-    /**
-     * Alert와 관련된 모든 AlertPayment를 저장
-     */
-    private Alert saveAlertWithPayments(List<AlertEvent> relatedEvents) {
+    private Alert saveAlertWithPayments(AlertEvent event) {
         try {
-            // 첫 번째 이벤트 기준으로 Alert 생성
-            AlertEvent firstEvent = relatedEvents.get(0);
+            log.info("[CONSUMER] Start saving alert: storeId={}, relatedIds={}",
+                    event.getStoreId(), event.getRelatedPaymentIds());
 
-            // 1. Store 조회
-            Store store = storeRepository.findById(firstEvent.getStoreId())
+            Store store = storeRepository.findById(event.getStoreId())
                     .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-            // 2. Alert 엔티티 생성 및 저장
             Alert alert = Alert.builder()
                     .store(store)
-                    .alertUuid(UUID.randomUUID().toString().substring(0, 20)) // Alert마다 고유한 UUID
-                    .alertType(firstEvent.getAlertType())
-                    .description(firstEvent.getDescription())
-                    .detectedAt(firstEvent.getDetectedAt())
+                    .alertUuid(UUID.randomUUID().toString().substring(0, 20))
+                    .alertType(event.getAlertType())
+                    .description(event.getDescription())
+                    .detectedAt(event.getDetectedAt())
                     .emailSent(false)
                     .checked(false)
                     .build();
 
             Alert savedAlert = alertRepository.save(alert);
-            log.info("Alert saved: alertId={}, uuid={}, type={}, storeId={}, relatedPayments={}",
-                    savedAlert.getId(), savedAlert.getAlertUuid(),
-                    savedAlert.getAlertType(), savedAlert.getStore().getId(),
-                    relatedEvents.size());
 
-            // 3. 관련된 모든 결제에 대해 AlertPayment 저장
-            // AlertPayment 저장 시 재시도 로직
-            for (AlertEvent event : relatedEvents) {
-                if (event.getPaymentId() != null) {
-                    Payment payment = findPaymentWithRetry(event.getPaymentId(), 10, 200);
-
+            //  윈도우 내 전체 결제 저장
+            List<Long> relatedIds = event.getRelatedPaymentIds();
+            if (relatedIds != null && !relatedIds.isEmpty()) {
+                for (Long pid : relatedIds) {
+                    log.info("[CONSUMER] Trying to save AlertPayment: alertId=?, paymentId={}", savedAlert.getId(), pid);
+                    Payment payment = findPaymentWithRetry(pid, 10, 200);
                     if (payment != null) {
-                        AlertPayment alertPayment = AlertPayment.builder()
-                                .alert(savedAlert)
-                                .payment(payment)
-                                .build();
-
-                        alertPaymentRepository.save(alertPayment);
-                        log.info("AlertPayment saved: alertId={}, paymentId={}",
-                                savedAlert.getId(), payment.getId());
+                        log.info("[CONSUMER] Found payment entity: {}", payment.getId());
+                        // (권장) 멱등성 보호
+                        if (!alertPaymentRepository.existsByAlertIdAndPaymentId(savedAlert.getId(), payment.getId())) {
+                            alertPaymentRepository.save(
+                                    AlertPayment.builder().alert(savedAlert).payment(payment).build()
+                            );
+                            log.info("AlertPayment saved: alertId={}, paymentId={}", savedAlert.getId(), payment.getId());
+                        }
                     } else {
-                        log.warn("Payment not found after retries: paymentId={}", event.getPaymentId());
+                        log.warn("[CONSUMER] Payment not found after retry: {}", pid);
+                        log.warn("Payment not found after retries: paymentId={}", pid);
                     }
                 }
+            } else {
+                log.warn("[CONSUMER] relatedIds is null or empty for alert={}", savedAlert.getId());
+                // 방어 로직: 리스트가 비면 트리거 결제라도 저장
+                if (event.getPaymentId() != null) {
+                    Payment payment = findPaymentWithRetry(event.getPaymentId(), 15, 300);
+                    if (payment != null && !alertPaymentRepository.existsByAlertIdAndPaymentId(savedAlert.getId(), payment.getId())) {
+                        alertPaymentRepository.save(
+                                AlertPayment.builder().alert(savedAlert).payment(payment).build()
+                        );
+                    }
+                }
+                log.warn("No relatedPaymentIds provided for alert: alertId={}", savedAlert.getId());
             }
 
             return savedAlert;
 
         } catch (Exception e) {
-            log.error("Failed to save alert with payments: {}", relatedEvents, e);
+            log.error("Failed to save alert with payments: {}", event, e);
             throw e;
         }
     }

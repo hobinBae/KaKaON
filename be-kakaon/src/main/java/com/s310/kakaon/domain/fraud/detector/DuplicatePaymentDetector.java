@@ -25,70 +25,73 @@ public class DuplicatePaymentDetector implements FraudDetector {
 
     @Override
     public List<AlertEvent> detect(PaymentEventDto event) {
-        // 중복 체크용 키 생성: "가맹점ID-결제수단-금액"
         String key = generateKey(event);
 
-        // Map에서 같은 키의 리스트 가져오기
         List<PaymentEventDto> recentList = recentPayments
                 .computeIfAbsent(key, k -> new ArrayList<>());
 
-        // 5분 이전 데이터 제거
         LocalDateTime windowStart = event.getApprovedAt().minusMinutes(TIME_WINDOW_MINUTES);
         recentList.removeIf(p -> p.getApprovedAt().isBefore(windowStart));
 
-        // 현재 이벤트를 리스트에 추가
+        // 현재 이벤트 추가
         recentList.add(event);
 
-        List<AlertEvent> alertEvents = new ArrayList<>();
-
-        // threshold 이상이면 이상거래 감지 (2건 이상일 때)
-        if (recentList.size() >= DUPLICATE_COUNT_THRESHOLD) {
-            log.warn("DUPLICATE_PAYMENT detected: key={}, count={}, payments={}",
-                    key, recentList.size(),
-                    recentList.stream().map(PaymentEventDto::getPaymentId).toList());
-
-//            // 같은 이상거래 케이스를 묶기 위한 groupId 생성
-//            String groupId = generateGroupId(key, recentList);
-
-            String description = String.format(
-                    "[중복 거래] 동일한 금액(%s원)과 결제수단(%s)으로 %d분 내 %d회 결제 발생\n" +
-                            "- 가맹점: %s (매장ID: %s)\n" +
-                            "- 첫 결제 시각: %s\n" +
-                            "- 마지막 결제 시각: %s\n" +
-                            "- 관련 결제 ID: %s\n" +
-                            "- 관련 결제 승인번호: %s",
-                    event.getAmount(),
-                    event.getPaymentMethod(),
-                    TIME_WINDOW_MINUTES,
-                    recentList.size(),
-                    event.getStoreName(),
-                    event.getStoreId(),
-                    recentList.get(0).getApprovedAt(),
-                    event.getApprovedAt(),
-                    recentList.stream().map(PaymentEventDto::getPaymentId).toList(),
-                    recentList.stream().map(PaymentEventDto::getAuthorizationNo).toList()
-            );
-
-            LocalDateTime detectedAt = LocalDateTime.now();
-
-            // 모든 중복 결제에 대해 AlertEvent 생성 (같은 groupId 사용)
-            for (PaymentEventDto payment : recentList) {
-                AlertEvent alertEvent = AlertEvent.builder()
-                        .groupId(key)  // 같은 이상거래 케이스는 같은 groupId
-                        .storeId(payment.getStoreId())
-                        .storeName(payment.getStoreName())
-                        .alertType(getAlertType())
-                        .description(description)
-                        .detectedAt(detectedAt)
-                        .paymentId(payment.getPaymentId())
-                        .build();
-
-                alertEvents.add(alertEvent);
-            }
+        if (recentList.size() < DUPLICATE_COUNT_THRESHOLD) {
+            return Collections.emptyList();
         }
 
-        return alertEvents;
+        // 승인시각 기준 정렬로 일관성 보장
+        recentList.sort(Comparator.comparing(PaymentEventDto::getApprovedAt));
+
+        List<Long> paymentIdsInWindow = recentList.stream()
+                .map(PaymentEventDto::getPaymentId)
+                .toList();
+
+        log.info("[DETECTOR] storeId={}, key={}, windowCount={}, paymentIdsInWindow={}",
+                event.getStoreId(), key, recentList.size(), paymentIdsInWindow);
+
+        List<String> authNosInWindow = recentList.stream()
+                .map(PaymentEventDto::getAuthorizationNo)
+                .toList();
+
+        String description = String.format(
+                "[중복 거래] 동일한 금액(%s원)과 결제수단(%s)으로 %d분 내 %d회 결제 발생\n" +
+                        "- 가맹점: %s (매장ID: %s)\n" +
+                        "- 첫 결제 시각: %s\n" +
+                        "- 마지막 결제 시각: %s\n" +
+                        "- 관련 결제 ID: %s\n" +
+                        "- 관련 결제 승인번호: %s",
+                event.getAmount(),
+                event.getPaymentMethod(),
+                TIME_WINDOW_MINUTES,
+                recentList.size(),
+                event.getStoreName(),
+                event.getStoreId(),
+                recentList.get(0).getApprovedAt(),
+                recentList.get(recentList.size()-1).getApprovedAt(),
+                paymentIdsInWindow, authNosInWindow
+        );
+
+        LocalDateTime detectedAt = LocalDateTime.now();
+
+        // groupId는 key가 아니라 generateGroupId 결과 사용
+        String groupId = generateGroupId(key, recentList);
+
+        // AlertEvent "1개만" 생성
+        AlertEvent alertEvent = AlertEvent.builder()
+                .groupId(groupId)
+                .storeId(event.getStoreId())
+                .storeName(event.getStoreName())
+                .alertType(getAlertType())
+                .description(description)
+                .detectedAt(detectedAt)
+                .paymentId(event.getPaymentId())            // 트리거 결제(참고용)
+                .relatedPaymentIds(paymentIdsInWindow)      // 윈도우 내 전체 결제
+                .build();
+
+        return List.of(alertEvent);
     }
+
 
     @Override
     public AlertType getAlertType() {
