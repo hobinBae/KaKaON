@@ -135,6 +135,7 @@ export type CartItem = Menu & { quantity: number };
 // ================== Transaction ==================
 export type Transaction = {
   id: number;
+  orderId: number;
   items: { name: string; quantity: number; price: number }[];
   total: number;
   date: string;
@@ -185,4 +186,34 @@ export interface AlertSearchRequest {
 
 export interface UnreadAlertCount {
   unreadCount: number;
+}
+
+// ================== Analytics ==================
+export interface DailySale {
+  date: string; // "yyyy-MM-dd"
+  storeSales: number;
+  deliverySales: number;
+  totalSales: number;
+}
+
+export interface MonthlySalesResponse {
+  storeId: number;
+  month: string;
+  dailySales: DailySale[];
+}
+
+export interface DashboardSummary {
+  storeId: number;
+  date: string;
+  todaySales: number;
+  yesterdaySales: number;
+  yesterdayGrowthRate: number;
+  lastWeekSameDaySales: number;
+  lastWeekGrowthRate: number;
+  monthlyTotalSales: number;
+  monthlyGrowthRate: number;
+  recent7Days: {
+    date: string;
+    totalSales: number;
+  }[];
 }

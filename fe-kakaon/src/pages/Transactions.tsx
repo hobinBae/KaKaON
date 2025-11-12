@@ -34,8 +34,8 @@ import { Transaction } from "@/types/api";
 import apiClient from "@/lib/apiClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
-function TransactionDetail({ transaction }: { transaction: Transaction }) {
-  const { data: orderDetail, isLoading } = useOrderDetail(transaction.id);
+function TransactionDetail({ orderId }: { orderId: number }) {
+  const { data: orderDetail, isLoading } = useOrderDetail(orderId);
 
   return (
     <Card className="p-4 bg-gray-50 rounded-lg">
@@ -111,7 +111,8 @@ export default function Transactions() {
     }
   );
 
-  const filteredTransactions = (ordersData?.transactions || []).filter(tx => {
+  const rawTransactions = ordersData?.transactions || [];
+  const filteredTransactions = rawTransactions.filter(tx => {
     // 날짜 필터
     if (dateRange?.from && dateRange?.to) {
       const txDate = new Date(tx.date);
@@ -891,7 +892,7 @@ export default function Transactions() {
                 </div>
               </div>
 
-              <TransactionDetail transaction={selectedTransaction} />
+              <TransactionDetail orderId={selectedTransaction.orderId} />
 
               {selectedTransaction.status === 'cancelled' && (
                 <Card className="p-4 bg-[#FF4D4D]/5 border-[#FF4D4D]/20 rounded-lg">

@@ -1,39 +1,21 @@
 import * as React from "react";
 import { Card } from "@/components/ui/card";
 import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
 import { DayProps } from "react-day-picker";
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-
-// 더미 데이터: 가게, 배달, 총 매출 포함
-const monthlySalesData: { [key: string]: { store: number; delivery: number } } = {
-  "2025-10-01": { store: 120000, delivery: 80000 },
-  "2025-10-02": { store: 150000, delivery: 90000 },
-  "2025-10-03": { store: 200000, delivery: 120000 },
-  "2025-10-04": { store: 180000, delivery: 110000 },
-  "2025-10-05": { store: 190000, delivery: 115000 },
-  "2025-10-07": { store: 220000, delivery: 130000 },
-  "2025-10-08": { store: 250000, delivery: 150000 },
-  "2025-10-09": { store: 210000, delivery: 140000 },
-  "2025-10-10": { store: 300000, delivery: 180000 },
-  "2025-10-11": { store: 280000, delivery: 170000 },
-  "2025-10-14": { store: 320000, delivery: 190000 },
-  "2025-10-15": { store: 350000, delivery: 210000 },
-  "2025-11-01": { store: 130000, delivery: 70000 },
-  "2025-11-02": { store: 160000, delivery: 85000 },
-  "2025-11-03": { store: 210000, delivery: 125000 },
-  "2025-11-04": { store: 190000, delivery: 115000 },
-  "2025-11-05": { store: 230000, delivery: 140000 },
-};
-
+import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carousel";
+import { useDashboardSummary, useMonthlySales } from "@/lib/hooks/useAnalytics";
+import { useUnreadAlertCount } from "@/lib/hooks/useAlerts";
+import { useBoundStore } from "@/stores/storeStore";
+import { DailySale } from "@/types/api";
+import { Skeleton } from "@/components/ui/skeleton";
+import { format } from "date-fns";
+import { ko } from "date-fns/locale";
 
 // 날짜를 'YYYY-MM-DD' 형식으로 변환하는 헬퍼 함수
 const formatDate = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return format(date, "yyyy-MM-dd");
 };
 
 // 금액을 K 또는 M 단위로 축약하는 함수
@@ -50,11 +32,11 @@ const formatSalesNumber = (num: number) => {
 };
 
 // 각 날짜 셀의 내용을 구성하는 커스텀 컴포넌트
-function DayContent({ date, displayMonth }: DayProps) {
+function DayContent({ date, displayMonth, monthlySalesData }: DayProps & { monthlySalesData: Map<string, DailySale> }) {
   const isOutsideDay = date.getMonth() !== displayMonth.getMonth();
   const dateString = formatDate(date);
-  const data = monthlySalesData[dateString];
-  const total = data ? data.store + data.delivery : 0;
+  const data = monthlySalesData.get(dateString);
+  const total = data ? data.totalSales : 0;
 
   return (
     <div className="flex flex-col h-full p-1 text-left text-[10px] tablet:text-xs">
@@ -68,8 +50,8 @@ function DayContent({ date, displayMonth }: DayProps) {
       <div className="flex-1 flex flex-col justify-end mt-1 space-y-0 tablet:space-y-0.5 text-right leading-tight tablet:leading-normal">
         {data && !isOutsideDay ? (
           <>
-            <div className="text-orange-500 truncate">{formatSalesNumber(data.store)}</div>
-            <div className="text-sky-500 truncate">{formatSalesNumber(data.delivery)}</div>
+            <div className="text-orange-500 truncate">{formatSalesNumber(data.storeSales)}</div>
+            <div className="text-sky-500 truncate">{formatSalesNumber(data.deliverySales)}</div>
             <div className="text-black font-semibold truncate">{formatSalesNumber(total)}</div>
           </>
         ) : (
@@ -93,7 +75,41 @@ const formatYAxis = (tick: number) => {
 
 export default function Dashboard() {
   const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [month, setMonth] = React.useState<Date>(new Date());
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
+  const { selectedStoreId } = useBoundStore();
+
+  const storeId = selectedStoreId ? Number(selectedStoreId) : 0;
+
+  const { data: summaryData, isLoading: isLoadingSummary, isError: isErrorSummary } = useDashboardSummary(storeId);
+  const { data: unreadCountData } = useUnreadAlertCount(selectedStoreId || "");
+  const { data: monthlyResponse, isLoading: isLoadingMonthly, isFetching: isFetchingMonthly, isError: isErrorMonthly } = useMonthlySales(
+    storeId,
+    formatDate(month)
+  );
+
+  const monthlySalesData = React.useMemo(() => {
+    const salesMap = new Map<string, DailySale>();
+    if (monthlyResponse?.dailySales) {
+      monthlyResponse.dailySales.forEach((sale) => {
+        // 오늘 날짜가 아닌 경우에만 통계 데이터를 사용
+        if (sale.date !== formatDate(new Date())) {
+          salesMap.set(sale.date, sale);
+        }
+      });
+    }
+    // 오늘 날짜 데이터는 summary API의 실시간 값으로 설정
+    if (summaryData) {
+      salesMap.set(formatDate(new Date()), {
+        date: formatDate(new Date()),
+        // summary API는 가게/배달 구분이 없으므로 totalSales에 값을 몰아넣음
+        storeSales: summaryData.todaySales,
+        deliverySales: 0,
+        totalSales: summaryData.todaySales,
+      });
+    }
+    return salesMap;
+  }, [monthlyResponse, summaryData]);
 
   React.useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -101,106 +117,44 @@ export default function Dashboard() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-
-  // 오늘 날짜를 "YYYY년 MM월 DD일 (요일)" 형식으로 생성
   const today = new Date();
-  const year = today.getFullYear();
-  const month = today.getMonth() + 1;
-  const day = today.getDate();
-  const dayOfWeek = ['일', '월', '화', '수', '목', '금', '토'][today.getDay()];
-  const todayString = `${year}년 ${month}월 ${day}일 (${dayOfWeek})`;
+  const todayString = format(today, "yyyy년 MM월 dd일 (eee)", { locale: ko });
 
   const formatWeekdayName = (date: Date) => {
     const weekdays = ["일", "월", "화", "수", "목", "금", "토"];
-    if (windowWidth < 800) {
-      return weekdays[date.getDay()];
-    }
-    return weekdays[date.getDay()] + '요일';
+    return windowWidth < 800 ? weekdays[date.getDay()] : weekdays[date.getDay()] + '요일';
   };
 
-  // 오늘 매출 계산
-  const todayDateString = formatDate(today);
-  const todaySales = monthlySalesData[todayDateString]
-    ? monthlySalesData[todayDateString].store + monthlySalesData[todayDateString].delivery
-    : 0;
-
-  // 어제 매출 계산
-  const yesterday = new Date(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayDateString = formatDate(yesterday);
-  const yesterdaySales = monthlySalesData[yesterdayDateString]
-    ? monthlySalesData[yesterdayDateString].store + monthlySalesData[yesterdayDateString].delivery
-    : 0;
-
-  // 어제 대비 계산
-  let yesterdayChangePercent = 0;
-  if (yesterdaySales > 0) {
-    yesterdayChangePercent = ((todaySales - yesterdaySales) / yesterdaySales) * 100;
-  }
+  const todaySales = summaryData?.todaySales ?? 0;
+  const yesterdayChangePercent = summaryData?.yesterdayGrowthRate ?? 0;
   const isYesterdayPositive = yesterdayChangePercent >= 0;
 
-  // 지난주 동일 요일 매출 계산
-  const lastWeek = new Date(today);
-  lastWeek.setDate(lastWeek.getDate() - 7);
-  const lastWeekDateString = formatDate(lastWeek);
-  const lastWeekSales = monthlySalesData[lastWeekDateString]
-    ? monthlySalesData[lastWeekDateString].store + monthlySalesData[lastWeekDateString].delivery
-    : 0;
-
-  // 지난주 대비 계산
-  let lastWeekChangePercent = 0;
-  if (lastWeekSales > 0) {
-    lastWeekChangePercent = ((todaySales - lastWeekSales) / lastWeekSales) * 100;
-  }
+  const lastWeekSales = summaryData?.lastWeekSameDaySales ?? 0;
+  const lastWeekChangePercent = summaryData?.lastWeekGrowthRate ?? 0;
   const isLastWeekPositive = lastWeekChangePercent >= 0;
 
-  // 이번 달 누적 매출 및 지난달 동일 일 수 대비 계산
-  const currentDayOfMonth = today.getDate();
-  const currentMonth = today.getMonth();
-  const currentYear = today.getFullYear();
-
-  let currentMonthCumulativeSales = 0;
-  for (let i = 1; i <= currentDayOfMonth; i++) {
-    const date = new Date(currentYear, currentMonth, i);
-    const dateString = formatDate(date);
-    if (monthlySalesData[dateString]) {
-      currentMonthCumulativeSales += monthlySalesData[dateString].store + monthlySalesData[dateString].delivery;
-    }
-  }
-
-  const prevMonthDate = new Date(today);
-  prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-  const prevMonth = prevMonthDate.getMonth();
-  const prevMonthYear = prevMonthDate.getFullYear();
-
-  let prevMonthCumulativeSales = 0;
-  for (let i = 1; i <= currentDayOfMonth; i++) {
-    const date = new Date(prevMonthYear, prevMonth, i);
-    const dateString = formatDate(date);
-    if (monthlySalesData[dateString]) {
-      prevMonthCumulativeSales += monthlySalesData[dateString].store + monthlySalesData[dateString].delivery;
-    }
-  }
-
-  let percentageChange = 0;
-  if (prevMonthCumulativeSales > 0) {
-    percentageChange = ((currentMonthCumulativeSales - prevMonthCumulativeSales) / prevMonthCumulativeSales) * 100;
-  }
+  const currentMonthCumulativeSales = summaryData?.monthlyTotalSales ?? 0;
+  const percentageChange = summaryData?.monthlyGrowthRate ?? 0;
   const isPositiveChange = percentageChange >= 0;
 
-  // 최근 7일 매출 데이터 생성 (오늘 포함)
-  const salesData = [];
-  for (let i = 6; i >= 0; i--) {
-    const date = new Date(today);
-    date.setDate(date.getDate() - i);
-    const dateString = formatDate(date);
-    const data = monthlySalesData[dateString];
-    const amount = data ? data.store + data.delivery : 0;
+  const unreadCount = unreadCountData?.unreadCount ?? 0;
 
-    salesData.push({
-      date: `${date.getMonth() + 1}/${date.getDate()}`,
-      amount: amount,
-    });
+  const salesData = summaryData?.recent7Days.map(d => ({
+    date: format(new Date(d.date), "M/d"),
+    amount: d.totalSales,
+  })) ?? [];
+
+  if (isLoadingSummary) {
+    return (
+      <div className="flex flex-col space-y-6">
+        <Skeleton className="h-8 w-32 mb-2" />
+        <Skeleton className="h-4 w-48" />
+      </div>
+    );
+  }
+
+  if (isErrorSummary || isErrorMonthly) {
+    return <div>데이터를 불러오는 중 오류가 발생했습니다.</div>;
   }
 
   return (
@@ -220,7 +174,7 @@ export default function Dashboard() {
         {/* Left: Calendar */}
         <div className="w-full lg:w-3/4">
           <Card className="p-2 tablet:p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none h-full flex flex-col">
-            <div className="flex justify-end text-xs tablet:text-sm space-x-2 tablet:space-x-4 pr-2 tablet:pr-4 mb-2">
+            <div className="flex justify-end text-xs tablet:text-sm space-x-2 tablet:space-x-4 pr-2 tablet:pr-4">
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 tablet:w-3 tablet:h-3 bg-orange-500 rounded-full" />
                 <span>가게</span>
@@ -238,12 +192,22 @@ export default function Dashboard() {
               <Calendar
                 mode="single"
                 selected={date}
+                month={month}
+                onMonthChange={setMonth}
                 onSelect={setDate}
                 components={{
-                  Day: DayContent,
+                  Day: (props) => <DayContent {...props} monthlySalesData={monthlySalesData} />,
                 }}
                 className="w-full"
-                formatters={{ formatWeekdayName }}
+                formatters={{ 
+                  formatCaption: (date) => (
+                    <div className="flex justify-center items-baseline">
+                      <span className="font-medium">{format(date, "yyyy년")}</span>
+                      <span className="text-3xl font-medium ml-2">{format(date, "M월")}</span>
+                    </div>
+                  ),
+                  formatWeekdayName 
+                }}
               />
             </div>
           </Card>
@@ -252,7 +216,6 @@ export default function Dashboard() {
         {/* Right: Stats Cards */}
         <div className="w-full lg:w-1/4">
           <div className="hidden sm:grid grid-cols-2 lg:flex lg:flex-col gap-4">
-            {/* Desktop View */}
             <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm text-[#717182]">오늘 매출</span>
@@ -289,7 +252,7 @@ export default function Dashboard() {
               <div className="text-xl tablet:text-2xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
               <div className={`flex items-center gap-1 text-xs tablet:text-sm ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
                 {isPositiveChange ? <TrendingUp className="w-3 h-3 tablet:w-4 tablet:h-4" /> : <TrendingDown className="w-3 h-3 tablet:w-4 tablet:h-4" />}
-                <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
+                <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 대비</span>
               </div>
             </Card>
             <Card className="p-4 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none flex-1">
@@ -299,8 +262,12 @@ export default function Dashboard() {
                   <AlertTriangle className="w-4 h-4 tablet:w-5 tablet:h-5 text-[#FF4D4D]" />
                 </div>
               </div>
-              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">2건</div>
-              <div className="text-xs tablet:text-sm text-[#FF4D4D]">미확인 알림 있음</div>
+              <div className="text-xl tablet:text-2xl text-[#333333] mb-2">{unreadCount}건</div>
+              {unreadCount > 0 ? (
+                <div className="text-xs tablet:text-sm text-[#FF4D4D]">미확인 알림 있음</div>
+              ) : (
+                <div className="text-xs tablet:text-sm text-gray-500">새로운 알림 없음</div>
+              )}
             </Card>
           </div>
           <Carousel className="sm:hidden">
@@ -346,7 +313,7 @@ export default function Dashboard() {
                   <div className="text-xl text-[#333333] mb-2">{currentMonthCumulativeSales.toLocaleString()}원</div>
                   <div className={`flex items-center gap-1 text-xs ${isPositiveChange ? "text-[#4CAF50]" : "text-[#FF9800]"}`}>
                     {isPositiveChange ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                    <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 동일 일 수 대비</span>
+                    <span>{Math.abs(percentageChange).toFixed(1)}% 지난달 대비</span>
                   </div>
                 </Card>
               </CarouselItem>
@@ -358,12 +325,15 @@ export default function Dashboard() {
                       <AlertTriangle className="w-4 h-4 text-[#FF4D4D]" />
                     </div>
                   </div>
-                  <div className="text-xl text-[#333333] mb-2">2건</div>
-                  <div className="text-xs text-[#FF4D4D]">미확인 알림 있음</div>
+                  <div className="text-xl text-[#333333] mb-2">{unreadCount}건</div>
+                  {unreadCount > 0 ? (
+                    <div className="text-xs text-[#FF4D4D]">미확인 알림 있음</div>
+                  ) : (
+                    <div className="text-xs text-gray-500">새로운 알림 없음</div>
+                  )}
                 </Card>
               </CarouselItem>
             </CarouselContent>
-            
           </Carousel>
         </div>
       </div>
@@ -372,7 +342,7 @@ export default function Dashboard() {
       <Card className="p-2 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
         <h3 className="text-[#333333] mb-4 tablet:mb-6">최근 7일 매출 추이</h3>
         <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={salesData} margin={{ top: 5, right: 20, left: -10, bottom: 20 }}>
+          <AreaChart data={salesData} margin={{ top: 5, right: 20, left: -10, bottom: 20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
             <XAxis dataKey="date" stroke="#717182" />
             <YAxis stroke="#717182" tickFormatter={formatYAxis} />
@@ -388,15 +358,17 @@ export default function Dashboard() {
               }}
               formatter={(value: number) => `${value.toLocaleString()}원`}
             />
-            <Line
+            <Area
               type="linear"
               dataKey="amount"
               name="총액"
               stroke="#FEE500"
               strokeWidth={3}
-              dot={{ fill: '#FEE500', r: 4 }}
+              fill="#c9c380ff"
+              fillOpacity={0.05}
+              dot={{ stroke: '#f5ab0bff', fill: '#FFFFFF', strokeWidth: 3, r: 4 }}
             />
-          </LineChart>
+          </AreaChart>
         </ResponsiveContainer>
       </Card>
     </div>
