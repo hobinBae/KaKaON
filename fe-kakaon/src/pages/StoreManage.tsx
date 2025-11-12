@@ -751,9 +751,9 @@ export default function StoreManage() {
                     <TableCell className="text-right hidden md:table-cell">
                       <div className="flex gap-2 justify-end">
                         <Button
-                          variant="secondary"
+                          variant="outline"
                           size="sm"
-                          className="rounded-lg h-8 px-3 text-xs"
+                          className="rounded-lg h-8 px-3 text-xs border-gray-300 hover:bg-gray-100"
                           onClick={(e) => {
                             e.stopPropagation(); // 행 클릭 이벤트 전파 방지
                             setGlobalSelectedStoreId(String(store.storeId));
@@ -763,9 +763,9 @@ export default function StoreManage() {
                           거래내역
                         </Button>
                         <Button
-                          variant="secondary"
+                          variant="outline"
                           size="sm"
-                          className="rounded-lg h-8 px-3 text-xs"
+                          className="rounded-lg h-8 px-3 text-xs border-gray-300 hover:bg-gray-100"
                           onClick={(e) => {
                             e.stopPropagation(); // 행 클릭 이벤트 전파 방지
                             setGlobalSelectedStoreId(String(store.storeId));

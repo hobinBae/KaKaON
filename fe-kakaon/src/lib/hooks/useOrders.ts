@@ -44,6 +44,7 @@ const getOrders = async (storeId: number): Promise<Transaction[]> => {
   const orders = response.data.data.content;
   return orders.map((order: any) => ({
     id: order.orderId,
+    orderId: order.orderId,
     items: order.items.map((item: any) => ({
       name: item.menuName,
       quantity: item.quantity,
@@ -112,6 +113,7 @@ const getFilteredOrders = async (storeId: number, filters: OrderFilters) => {
   
   const transactions: Transaction[] = content.map((order: any) => ({
     id: order.orderId,
+    orderId: order.orderId,
     items: order.items.map((item: any) => ({
       name: item.menuName,
       quantity: item.quantity,
@@ -147,6 +149,7 @@ const getOrderDetail = async (orderId: number): Promise<Transaction> => {
   const orderDetail = response.data.data;
   return {
     id: orderDetail.orderId,
+    orderId: orderDetail.orderId,
     items: orderDetail.items.map((item: any) => ({
       name: item.menuName,
       quantity: item.quantity,

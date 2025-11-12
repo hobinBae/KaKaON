@@ -181,6 +181,7 @@ export interface Alert {
 
 export interface PaymentSimpleInfo {
   paymentId: number;
+  orderId: number;
   authorizationNo: string;
   amount: number;
   paymentMethod: string;

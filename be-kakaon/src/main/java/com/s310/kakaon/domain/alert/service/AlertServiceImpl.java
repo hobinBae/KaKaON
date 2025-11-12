@@ -19,6 +19,7 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -136,12 +137,13 @@ public class AlertServiceImpl implements AlertService{
                     Payment payment = alertPayment.getPayment();
                     return PaymentSimpleResponseDto.builder()
                             .paymentId(payment.getId())
+                            .orderId(payment.getOrder().getOrderId())
                             .authorizationNo(payment.getAuthorizationNo())
                             .amount(payment.getAmount())
                             .paymentMethod(payment.getPaymentMethod())
                             .build();
                 })
-                .toList();
+                .collect(Collectors.toList());
 
 
         return AlertDetailResponseDto.builder()
