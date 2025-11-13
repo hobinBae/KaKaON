@@ -5,6 +5,7 @@ import com.s310.kakaon.domain.alert.entity.AlertType;
 import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
@@ -29,9 +30,21 @@ public class DuplicatePaymentDetector implements FraudDetector {
     public List<AlertEvent> detect(PaymentEventDto event) {
         String redisKey = generateRedisKey(event);
 
-        // 1) 현재 이벤트 추가
-        paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
-        paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 5));
+        // Redis Transaction 또는 Lua Script 사용 권장
+        paymentEventRedisTemplate.execute((RedisCallback<Object>) connection -> {
+            connection.multi();
+
+            // 1) 현재 이벤트 추가
+            paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
+            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 5));
+
+            connection.exec();
+            return null;
+        });
+
+//        // 1) 현재 이벤트 추가
+//        paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
+//        paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 5));
 
         // 2) 전체 윈도우 조회 (이미 타입이 PaymentEventDto)
         List<PaymentEventDto> rawList =
@@ -106,7 +119,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
     }
 
     private String generateRedisKey(PaymentEventDto event) {
-        return String.format("%s%d-%s-%s",
+        return String.format("%s%d-%s-%d",
                 REDIS_KEY_PREFIX,
                 event.getStoreId(),
                 event.getPaymentMethod(),
