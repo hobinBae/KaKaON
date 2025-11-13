@@ -185,7 +185,7 @@ public class StoreServiceImpl implements StoreService{
     @Transactional(readOnly = true)
     public PageResponse<StoreResponseDto> getMyStores(Long memberId, Pageable pageable) {
 
-         memberRepository.findById(memberId)
+         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Page<Store> stores = storeRepository.findByMemberId(memberId, pageable);
@@ -210,7 +210,9 @@ public class StoreServiceImpl implements StoreService{
         Page<StoreResponseDto> responsePage = stores.map(store -> {
             Long storeId = store.getId();
             Long unreadCount = unreadCountMap.getOrDefault(storeId, 0L);
-
+            Long currentFavoriteStore = member.getFavoriteStore() != null
+                    ? member.getFavoriteStore().getId()
+                    : null;
             // 오늘 매출 및 취소율 (Redis)
             var todayStats = salesCacheService.getSalesStats(storeId, redisDate);
             salesCacheService.getSalesStats(storeId, redisDate);
@@ -235,7 +237,7 @@ public class StoreServiceImpl implements StoreService{
                     .stream()
                     .mapToInt(PaymentStats::getTotalSales)
                     .sum() + todaySales;
-            return storeMapper.toResponseDto(store, unreadCount, todaySales, yesterdayGrowthRate, weeklySales, monthlySales, todayCancelRate);
+            return storeMapper.toResponseDto(store, unreadCount, todaySales, yesterdayGrowthRate, weeklySales, monthlySales, todayCancelRate, currentFavoriteStore);
         });
 
         return PageResponse.from(responsePage);

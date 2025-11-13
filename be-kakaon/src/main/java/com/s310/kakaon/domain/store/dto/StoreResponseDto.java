@@ -14,6 +14,7 @@ public class StoreResponseDto {
     private String name;
     private OperationStatus status;
     private Long unreadCount;
+    private boolean isFavorite;
 
     // 매출 정보
     private Integer todaySales;           // 오늘 매출
