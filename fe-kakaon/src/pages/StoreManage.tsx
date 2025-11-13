@@ -215,7 +215,7 @@ export default function StoreManage() {
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
-  const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
+  const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('FOOD');
 
   // 사업자번호 포맷팅 함수
   const formatBusinessNumber = (value: string) => {
@@ -287,7 +287,7 @@ export default function StoreManage() {
   // 가맹점 정보 수정을 위한 상태
   const [editingStoreName, setEditingStoreName] = useState("");
   const [editingStorePhone, setEditingStorePhone] = useState("");
-  const [editingStoreType, setEditingStoreType] = useState<BusinessType>('RESTAURANT');
+  const [editingStoreType, setEditingStoreType] = useState<BusinessType>('FOOD');
   const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
 
   useEffect(() => {
@@ -431,7 +431,7 @@ export default function StoreManage() {
         // 상태 초기화
         setNewStoreName("");
         setNewStoreBusinessNumber("");
-        setNewStoreType("RESTAURANT");
+        setNewStoreType("FOOD");
         setNewStoreBaseAddress("");
         setNewStoreDetailAddress("");
         setNewStorePhone("");
@@ -617,9 +617,11 @@ export default function StoreManage() {
                     <SelectValue placeholder="업종을 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="RESTAURANT">음식점</SelectItem>
-                    <SelectItem value="CAFE">카페</SelectItem>
-                    <SelectItem value="ETC">기타</SelectItem>
+                    <SelectItem value="FOOD">음식업</SelectItem>
+                    <SelectItem value="RETAIL">소매업</SelectItem>
+                    <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
+                    <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
+                    <SelectItem value="LODGING">숙박업</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -920,9 +922,11 @@ export default function StoreManage() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="RESTAURANT">음식점</SelectItem>
-                                        <SelectItem value="CAFE">카페</SelectItem>
-                                        <SelectItem value="ETC">기타</SelectItem>
+                                        <SelectItem value="FOOD">음식업</SelectItem>
+                                        <SelectItem value="RETAIL">소매업</SelectItem>
+                                        <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
+                                        <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
+                                        <SelectItem value="LODGING">숙박업</SelectItem>
                                       </SelectContent>
                                     </Select>
                                   </div>
