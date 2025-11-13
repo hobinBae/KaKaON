@@ -1,9 +1,6 @@
 package com.s310.kakaon.domain.analytics.controller;
 
-import com.s310.kakaon.domain.analytics.dto.PaymentMethodRatioResponseDto;
-import com.s310.kakaon.domain.analytics.dto.SalesHourlyResponseDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodRequestDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodResponseDto;
+import com.s310.kakaon.domain.analytics.dto.*;
 import com.s310.kakaon.domain.analytics.service.AnalyticsService;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.global.dto.ApiResponse;
@@ -93,5 +90,26 @@ public class AnalyticsController {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         PaymentMethodRatioResponseDto response = analyticsService.getPaymentMethodRatioByPeriod(storeId, memberId, period);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "결제수단별 매출 합계 조회 성공", response, request.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "취소율 조회",
+            description = """
+                    ** 오늘 매출 포함..
+                    기간 타입(WEEK(최근 7일)/MONTH/YEAR/RANGE),
+                    조회 시작 날짜 (기간 타입 "RANGE" 시 필수), 
+                    조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
+                    """
+    )
+    @GetMapping("{storeId}/sales/cancel-rate")
+    public ResponseEntity<ApiResponse<CancelRateResponseDto>> getCancelRateByPeriod(
+            @PathVariable Long storeId,
+            @AuthenticationPrincipal String kakaoId,
+            @ParameterObject @ModelAttribute SalesPeriodRequestDto period,
+            HttpServletRequest request
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        CancelRateResponseDto response = analyticsService.getCancelRateByPeriod(storeId, memberId, period);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "취소율 조회 성공", response, request.getRequestURI()));
     }
 }

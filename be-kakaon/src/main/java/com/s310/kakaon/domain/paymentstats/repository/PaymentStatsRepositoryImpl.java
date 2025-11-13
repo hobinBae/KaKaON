@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.paymentstats.repository;
 
 import com.querydsl.core.types.Projections;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+import com.s310.kakaon.domain.analytics.dto.CancelRateResponseDto;
 import com.s310.kakaon.domain.analytics.dto.MonthlySalesDto;
 import com.s310.kakaon.domain.analytics.dto.PaymentMethodRatioResponseDto;
 import com.s310.kakaon.domain.paymentstats.entity.QPaymentStats;
@@ -85,6 +86,46 @@ public class PaymentStatsRepositoryImpl implements PaymentStatsRepositoryCustom 
                         .and(paymentStats.statsDate.between(startDate, endDate)))
                 .fetchOne();
 
+
+    }
+
+    @Override
+    public List<CancelRateResponseDto.CancelRateDailyDto> findCancelRateByPeriod(Long storeId, String periodType, LocalDate startDate, LocalDate endDate) {
+
+            if(!periodType.equalsIgnoreCase("YEAR")) {
+                return queryFactory
+                        .select(Projections.constructor(CancelRateResponseDto.CancelRateDailyDto.class,
+                                paymentStats.statsDate.stringValue(),
+                                paymentStats.cancelCnt.sum()
+                                        .divide(paymentStats.salesCnt.sum().doubleValue()).multiply(100.0),
+                                paymentStats.salesCnt.sum(),
+                                paymentStats.cancelCnt.sum()))
+                        .from(paymentStats)
+                        .where(
+                                paymentStats.store.id.eq(storeId)
+                                                .and(paymentStats.statsDate.between(startDate, endDate)))
+                        .groupBy(paymentStats.statsDate)
+                        .orderBy(paymentStats.statsDate.asc())
+                        .fetch();
+            }
+
+            return queryFactory
+                    .select(Projections.constructor(CancelRateResponseDto.CancelRateDailyDto.class,
+                            com.querydsl.core.types.dsl.Expressions.stringTemplate(
+                                    "CONCAT({0}, '-', LPAD({1}, 2, '0'))",
+                                            paymentStats.statsDate.year().min().stringValue(),
+                                            paymentStats.statsDate.month().min().stringValue()),
+                            paymentStats.cancelCnt.sum()
+                                    .divide(paymentStats.salesCnt.sum().doubleValue()).multiply(100.0),
+                            paymentStats.salesCnt.sum(),
+                            paymentStats.cancelCnt.sum()))
+                    .from(paymentStats)
+                    .where(
+                            paymentStats.store.id.eq(storeId)
+                                    .and(paymentStats.statsDate.between(startDate, endDate)))
+                    .groupBy(paymentStats.statsDate.month())
+                    .orderBy(paymentStats.statsDate.month().asc())
+                    .fetch();
 
     }
 
