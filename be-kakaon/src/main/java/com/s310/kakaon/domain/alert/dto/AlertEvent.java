@@ -1,7 +1,6 @@
 package com.s310.kakaon.domain.alert.dto;
 
 import com.s310.kakaon.domain.alert.entity.AlertType;
-import com.s310.kakaon.domain.payment.entity.Payment;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
