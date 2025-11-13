@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -112,7 +111,7 @@ export default function Settings() {
   };
 
   if (isLoading) {
-    return <SettingsSkeleton />;
+    return null;
   }
 
   if (isError) {
@@ -267,34 +266,4 @@ export default function Settings() {
   );
 }
 
-// 로딩 상태를 표시하기 위한 스켈레톤 컴포넌트
-const SettingsSkeleton = () => (
-  <div className="space-y-6">
-    <div>
-      <Skeleton className="h-8 w-24 mb-2" />
-      <Skeleton className="h-4 w-48" />
-    </div>
-    <div className="max-w-2xl mx-auto space-y-6">
-      <Card className="p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <Skeleton className="h-6 w-32 mb-6" />
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-16" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-          <div className="space-y-2">
-            <Skeleton className="h-4 w-24" />
-            <Skeleton className="h-10 w-full" />
-          </div>
-        </div>
-      </Card>
-      <div className="flex justify-center">
-        <Skeleton className="h-10 w-full max-w-xs" />
-      </div>
-    </div>
-  </div>
-);
+

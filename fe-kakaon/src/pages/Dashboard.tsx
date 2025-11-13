@@ -10,7 +10,6 @@ import { useUnreadAlertCount } from "@/lib/hooks/useAlerts";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useBoundStore } from "@/stores/storeStore";
 import { DailySale, Transaction } from "@/types/api";
-import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
 import { ko } from "date-fns/locale";
 
@@ -97,15 +96,19 @@ export default function Dashboard() {
   const todayRealtimeSale = React.useMemo(() => {
     if (!todayPaymentsData?.transactions) return null;
 
+    const todayStr = formatDate(new Date());
     const dailySale: DailySale = {
-      date: formatDate(new Date()),
+      date: todayStr,
       storeSales: 0,
       deliverySales: 0,
       totalSales: 0,
     };
 
     todayPaymentsData.transactions.forEach((tx: Transaction) => {
-      if (tx.status !== 'completed') return;
+      // Defensive check: Ensure the transaction date is actually today.
+      const transactionDateStr = format(new Date(tx.date), "yyyy-MM-dd");
+      if (tx.status !== 'completed' || transactionDateStr !== todayStr) return;
+
       if (tx.orderType === '배달 주문') {
         dailySale.deliverySales += tx.total;
       } else {
@@ -165,12 +168,7 @@ export default function Dashboard() {
   })) ?? [];
 
   if (isLoadingSummary) {
-    return (
-      <div className="flex flex-col space-y-6">
-        <Skeleton className="h-8 w-32 mb-2" />
-        <Skeleton className="h-4 w-48" />
-      </div>
-    );
+    return null;
   }
 
   if (isErrorSummary || isErrorMonthly) {
