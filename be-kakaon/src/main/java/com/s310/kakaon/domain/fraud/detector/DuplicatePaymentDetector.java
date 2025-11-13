@@ -115,7 +115,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
 
     @Override
     public AlertType getAlertType() {
-        return AlertType.DUPLICATE_PAYMENT;
+        return AlertType.REPEATED_PAYMENT;
     }
 
     private String generateRedisKey(PaymentEventDto event) {
