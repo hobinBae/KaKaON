@@ -10,6 +10,8 @@ import type {
   AlertRecipient,
   AlertRecipientCreateRequest,
   AlertRecipientUpdateRequest,
+  FavoriteDetailResponse, // 즐겨찾기 타입 추가
+  FavoriteResponse, // 즐겨찾기 타입 추가
 } from '@/types/api';
 import apiClient from '@/lib/apiClient';
 
@@ -79,6 +81,20 @@ const deleteAlertRecipient = async ({ storeId, alertId }: { storeId: number; ale
   await apiClient.delete(`/stores/${storeId}/alert-recipient/${alertId}`);
 };
 
+// ================== 즐겨찾기 API 함수들 ==================
+
+// 즐겨찾기 가맹점 정보를 가져오는 API 함수
+const getFavoriteStore = async (): Promise<FavoriteDetailResponse> => {
+  const response = await apiClient.get('/stores/favorite');
+  return response.data.data;
+};
+
+// 즐겨찾기를 토글하는 API 함수
+const toggleFavoriteStore = async (storeId: number): Promise<FavoriteResponse> => {
+  const response = await apiClient.patch(`/stores/${storeId}/favorite`);
+  return response.data.data;
+};
+
 
 const storeKeys = {
   all: ['stores'] as const,
@@ -87,6 +103,7 @@ const storeKeys = {
   detail: (id: number) => [...storeKeys.details(), id] as const,
   operationStatus: (id: number) => [...storeKeys.all, 'operation-status', id] as const,
   alertRecipients: (id: number) => [...storeKeys.all, 'alert-recipients', id] as const,
+  favorite: () => [...storeKeys.all, 'favorite'] as const, // 즐겨찾기 쿼리 키 추가
 };
 
 /**
@@ -251,6 +268,35 @@ export const useDeleteAlertRecipient = () => {
     mutationFn: deleteAlertRecipient,
     onSuccess: () => {
       // 성공 시 별도 처리 없음.
+    },
+  });
+};
+
+// ================== 즐겨찾기 관련 훅 ==================
+
+/**
+ * 즐겨찾기(대표) 가맹점 정보를 조회하는 커스텀 훅
+ */
+export const useFavoriteStore = () => {
+  return useQuery({
+    queryKey: storeKeys.favorite(),
+    queryFn: getFavoriteStore,
+  });
+};
+
+/**
+ * 즐겨찾기(대표) 가맹점을 설정/해제하는 커스텀 훅
+ */
+export const useToggleFavoriteStore = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: toggleFavoriteStore,
+    onSuccess: (data) => {
+      // 즐겨찾기 상태가 변경되었으므로 관련 쿼리를 모두 무효화하여 최신 상태로 업데이트
+      queryClient.invalidateQueries({ queryKey: storeKeys.favorite() });
+      queryClient.invalidateQueries({ queryKey: storeKeys.lists() });
+      // 상세 정보 캐시도 업데이트 할 수 있지만, 무효화로 처리해도 충분
+      queryClient.invalidateQueries({ queryKey: storeKeys.detail(data.storeId) });
     },
   });
 };

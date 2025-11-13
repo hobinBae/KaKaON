@@ -11,6 +11,7 @@ import lombok.NoArgsConstructor;
 @Getter
 public class PaymentSimpleResponseDto {
     private Long paymentId;
+    private Long orderId;
     private String authorizationNo;
     private Integer amount;
     private PaymentMethod paymentMethod;

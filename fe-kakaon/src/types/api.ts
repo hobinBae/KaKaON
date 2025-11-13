@@ -119,6 +119,19 @@ export interface AlertRecipientUpdateRequest {
   active?: boolean;
 }
 
+// 즐겨찾기(대표 가맹점) 상세 응답 타입
+export interface FavoriteDetailResponse {
+  storeId: number;
+  storeName: string;
+  hasFavorite: boolean;
+}
+
+// 즐겨찾기 토글 응답 타입
+export interface FavoriteResponse {
+  storeId: number;
+  isFavorite: boolean;
+}
+
 // ================== Menu ==================
 export interface Menu {
   id: number;
@@ -168,6 +181,7 @@ export interface Alert {
 
 export interface PaymentSimpleInfo {
   paymentId: number;
+  orderId: number;
   authorizationNo: string;
   amount: number;
   paymentMethod: string;

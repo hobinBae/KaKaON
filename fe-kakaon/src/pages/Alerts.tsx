@@ -19,21 +19,62 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { useBoundStore } from "@/stores/storeStore";
 import { useAlerts, useReadAlert, useReadAllAlerts, useAlertDetail } from "@/lib/hooks/useAlerts";
-import { Alert, AlertSearchRequest, AlertType as ApiAlertType } from "@/types/api";
+import { useOrderDetail } from "@/lib/hooks/useOrders";
+import { Alert, AlertSearchRequest, AlertType as ApiAlertType, PaymentSimpleInfo } from "@/types/api";
 import { getAlertTypeKorean } from "@/lib/utils";
 
-const transactionDetails = {
-  'TX-20251015-003': { id: 'TX-20251015-003', time: '2025-10-15 14:10:05', amount: 15000, method: '카드결제', status: '취소' },
-  'TX-20251015-008': { id: 'TX-20251015-008', time: '2025-10-15 12:58:14', amount: 48000, method: '카드결제', status: '취소' },
-};
+// TransactionDetail 컴포넌트를 Transactions.tsx에서 가져오거나 여기에 정의해야 합니다.
+// 우선 간단하게 여기에 정의하겠습니다.
+function TransactionDetail({ orderId }: { orderId: number }) {
+  const { data: orderDetail, isLoading } = useOrderDetail(orderId);
+
+  return (
+    <Card className="p-4 bg-gray-50 rounded-lg">
+      <h3 className="text-sm font-semibold mb-2">주문상세내역</h3>
+      {isLoading ? (
+        <div>로딩 중...</div>
+      ) : orderDetail ? (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>상품명</TableHead>
+                <TableHead className="text-right">수량</TableHead>
+                <TableHead className="text-right">가격</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orderDetail.items.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{(item.price * item.quantity).toLocaleString()}원</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="text-right font-bold mt-2">
+            합계: {orderDetail.total.toLocaleString()}원
+          </div>
+        </>
+      ) : (
+        <div>주문 상세 내역을 불러올 수 없습니다.</div>
+      )}
+    </Card>
+  );
+}
+
 
 export default function Alerts() {
   const { selectedStoreId } = useBoundStore();
   const [selectedAlertId, setSelectedAlertId] = useState<number | null>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<typeof transactionDetails[keyof typeof transactionDetails] | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const { data: selectedOrderDetail } = useOrderDetail(selectedOrderId);
+
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfMonth(new Date()),
@@ -594,8 +635,8 @@ export default function Alerts() {
                 <div>
                   <h4 className="text-sm font-semibold mb-2">관련 거래 내역</h4>
                   <div className="space-y-2">
-                    {selectedAlertDetail.payments.map(p => (
-                       <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedTransaction(transactionDetails['TX-20251015-003'])}>
+                    {selectedAlertDetail.payments.map((p: PaymentSimpleInfo) => (
+                       <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedOrderId(p.orderId)}>
                        <div className="flex justify-between">
                          <span className="font-medium">승인번호: {p.authorizationNo}</span>
                          <span>{p.amount.toLocaleString()}원</span>
@@ -623,43 +664,53 @@ export default function Alerts() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!selectedTransaction} onOpenChange={() => setSelectedTransaction(null)}>
+      <Dialog open={!!selectedOrderId} onOpenChange={() => setSelectedOrderId(null)}>
         <DialogContent className="max-w-2xl rounded-xl">
           <DialogHeader>
             <DialogTitle>결제 상세정보</DialogTitle>
           </DialogHeader>
-          {selectedTransaction && (
+          {selectedOrderDetail && (
             <div className="space-y-6">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <div className="text-sm text-[#717182] mb-1">결제ID</div>
-                  <div className="text-[#333333]">{selectedTransaction.id}</div>
-                </div>
-                <div>
                   <div className="text-sm text-[#717182] mb-1">결제시간</div>
-                  <div className="text-[#333333]">{selectedTransaction.time}</div>
+                  <div className="text-[#333333]">{format(new Date(selectedOrderDetail.date), 'yyyy.MM.dd (eee) HH:mm', { locale: ko })}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-[#717182] mb-1">결제금액</div>
-                  <div className="text-[#333333]">{selectedTransaction.amount.toLocaleString()}원</div>
+                  <div className="text-sm text-[#717182] mb-1">주문 구분</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.orderType}</div>
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">결제수단</div>
-                  <div className="text-[#333333]">{selectedTransaction.method}</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.paymentMethod}</div>
                 </div>
                 <div>
-                  <div className="text-sm text-[#717182] mb-1">결제상태</div>
-                  <Badge
-                    variant={selectedTransaction.status === '취소' ? 'destructive' : 'secondary'}
-                    className="rounded"
-                  >
-                    {selectedTransaction.status}
+                  <div className="text-sm text-[#717182] mb-1">결제 상태</div>
+                  <Badge variant={selectedOrderDetail.status === 'cancelled' ? 'destructive' : 'secondary'} className="rounded">
+                    {selectedOrderDetail.status === 'completed' ? '완료' : '취소'}
                   </Badge>
                 </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">승인번호</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.id}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제금액</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.total.toLocaleString()}원</div>
+                </div>
               </div>
-              <Button variant="outline" className="w-full rounded-lg" onClick={() => setSelectedTransaction(null)}>
-                닫기
-              </Button>
+
+              <TransactionDetail orderId={selectedOrderDetail.orderId} />
+
+              {selectedOrderDetail.status === 'cancelled' && (
+                <Card className="p-4 bg-[#FF4D4D]/5 border-[#FF4D4D]/20 rounded-lg">
+                  <div className="text-sm text-[#FF4D4D]">⚠️ 이 거래는 취소되었습니다. 관련 이상거래 알림을 확인하세요.</div>
+                </Card>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedOrderId(null)}>닫기</Button>
+              </div>
             </div>
           )}
         </DialogContent>
@@ -668,6 +719,7 @@ export default function Alerts() {
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent className="sm:max-w-[280px] rounded-xl border-0 shadow-xl p-5 gap-3">
           <AlertDialogHeader className="text-center pb-0 gap-2">
+            <AlertDialogTitle>알림</AlertDialogTitle>
             <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE500]">
               <svg
                 className="h-6 w-6 text-[#3C1E1E]"

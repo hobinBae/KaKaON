@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
-import { useState, useRef } from "react";
+import { useState, useRef, useMemo, useEffect } from "react";
 import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X } from "lucide-react";
 import {
   DropdownMenu,
@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useBoundStore } from "@/stores/storeStore";
-import { useMyStores } from "@/lib/hooks/useStores";
+import { useMyStores, useFavoriteStore } from "@/lib/hooks/useStores";
 import { useLogout } from "@/auth/hooks/useAuth";
 import { useAllAlerts, useReadAlert, useAlertDetail } from "@/lib/hooks/useAlerts";
 import { getAlertTypeKorean } from "@/lib/utils";
@@ -42,11 +42,30 @@ export function AppLayout() {
   const { mutate: logout } = useLogout();
 
   const { data: stores, isLoading: isLoadingStores, isError: isErrorStores } = useMyStores();
+  const { data: favoriteStore } = useFavoriteStore();
+
+  const sortedStores = useMemo(() => {
+    if (!stores) return [];
+    const favoriteStoreId = favoriteStore?.storeId;
+    return [...stores].sort((a, b) => {
+      if (a.storeId === favoriteStoreId) return -1;
+      if (b.storeId === favoriteStoreId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+  }, [stores, favoriteStore]);
 
   // 전체 알림을 가져오는 훅으로 변경
   const { alerts, unreadCount } = useAllAlerts();
   const { data: selectedAlertDetail } = useAlertDetail(selectedAlertId ? String(selectedAlertId.storeId) : null, selectedAlertId ? selectedAlertId.alertId : null);
   const { mutate: readAlert } = useReadAlert();
+
+  useEffect(() => {
+    // 현재 선택된 가맹점이 없고, 정렬된 가맹점 목록이 있을 때
+    if (!selectedStoreId && sortedStores && sortedStores.length > 0) {
+      // 목록의 첫 번째 가맹점을 기본으로 선택
+      setSelectedStoreId(String(sortedStores[0].storeId));
+    }
+  }, [sortedStores, selectedStoreId, setSelectedStoreId]);
 
   const handleAlertClick = (alert: Alert & { storeId: number }) => {
     isOpeningModal.current = true;
@@ -191,8 +210,8 @@ export function AppLayout() {
                 </SelectTrigger>
                 <SelectContent>
                   {isErrorStores && <SelectItem value="error" disabled>매장 목록을 불러올 수 없습니다.</SelectItem>}
-                  {stores && stores.length > 0 ? (
-                    stores.map((store) => (
+                  {sortedStores && sortedStores.length > 0 ? (
+                    sortedStores.map((store) => (
                       <SelectItem key={store.storeId} value={String(store.storeId)}>
                         {store.name}
                       </SelectItem>
