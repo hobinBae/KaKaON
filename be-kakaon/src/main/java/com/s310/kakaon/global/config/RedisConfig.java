@@ -1,5 +1,10 @@
 package com.s310.kakaon.global.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,6 +13,7 @@ import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactor
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
@@ -49,4 +55,31 @@ public class RedisConfig {
 
         return redisTemplate;
     }
+
+    // 중복 결제 탐지용 Redis 저장소
+    @Bean
+    @Qualifier("paymentEventRedisTemplate")
+    public RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate(
+            RedisConnectionFactory cf,
+            ObjectMapper objectMapper
+    ) {
+        RedisTemplate<String, PaymentEventDto> template = new RedisTemplate<>();
+        template.setConnectionFactory(cf);
+
+        // key는 String
+        StringRedisSerializer keySerializer = new StringRedisSerializer();
+
+        // value는 PaymentEventDto 전용 JSON 직렬화
+        Jackson2JsonRedisSerializer<PaymentEventDto> valueSerializer =
+                new Jackson2JsonRedisSerializer<>(objectMapper, PaymentEventDto.class);
+
+        template.setKeySerializer(keySerializer);
+        template.setValueSerializer(valueSerializer);
+        template.setHashKeySerializer(keySerializer);
+        template.setHashValueSerializer(valueSerializer);
+
+        template.afterPropertiesSet();
+        return template;
+    }
+
 }

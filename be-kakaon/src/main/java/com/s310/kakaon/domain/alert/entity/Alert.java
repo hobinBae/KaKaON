@@ -41,7 +41,7 @@ public class Alert extends BaseEntity {
     @Column(name = "alert_type", nullable = false)
     private AlertType alertType;
 
-    @Column(name = "description", nullable = false)
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Column(name = "detected_at", nullable = false)
