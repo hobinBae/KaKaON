@@ -7,6 +7,8 @@ import com.s310.kakaon.domain.store.dto.StoreStatus;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.annotations.Where;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -21,7 +23,7 @@ import java.util.List;
 @Getter
 @EqualsAndHashCode(of = "id", callSuper = false)
 @ToString(exclude = "member")
-
+@SQLRestriction("deleted_at IS NULL")
 public class Store extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
