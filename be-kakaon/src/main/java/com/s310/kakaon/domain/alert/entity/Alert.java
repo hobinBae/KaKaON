@@ -61,6 +61,11 @@ public class Alert extends BaseEntity {
     @OneToMany(mappedBy = "alert", cascade = CascadeType.ALL)
     private List<AlertPayment> alertPayments = new ArrayList<>();
 
+    public void addAlertPayments(AlertPayment alertPayment){
+        alertPayments.add(alertPayment);
+        alertPayment.setAlert(this);
+    }
+
     public void updateChecked(){
         this.checked = true;
         this.checkedAt = LocalDateTime.now();
