@@ -205,7 +205,7 @@ export function AppLayout() {
                 value={selectedStoreId || ""}
                 onValueChange={(val) => setSelectedStoreId(val || null)}
               >
-                <SelectTrigger className="w-[200px] rounded-lg bg-[#F5F5F5]">
+                <SelectTrigger className="min-w-[200px] max-w-[400px] rounded-lg bg-[#F5F5F5]">
                   <SelectValue placeholder={isLoadingStores ? "로딩 중..." : "매장 선택"} />
                 </SelectTrigger>
                 <SelectContent>
