@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalTime;
+import java.util.Objects;
 
 @Component
 @RequiredArgsConstructor
@@ -46,7 +47,8 @@ public class StoreMapper {
                 .build();
     }
 
-    public StoreResponseDto toResponseDto(Store store, Long unreadCount, int todaySales, double yesterdayGrowthRate, int weeklySales, int monthlySales, double todayCancelRate){
+    public StoreResponseDto toResponseDto(Store store, Long unreadCount, int todaySales, double yesterdayGrowthRate, int weeklySales, int monthlySales, double todayCancelRate, Long currentFavoriteStore){
+
         return StoreResponseDto.builder()
                 .storeId(store.getId())
                 .name(store.getName())
@@ -57,6 +59,7 @@ public class StoreMapper {
                 .weeklySales(weeklySales)
                 .monthlySales(monthlySales)
                 .todayCancelRate(todayCancelRate)
+                .isFavorite(Objects.equals(currentFavoriteStore, store.getId()))
                 .build();
     }
 
