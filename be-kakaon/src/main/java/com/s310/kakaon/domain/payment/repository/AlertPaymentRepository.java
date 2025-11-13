@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface AlertPaymentRepository extends JpaRepository<AlertPayment, Long> {
 
+    boolean existsByAlertIdAndPaymentId(Long id, Long id1);
 }

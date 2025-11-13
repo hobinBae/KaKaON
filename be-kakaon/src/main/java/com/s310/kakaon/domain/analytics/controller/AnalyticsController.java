@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.persistence.Table;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
@@ -111,5 +112,25 @@ public class AnalyticsController {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         CancelRateResponseDto response = analyticsService.getCancelRateByPeriod(storeId, memberId, period);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "취소율 조회 성공", response, request.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "가맹점별 매출 합계 조회",
+            description = """
+                    오늘 매출 포함한 가맹점별 매출을 조회합니다.
+                    기간 타입(WEEK(최근 7일)/MONTH/YEAR/RANGE),
+                    조회 시작 날짜 (기간 타입 "RANGE" 시 필수), 
+                    조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
+                    """
+    )
+    @GetMapping("sales/stores")
+    public ResponseEntity<ApiResponse<StoreSalesResponseDto>> getStoreSalesByPeriod(
+            @AuthenticationPrincipal String kakaoId,
+            @ParameterObject @ModelAttribute SalesPeriodRequestDto period,
+            HttpServletRequest request
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        StoreSalesResponseDto response = analyticsService.getStoreSalesByPeriod(memberId, period);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "가맹점별 매출 합계 조회 성공", response, request.getRequestURI()));
     }
 }

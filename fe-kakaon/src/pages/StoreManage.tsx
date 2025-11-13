@@ -168,15 +168,14 @@ export default function StoreManage() {
   }, [sortedStores, appliedSearchTerm]);
 
   // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
-  const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
-    const totalSales = store.totalSales ?? 0;
+  const getSalesData = (store: Store, period: SalesPeriod) => {
     switch (period) {
       case "일별":
-        return Math.round(totalSales * 0.03); // 임시: 전체 매출의 3%를 오늘 매출로 가정
+        return store.todaySales ?? 0;
       case "주별":
-        return Math.round(totalSales * 0.2); // 임시: 전체 매출의 20%를 이번주 매출로 가정
+        return store.weeklySales ?? 0;
       case "월별":
-        return totalSales; // 전체 매출을 이번달 매출로 사용
+        return store.monthlySales ?? 0;
       default:
         return 0;
     }
@@ -644,7 +643,7 @@ export default function StoreManage() {
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
                 <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
-                <TableHead className="text-[#333333] text-center">매출</TableHead>
+                <TableHead className="text-[#333333] text-center">오늘매출</TableHead>
                 <TableHead className="text-[#333333] text-center">취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
                 <TableHead className="text-[#333333] text-center">상태</TableHead>
@@ -690,22 +689,22 @@ export default function StoreManage() {
                     <TableCell className="text-center">
                       <div>
                         <p className="text-sm text-[#333333]">
-                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
+                          ₩{(store.todaySales ?? 0).toLocaleString()}
                         </p>
                         {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      {store.cancelRate !== undefined ? (
+                      {store.todayCancelRate !== undefined ? (
                         <Badge
                           variant="outline"
                           className={`rounded ${
-                            store.cancelRate > 3.5
+                            store.todayCancelRate > 3.5
                               ? "border-[#FF4D4D] text-[#FF4D4D]"
                               : "border-[#717182] text-[#717182]"
                           }`}
                         >
-                          {store.cancelRate}%
+                          {store.todayCancelRate}%
                         </Badge>
                       ) : (
                         <span className="text-xs text-[#717182]">-</span>

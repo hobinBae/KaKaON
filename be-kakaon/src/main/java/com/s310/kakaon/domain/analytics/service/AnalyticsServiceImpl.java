@@ -364,5 +364,60 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 .build();
     }
 
+    @Override
+    public StoreSalesResponseDto getStoreSalesByPeriod(Long memberId, SalesPeriodRequestDto period) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+        String periodType = period.getPeriodType();
+        LocalDate startDate = period.getStartDate();
+        LocalDate endDate = period.getEndDate();
+        LocalDate today = LocalDate.now();
+
+        switch (periodType.toUpperCase()) {
+            case "TODAY":
+                startDate = today;
+                endDate = today;
+            case "WEEK":
+                startDate = today.minusDays(6);
+                endDate = today.minusDays(1);
+                break;
+
+            case "MONTH":
+                startDate = today.withDayOfMonth(1);
+                endDate = today.minusDays(1);
+                break;
+
+            case "YEAR":
+                startDate = LocalDate.of(today.getYear(), 1, 1);
+                endDate = today.minusDays(1);
+                break;
+
+            case "RANGE":
+                if (startDate == null || endDate == null) {
+                    throw new ApiException(ErrorCode.PERIOD_NOT_FOUND);
+                }
+                break;
+
+            default:
+                throw new ApiException(ErrorCode.INVALID_PERIOD);
+        }
+
+        List<StoreSalesResponseDto.StoreSalesDto> storeList = paymentStatsRepository.findStoreSalesByPeriod(memberId, periodType, startDate, endDate);
+        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        for(StoreSalesResponseDto.StoreSalesDto store : storeList) {
+            Long todaySales = salesCacheService.getSalesStats(store.getStoreId(), redisDate).getTotalSales().longValue();
+            store.setTotalSales(store.getTotalSales() + todaySales);
+        }
+
+        return StoreSalesResponseDto.builder()
+                .memberId(memberId)
+                .periodType(periodType)
+                .startDate(startDate.toString())
+                .endDate(storeList.toString())
+                .storeSalesList(storeList)
+                .build();
+    }
+
+
 
 }

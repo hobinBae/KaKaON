@@ -7,15 +7,11 @@ import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
-import com.s310.kakaon.domain.payment.dto.CancelRateAnomalyDto;
-import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
-import com.s310.kakaon.domain.payment.dto.PaymentMethod;
-import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
-import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
-import com.s310.kakaon.domain.payment.dto.PaymentStatus;
+import com.s310.kakaon.domain.payment.dto.*;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.entity.PaymentCancel;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
+import com.s310.kakaon.domain.payment.producer.PaymentEventProducer;
 import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
@@ -65,6 +61,8 @@ public class PaymentServiceImpl implements PaymentService{
     private final StringRedisTemplate stringRedisTemplate;
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
+//    private final PaymentEventProducer  paymentEventProducer;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @Transactional
@@ -91,12 +89,32 @@ public class PaymentServiceImpl implements PaymentService{
 
         Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
 
-        paymentRepository.save(payment);
+        Payment savedPayment = paymentRepository.save(payment);
 
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
+        // Kafka 이벤트 발행
+        PaymentEventDto event = PaymentEventDto.builder()
+                .paymentId(savedPayment.getId())
+                .storeId(savedPayment.getStore().getId())
+                .orderId(savedPayment.getOrder().getOrderId())
+                .authorizationNo(savedPayment.getAuthorizationNo())
+                .amount(savedPayment.getAmount())
+                .paymentMethod(savedPayment.getPaymentMethod().name())
+                .status(savedPayment.getStatus().name())
+                .approvedAt(savedPayment.getApprovedAt())
+                .canceledAt(savedPayment.getCanceledAt())
+                .isDelivery(savedPayment.getDelivery())
+                .createdDateTime(savedPayment.getCreatedDateTime())
+                .storeLatitude(savedPayment.getStore().getLatitude())
+                .storeLongitude(savedPayment.getStore().getLongitude())
+                .storeName(savedPayment.getStore().getName())
+                .build();
 
+//        paymentEventProducer.sendPaymentEvent(event);
+        // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
+        eventPublisher.publishEvent(event);
 
         long t1 = System.currentTimeMillis();
         if(!detectAfterHoursTransaction(store, payment)){
