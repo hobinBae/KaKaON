@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
@@ -10,48 +10,73 @@ import Clock from '@/components/Clock'; // 실시간 시계 컴포넌트
 import ElapsedTimeClock from '@/components/ElapsedTimeClock'; // 영업 경과 시간 시계 컴포넌트
 import { PlayCircle, StopCircle, Calendar, Clock as ClockIcon } from 'lucide-react';
 
+// 이전 값을 추적하는 커스텀 훅
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>();
+  useEffect(() => {
+    ref.current = value;
+  });
+  return ref.current;
+}
+
 export default function BusinessHours() {
   const { selectedStoreId } = useBoundStore();
   const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
   const { mutate: updateStatus } = useUpdateOperationStatus();
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [currentTime, setCurrentTime] = useState(new Date());
   const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
   const [sessionEndTime, setSessionEndTime] = useState<Date | null>(null);
-
-  // 서버 상태가 변경될 때 세션 시간 상태를 업데이트
-  useEffect(() => {
-    // 데이터가 없거나, 날짜 정보가 없거나, 유효하지 않은 날짜인 경우 아무것도 하지 않음
-    if (!operationStatus || !operationStatus.updatedAt || isNaN(new Date(operationStatus.updatedAt).getTime())) {
-      return;
-    }
-
-    const newDate = new Date(operationStatus.updatedAt);
-
-    if (operationStatus.status === 'OPEN') {
-      // 영업 시작: 세션을 새로 시작함
-      setSessionStartTime(newDate);
-      setSessionEndTime(null);
-    } else { // 'CLOSED'
-      // 영업 마감: 마감 시간을 설정함. 시작 시간은 건드리지 않음.
-      setSessionEndTime(newDate);
-    }
-  }, [operationStatus]);
-
-  // 1초마다 현재 시간을 업데이트하여 경과 시간 시계가 다시 렌더링되도록 함
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const isBusinessOpen = operationStatus?.status === 'OPEN';
+  const prevIsBusinessOpen = usePrevious(isBusinessOpen);
 
-  const elapsedSeconds = sessionStartTime && isBusinessOpen
-    ? Math.floor((currentTime.getTime() - sessionStartTime.getTime()) / 1000)
-    : 0;
+  // 세션 시작 및 종료 시간 관리
+  useEffect(() => {
+    // 1. 페이지 로드 시: 서버 상태에 따라 초기 시간 설정
+    if (prevIsBusinessOpen === undefined && operationStatus?.updatedAt) {
+      const serverTime = new Date(operationStatus.updatedAt);
+      if (isBusinessOpen) {
+        setSessionStartTime(serverTime);
+      } else {
+        // 영업 시작 시간을 유지하기 위해 마감 시에는 시작 시간을 초기화하지 않음
+        if(operationStatus.status === 'CLOSED' && operationStatus.updatedAt) {
+          setSessionStartTime(new Date(operationStatus.updatedAt));
+        }
+        setSessionEndTime(serverTime);
+      }
+      return; 
+    }
+
+    // 2. 영업 시작으로 상태 변경 시 (CLOSED -> OPEN)
+    if (isBusinessOpen && !prevIsBusinessOpen) {
+      setSessionStartTime(new Date()); // 정확한 클라이언트 현재 시간으로 설정
+      setSessionEndTime(null);
+    } 
+    // 3. 영업 종료로 상태 변경 시 (OPEN -> CLOSED)
+    else if (!isBusinessOpen && prevIsBusinessOpen && operationStatus?.updatedAt) {
+      setSessionEndTime(new Date(operationStatus.updatedAt));
+    }
+  }, [isBusinessOpen, prevIsBusinessOpen, operationStatus]);
+
+  // 영업 상태일 때 경과 시간을 계산하는 타이머를 관리
+  useEffect(() => {
+    let timer: number | undefined;
+
+    if (isBusinessOpen && sessionStartTime) {
+      const updateElapsed = () => {
+        const seconds = Math.floor((new Date().getTime() - sessionStartTime.getTime()) / 1000);
+        setElapsedSeconds(seconds >= 0 ? seconds : 0);
+      };
+      updateElapsed();
+      timer = setInterval(updateElapsed, 1000);
+    } else {
+      setElapsedSeconds(0);
+    }
+
+    return () => clearInterval(timer);
+  }, [isBusinessOpen, sessionStartTime]);
 
   const formatDateTime = (date: Date | null) => {
     if (!date) return '-';
