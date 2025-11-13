@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDate;
@@ -12,6 +13,7 @@ import java.time.LocalDate;
 @AllArgsConstructor
 @Builder
 @Getter
+@Setter
 public class PaymentSearchRequestDto {
 
     @DateTimeFormat(pattern = "yyyy-MM-dd")

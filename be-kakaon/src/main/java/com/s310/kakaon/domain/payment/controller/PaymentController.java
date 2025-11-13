@@ -9,10 +9,12 @@ import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.global.dto.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -78,8 +80,8 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
-            @ModelAttribute PaymentSearchRequestDto request,
-            Pageable pageable,
+            @ParameterObject @ModelAttribute PaymentSearchRequestDto request,
+            @Parameter(hidden=true)Pageable pageable,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
