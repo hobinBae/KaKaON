@@ -58,6 +58,7 @@ public class Alert extends BaseEntity {
     @Column(name = "checked_at")
     private LocalDateTime checkedAt;
 
+    @Builder.Default
     @OneToMany(mappedBy = "alert", cascade = CascadeType.ALL)
     private List<AlertPayment> alertPayments = new ArrayList<>();
 
