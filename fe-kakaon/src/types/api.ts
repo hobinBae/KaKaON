@@ -49,7 +49,6 @@ export interface Store {
   weeklySales?: number;
   monthlySales?: number;
   todayCancelRate?: number;
-
 }
 
 // 가맹점 상세 정보 응답 타입
@@ -265,3 +264,31 @@ export interface SalesHourlyResponse {
     avgSales: number;
   }[];
 }
+
+export interface CancelRateResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  cancelRateList: {
+    date: string;
+    cancelRate: number;
+    totalSales: number;
+    cancelSales: number;
+  }[];
+}
+
+export interface PaymentMethodRatioResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  cardTotal: number;
+  cashTotal: number;
+  kakaopayTotal: number;
+  transferTotal: number;
+  storeTotal: number;
+  deliveryTotal: number;
+  totalAmount: number;
+}
+
