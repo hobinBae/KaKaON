@@ -11,4 +11,6 @@ public interface AnalyticsService {
     PaymentMethodRatioResponseDto getPaymentMethodRatioByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period);
 
     CancelRateResponseDto getCancelRateByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period);
+
+    StoreSalesResponseDto getStoreSalesByPeriod(Long memberId, SalesPeriodRequestDto period);
 }
