@@ -366,6 +366,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
     @Override
     public StoreSalesResponseDto getStoreSalesByPeriod(Long memberId, SalesPeriodRequestDto period) {
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
         String periodType = period.getPeriodType();
         LocalDate startDate = period.getStartDate();
         LocalDate endDate = period.getEndDate();
