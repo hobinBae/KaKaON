@@ -1,9 +1,6 @@
 package com.s310.kakaon.domain.analytics.service;
 
-import com.s310.kakaon.domain.analytics.dto.PaymentMethodRatioResponseDto;
-import com.s310.kakaon.domain.analytics.dto.SalesHourlyResponseDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodRequestDto;
-import com.s310.kakaon.domain.analytics.dto.SalesPeriodResponseDto;
+import com.s310.kakaon.domain.analytics.dto.*;
 
 public interface AnalyticsService {
 
@@ -12,4 +9,6 @@ public interface AnalyticsService {
     SalesHourlyResponseDto getHourlyByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period);
 
     PaymentMethodRatioResponseDto getPaymentMethodRatioByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period);
+
+    CancelRateResponseDto getCancelRateByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period);
 }
