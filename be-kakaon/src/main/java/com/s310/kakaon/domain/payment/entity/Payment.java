@@ -29,7 +29,7 @@ public class Payment extends BaseEntity {
     private Store store;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "order_id", nullable = false)
+    @JoinColumn(name = "order_id", nullable = true)
     private Orders order;
 
     @Column(name = "authorization_no", nullable = false, length = 20, unique = true)

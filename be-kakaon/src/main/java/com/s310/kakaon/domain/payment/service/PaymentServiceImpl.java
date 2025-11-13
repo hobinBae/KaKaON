@@ -164,35 +164,23 @@ public class PaymentServiceImpl implements PaymentService{
                 try {
                     String[] fields = parseCsvLine(line);
 
-                    if (fields.length < 8) {
+                    if (fields.length < 7) {
                         log.warn("라인 {} 스킵: 필드 수 부족 ({}개)", i + 1, fields.length);
                         failCount++;
                         continue;
                     }
 
                     // CSV 필드 파싱
-                    // 결제ID(0), 매장명(1), 주문ID(2), 승인번호(3), 금액(4), 결제수단(5), 상태(6), 배달여부(7), 승인일시(8), 취소일시(9)
-                    Long orderId = Long.parseLong(fields[2].trim());
-                    String authorizationNo = fields[3].trim();
-                    Integer amount = Integer.parseInt(fields[4].trim());
-                    PaymentMethod paymentMethod = PaymentMethod.valueOf(fields[5].trim());
-                    PaymentStatus status = PaymentStatus.valueOf(fields[6].trim());
-                    Boolean isDelivery = "배달".equals(fields[7].trim());
-                    LocalDateTime approvedAt = LocalDateTime.parse(fields[8].trim(), formatter);
+                    // 승인번호(0), 금액(1), 결제수단(2), 상태(3), 배달여부(4), 승인일시(5), 취소일시(6)
+                    String authorizationNo = fields[0].trim();
+                    Integer amount = Integer.parseInt(fields[1].trim());
+                    PaymentMethod paymentMethod = PaymentMethod.valueOf(fields[2].trim());
+                    PaymentStatus status = PaymentStatus.valueOf(fields[3].trim());
+                    Boolean isDelivery = "배달".equals(fields[4].trim());
+                    LocalDateTime approvedAt = LocalDateTime.parse(fields[5].trim(), formatter);
                     LocalDateTime canceledAt = null;
-                    if (fields.length > 9 && !fields[9].trim().isEmpty()) {
-                        canceledAt = LocalDateTime.parse(fields[9].trim(), formatter);
-                    }
-
-                    // Order 찾기
-                    Orders order = orderRepository.findById(orderId)
-                            .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
-
-                    // Order가 해당 Store에 속하는지 확인
-                    if (!order.getStore().getId().equals(storeId)) {
-                        log.warn("라인 {} 스킵: 주문 {}가 매장 {}에 속하지 않음", i + 1, orderId, storeId);
-                        failCount++;
-                        continue;
+                    if (fields.length > 6 && !fields[6].trim().isEmpty()) {
+                        canceledAt = LocalDateTime.parse(fields[6].trim(), formatter);
                     }
 
                     // 승인번호 중복 체크
@@ -202,10 +190,10 @@ public class PaymentServiceImpl implements PaymentService{
                         continue;
                     }
 
-                    // Payment 생성
+                    // Payment 생성 (Order는 null)
                     Payment payment = Payment.builder()
                             .store(store)
-                            .order(order)
+                            .order(null)
                             .authorizationNo(authorizationNo)
                             .amount(amount)
                             .paymentMethod(paymentMethod)
@@ -355,15 +343,12 @@ public class PaymentServiceImpl implements PaymentService{
             baos.write(0xBF);
 
             // CSV 헤더
-            writer.println("결제ID,매장명,주문ID,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시");
+            writer.println("승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시");
 
             // CSV 데이터
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             for (PaymentResponseDto payment : paymentDtos) {
-                writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s%n",
-                        payment.getPaymentId(),
-                        escapeCsvField(store.getName()),
-                        payment.getOrderId(),
+                writer.printf("%s,%d,%s,%s,%s,%s,%s%n",
                         escapeCsvField(payment.getAuthorizationCode()),
                         payment.getAmount(),
                         payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "",
