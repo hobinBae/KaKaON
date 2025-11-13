@@ -47,18 +47,7 @@ public class AlertServiceImpl implements AlertService{
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
         List<AlertRecipient> alertRecipients = store.getAlertRecipient();
 
-        Alert alert = Alert.builder()
-                .alertUuid(event.getAlertUuid())
-                .store(store)
-                .alertType(event.getAlertType())
-                .description(event.getDescription())
-                .detectedAt(event.getDetectedAt())
-                .emailSent(false)
-                .checked(false)
-                .build();
-
-        alertRepository.save(alert);
-
+        Alert alert = alertMapper.fromAlertEvent(event, store);
 
         if(event.getPaymentId() != null){
 
@@ -70,9 +59,11 @@ public class AlertServiceImpl implements AlertService{
                     .alert(alert)
                     .build();
 
-            alertPaymentRepository.save(alertPayment);
+            alert.addAlertPayments(alertPayment);
 
         }
+
+        alertRepository.save(alert);
 
         // 메일 내용 구성
         String subject = "[이상거래 탐지 알림] " + alert.getAlertType().getDescription();
