@@ -1,9 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
-import { DashboardSummary, MonthlySalesResponse, SalesPeriodResponse, SalesHourlyResponse } from "@/types/api";
+import { DashboardSummary, MonthlySalesResponse, SalesPeriodResponse, SalesHourlyResponse, CancelRateResponse, PaymentMethodRatioResponse } from "@/types/api";
 
 export interface SalesPeriodParams {
-  periodType: 'TODAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'RANGE';
+  periodType: 'TODAY' | 'YESTERDAY' | 'WEEK' | 'MONTH' | 'YEAR' | 'RANGE';
   startDate?: string;
   endDate?: string;
 }
@@ -52,5 +52,27 @@ export const useMonthlySales = (storeId: number, date: string) => {
     },
     enabled: !!storeId && storeId > 0,
     placeholderData: (previousData) => previousData, // 이전 데이터를 유지하여 깜빡임 방지
+  });
+};
+
+export const useCancelRateByPeriod = (storeId: number, params: SalesPeriodParams, options?: { enabled?: boolean }) => {
+  return useQuery<CancelRateResponse, Error>({
+    queryKey: ["cancelRateByPeriod", storeId, params],
+    queryFn: async () => {
+      const res = await apiClient.get(`/analytics/${storeId}/sales/cancel-rate`, { params });
+      return res.data.data;
+    },
+    enabled: !!storeId && storeId > 0 && (options?.enabled ?? true),
+  });
+};
+
+export const usePaymentMethodRatioByPeriod = (storeId: number, params: SalesPeriodParams, options?: { enabled?: boolean }) => {
+  return useQuery<PaymentMethodRatioResponse, Error>({
+    queryKey: ["paymentMethodRatioByPeriod", storeId, params],
+    queryFn: async () => {
+      const res = await apiClient.get(`/analytics/${storeId}/sales/payment-method`, { params });
+      return res.data.data;
+    },
+    enabled: !!storeId && storeId > 0 && (options?.enabled ?? true),
   });
 };

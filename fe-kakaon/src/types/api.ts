@@ -39,13 +39,16 @@ export interface BusinessHour {
 export interface Store {
   storeId: number;
   name: string;
-  // 목록 조회 시 필요한 최소 정보
   status: StoreStatus;
-  unreadCount?: number; // 읽지 않은 알림 수
-  // 대시보드용 요약 데이터
-  totalSales?: number;
-  cancelRate?: number;
-  changeRate?: number;
+  unreadCount?: number;
+  isFavorite?: boolean;
+
+  // 매출 정보 from StoreResponseDto
+  todaySales?: number;
+  yesterdayGrowthRate?: number;
+  weeklySales?: number;
+  monthlySales?: number;
+  todayCancelRate?: number;
 }
 
 // 가맹점 상세 정보 응답 타입
@@ -261,3 +264,31 @@ export interface SalesHourlyResponse {
     avgSales: number;
   }[];
 }
+
+export interface CancelRateResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  cancelRateList: {
+    date: string;
+    cancelRate: number;
+    totalSales: number;
+    cancelSales: number;
+  }[];
+}
+
+export interface PaymentMethodRatioResponse {
+  storeId: number;
+  periodType: string;
+  startDate: string;
+  endDate: string;
+  cardTotal: number;
+  cashTotal: number;
+  kakaopayTotal: number;
+  transferTotal: number;
+  storeTotal: number;
+  deliveryTotal: number;
+  totalAmount: number;
+}
+

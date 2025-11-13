@@ -30,9 +30,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams } from "@/lib/hooks/useAnalytics";
+import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams, useCancelRateByPeriod, usePaymentMethodRatioByPeriod } from "@/lib/hooks/useAnalytics";
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
+import { CancelRateResponse } from "@/types/api";
 
 // --- Helper Functions & Dummy Data ---
 
@@ -158,15 +159,27 @@ export default function Analytics() {
   const { data: salesData, isLoading: isSalesLoading } = useSalesByPeriod(
     storeId,
     apiParams,
-    { enabled: storeId > 0 }
+    { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' && apiParams.periodType !== 'TODAY' }
   );
 
   const { data: hourlySalesData, isLoading: isHourlySalesLoading } = useSalesByHourly(
     storeId,
     apiParams,
-    { enabled: storeId > 0 }
+    { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' }
   );
 
+  const { data: cancelRateData, isLoading: isCancelRateLoading } = useCancelRateByPeriod(
+    storeId,
+    apiParams,
+    { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' && apiParams.periodType !== 'TODAY' }
+  );
+
+  const { data: paymentMethodRatioData, isLoading: isPaymentMethodRatioLoading } = usePaymentMethodRatioByPeriod(
+    storeId,
+    apiParams,
+    { enabled: storeId > 0 && apiParams.periodType !== 'TODAY' }
+  );
+  
   const [dateRange, setDateRange] = useState<DateRange | undefined>({
     from: startOfMonth(new Date()),
     to: endOfDay(addDays(new Date(), -1)),
@@ -179,16 +192,21 @@ export default function Analytics() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState<ReactNode>("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // State for processed chart data
   const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
   const [periodSales, setPeriodSales] = useState<{time?: string; date?: string; month?: string; sales: number}[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
-  const [xAxisDataKeyCancellation, setXAxisDataKeyCancellation] = useState<string>('date');
   const [paymentDistribution, setPaymentDistribution] = useState<{name: string; value: number; color: string}[]>([]);
   const [salesTypeDistribution, setSalesTypeDistribution] = useState<{name: string; value: number; color: string}[]>([]);
   const [hourlySales, setHourlySales] = useState<{time: string; sales: number}[]>([]);
-  const [cancellationRate, setCancellationRate] = useState<{time?: string; date?: string; month?: string; rate: number}[]>([]);
   const [salesVsLabor, setSalesVsLabor] = useState<{month: string; sales: number; labor: number; laborRatio: number}[]>([]);
 
   useEffect(() => {
@@ -273,7 +291,20 @@ export default function Analytics() {
     } else {
       setHourlySales([]);
     }
-  }, [salesData, hourlySalesData, activePeriod]);
+
+    if (paymentMethodRatioData) {
+      setPaymentDistribution([
+        { name: '카드', value: paymentMethodRatioData.cardTotal, color: '#f7c851ff' },
+        { name: '계좌이체', value: paymentMethodRatioData.transferTotal, color: '#aa704aff' },
+        { name: '카카오페이', value: paymentMethodRatioData.kakaopayTotal, color: '#faae4aff' },
+        { name: '현금', value: paymentMethodRatioData.cashTotal, color: '#99c271ff' },
+      ]);
+      setSalesTypeDistribution([
+        { name: '가게', value: paymentMethodRatioData.storeTotal, color: '#fea769ff' },
+        { name: '배달', value: paymentMethodRatioData.deliveryTotal, color: '#4dafdcff' },
+      ]);
+    }
+  }, [salesData, hourlySalesData, activePeriod, paymentMethodRatioData]);
 
   useEffect(() => {
     const params: SalesPeriodParams = { periodType: 'RANGE' };
@@ -281,6 +312,9 @@ export default function Analytics() {
       switch (activePeriod) {
         case 'today':
           params.periodType = 'TODAY';
+          break;
+        case 'yesterday':
+          params.periodType = 'YESTERDAY';
           break;
         case 'this-week':
           params.periodType = 'WEEK';
@@ -300,108 +334,83 @@ export default function Analytics() {
     setApiParams(params);
   }, [dateRange, activePeriod]);
 
-  // Dummy data for other charts - will be replaced later
-  // useEffect(() => {
-  //   const totalPayments = { card: 1200000, account: 400000, kakaopay: 300000, cash: 100000 };
-  //   setPaymentDistribution([
-  //     { name: '카드결제', value: totalPayments.card, color: '#FEE500' },
-  //     { name: '계좌이체', value: totalPayments.account, color: '#FFB800' },
-  //     { name: '카카오페이', value: totalPayments.kakaopay, color: '#3C1E1E' },
-  //     { name: '현금', value: totalPayments.cash, color: '#9e9e9eff' },
-  //   ]);
-  //
-  //   // Process sales type distribution (delivery vs store)
-  //   const totalSalesType = { delivery: 0, store: 0 };
-  //   filteredData.forEach(d => {
-  //     totalSalesType.delivery += d.deliverySales;
-  //     totalSalesType.store += d.storeSales;
-  //   });
-  //   setSalesTypeDistribution([
-  //     { name: '배달', value: totalSalesType.delivery, color: '#FEE500' },
-  //     { name: '가게', value: totalSalesType.store, color: '#3C1E1E' },
-  //   ]);
-  //
-  //   // Process hourly sales - average for period, actual for today
-  //   const hourlyTotals: { [key: string]: number } = {};
-  //   filteredData.forEach(d => {
-  //     d.hourly.forEach(h => {
-  //       hourlyTotals[h.time] = (hourlyTotals[h.time] || 0) + h.sales;
-  //     });
-  //   });
-  //
-  //   // Calculate average if period is more than 1 day
-  //   const daysInPeriod = filteredData.length;
-  //   const isToday = daysDiff < 1 || activePeriod === 'today';
-  //
-  //   // Find first and last hour with sales (operating hours)
-  //   const sortedHours = Object.entries(hourlyTotals)
-  //     .sort((a, b) => a[0].localeCompare(b[0]))
-  //     .filter(([, sales]) => sales > 0);
-  //
-  //   if (sortedHours.length > 0) {
-  //     const firstHour = parseInt(sortedHours[0][0].split(':')[0]);
-  //     const lastHour = parseInt(sortedHours[sortedHours.length - 1][0].split(':')[0]);
-  //
-  //     // Generate all hours between first and last hour
-  //     const operatingHours = [];
-  //     for (let hour = firstHour; hour <= lastHour; hour++) {
-  //       const time = `${hour.toString().padStart(2, '0')}:00`;
-  //       const sales = hourlyTotals[time] || 0;
-  //
-  //       if (isToday) {
-  //         // For today, show actual hourly sales
-  //         operatingHours.push({ time, sales });
-  //       } else {
-  //         // For other periods, show average hourly sales
-  //         operatingHours.push({
-  //           time,
-  //           sales: daysInPeriod > 0 ? Math.round(sales / daysInPeriod) : sales
-  //         });
-  //       }
-  //     }
-  //     setHourlySales(operatingHours);
-  //   } else {
-  //     setHourlySales([]);
-  //   }
-  //
-  //   // Process cancellation rate based on period
-  //   if (daysDiff < 1) { // Single day - hourly
-  //     setXAxisDataKeyCancellation('time');
-  //     const hourlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
-  //     filteredData.forEach(d => {
-  //       d.hourly.forEach(h => {
-  //         if (!hourlyCancellations[h.time]) hourlyCancellations[h.time] = { sales: 0, cancellations: 0 };
-  //         hourlyCancellations[h.time].sales += h.sales;
-  //         hourlyCancellations[h.time].cancellations += Math.floor(Math.random() * (h.sales / 100000)); // Using random for demo
-  //       });
-  //     });
-  //     setCancellationRate(Object.entries(hourlyCancellations).map(([time, data]) => ({
-  //       time,
-  //       rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
-  //     })).sort((a, b) => a.time.localeCompare(b.time)));
-  //   } else if (daysDiff <= 31) { // Daily
-  //     setXAxisDataKeyCancellation('date');
-  //     setCancellationRate(filteredData.map(d => ({
-  //       date: format(new Date(d.date), 'MM/dd'),
-  //       rate: d.sales > 0 ? parseFloat(((d.cancellations / (d.sales / 100000)) * 100).toFixed(1)) : 0,
-  //     })));
-  //   } else { // Monthly
-  //     setXAxisDataKeyCancellation('month');
-  //     const monthlyCancellations: { [key: string]: { sales: number, cancellations: number } } = {};
-  //     filteredData.forEach(d => {
-  //       const month = format(new Date(d.date), 'yyyy-MM');
-  //       if (!monthlyCancellations[month]) monthlyCancellations[month] = { sales: 0, cancellations: 0 };
-  //       monthlyCancellations[month].sales += d.sales;
-  //       monthlyCancellations[month].cancellations += d.cancellations;
-  //     });
-  //     setCancellationRate(Object.entries(monthlyCancellations).map(([month, data]) => ({
-  //       month: month.slice(5) + '월',
-  //       rate: data.sales > 0 ? parseFloat(((data.cancellations / (data.sales / 100000)) * 100).toFixed(1)) : 0,
-  //     })).sort((a, b) => a.month.localeCompare(b.month)));
-  //   }
-  //
-  // }, [dateRange, activePeriod]);
+  const cancelChartData = useMemo(() => {
+    if (!cancelRateData) return [];
 
+    const rateMap = new Map(cancelRateData.cancelRateList.map(d => [d.date, d.cancelRate]));
+    const today = new Date();
+
+    if (activePeriod === 'this-week') {
+      return Array.from({ length: 7 }).map((_, i) => {
+        const currentDate = addDays(today, -6 + i);
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
+        return {
+          date: format(currentDate, 'MM/dd'),
+          cancelRate: rateMap.get(dateKey) || 0,
+        };
+      });
+    } else if (activePeriod === 'this-month') {
+      const monthStart = startOfMonth(today);
+      const daysInMonth = differenceInCalendarDays(endOfMonth(today), monthStart) + 1;
+      return Array.from({ length: daysInMonth }).map((_, i) => {
+        const currentDate = addDays(monthStart, i);
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
+        if (currentDate > today) {
+          return {
+            date: format(currentDate, 'MM/dd'),
+            cancelRate: 0,
+          };
+        }
+        return {
+          date: format(currentDate, 'MM/dd'),
+          cancelRate: rateMap.get(dateKey) || 0,
+        };
+      });
+    } else if (activePeriod === 'this-year') {
+      const yearStart = startOfYear(today);
+      const monthMap = new Map<string, { total: number, count: number }>();
+
+      cancelRateData.cancelRateList.forEach(item => {
+        const monthKey = format(new Date(item.date), 'yyyy-MM');
+        const monthData = monthMap.get(monthKey) || { total: 0, count: 0 };
+        monthData.total += item.cancelRate;
+        monthData.count++;
+        monthMap.set(monthKey, monthData);
+      });
+
+      return Array.from({ length: 12 }).map((_, i) => {
+        const monthDate = addMonths(yearStart, i);
+        const monthKey = format(monthDate, 'yyyy-MM');
+        if (monthDate > today) {
+		  return {
+			month: format(monthDate, 'MM월'),
+			cancelRate: 0,
+		  };
+		}
+        const monthData = monthMap.get(monthKey);
+        return {
+          month: format(monthDate, 'MM월'),
+          cancelRate: monthData ? monthData.total / monthData.count : 0,
+        };
+      });
+    } else if (dateRange?.from && dateRange?.to) { // RANGE
+      const diff = differenceInCalendarDays(dateRange.to, dateRange.from);
+      return Array.from({ length: diff + 1 }).map((_, i) => {
+        const currentDate = addDays(dateRange.from!, i);
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
+        return {
+          date: format(currentDate, 'MM/dd'),
+          cancelRate: rateMap.get(dateKey) || 0,
+        };
+      });
+    }
+    return [];
+  }, [cancelRateData, activePeriod, dateRange]);
+
+  const totalCancellations = cancelRateData?.cancelRateList.reduce((acc, item) => acc + item.cancelSales, 0) || 0;
+  const totalSales = cancelRateData?.cancelRateList.reduce((acc, item) => acc + item.totalSales, 0) || 0;
+  const overallCancelRate = totalSales > 0 ? (totalCancellations / totalSales) * 100 : 0;
+  
   // 가맹점별 매출 비교 데이터 처리 로직을 useMemo로 분리하여 불필요한 재실행을 방지했음
   const storeComparisonData = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to || !stores) return [];
@@ -433,31 +442,6 @@ export default function Analytics() {
     }
     return result;
   }, [dateRange, selectedStoreIds, stores, salesData]);
-
-  // useEffect(() => {
-  //   if (!dateRange?.from) return;
-  //
-  //   const year = dateRange.from.getFullYear();
-  //   const today = new Date();
-  //   const yearData = allSalesData.filter(d => {
-  //     const date = new Date(d.date);
-  //     return date.getFullYear() === year && date < startOfDay(today);
-  //   });
-  //
-  //   const monthlySalesVsLabor: { [key: string]: { sales: number, labor: number } } = {};
-  //   yearData.forEach(d => {
-  //     const month = format(new Date(d.date), 'yyyy-MM');
-  //     if (!monthlySalesVsLabor[month]) monthlySalesVsLabor[month] = { sales: 0, labor: 0 };
-  //     monthlySalesVsLabor[month].sales += d.sales;
-  //     monthlySalesVsLabor[month].labor += d.labor;
-  //   });
-  //   setSalesVsLabor(Object.entries(monthlySalesVsLabor).map(([month, data]) => ({
-  //     month: month.slice(5) + '월',
-  //     sales: data.sales,
-  //     labor: data.labor,
-  //     laborRatio: data.sales > 0 ? parseFloat(((data.labor / data.sales) * 100).toFixed(1)) : 0
-  //   })).sort((a,b) => a.month.localeCompare(b.month)));
-  // }, [dateRange]);
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
@@ -962,7 +946,7 @@ export default function Analytics() {
                   </>
                 )}
               </div>
-              {activeTab !== 'sales-trend' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
+              {activeTab !== 'sales-trend' && activeTab !== 'cancellation-rate' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
                 <div className="text-xs text-red-500 mt-1">
                   * 오늘 매출은 영업 종료 후 반영됩니다.
                 </div>
@@ -1065,7 +1049,7 @@ export default function Analytics() {
                   type="category"
                   dataKey="displayName"
                   stroke="#717182"
-                  tick={<StoreComparisonTick x={0} y={0} payload={{value: ''}} />}
+                  tick={StoreComparisonTick}
                   width={90}
                 />
                 <Bar
@@ -1080,16 +1064,28 @@ export default function Analytics() {
         </TabsContent>
         <TabsContent value="cancellation-rate">
           <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">취소율 추이</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={cancellationRate} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey={xAxisDataKeyCancellation} stroke="#717182" />
-                <YAxis stroke="#717182" />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
-                <Line type="linear" dataKey="rate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-[#333333] text-center tablet:text-left">취소율 추이</h3>
+              <div className="text-right">
+                <p className="text-sm text-gray-500">총 취소 건수: {totalCancellations}건</p>
+              </div>
+            </div>
+            {isCancelRateLoading ? (
+              <div className="h-[300px] flex items-center justify-center">로딩중...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={cancelChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
+                  <XAxis dataKey={activePeriod === 'this-year' ? 'month' : 'date'} stroke="#717182" dy={10} />
+                  <YAxis stroke="#717182" tickFormatter={(tick) => `${Math.round(tick)}%`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                    formatter={(value: number) => [`${value.toFixed(2)}%`, '취소율']}
+                  />
+                  <Line type="linear" dataKey="cancelRate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
           </Card>
         </TabsContent>
         <TabsContent value="payment-method">
@@ -1098,7 +1094,32 @@ export default function Analytics() {
               <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">결제수단별 비중</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={paymentDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                  <Pie
+                    data={paymentDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent, x, y, cx, cy, midAngle, innerRadius, outerRadius }) => {
+                      if (windowWidth < 768) {
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const xPos = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                        const yPos = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                        return (
+                          <text x={xPos} y={yPos} fill="black" textAnchor="middle" dominantBaseline="central">
+                            {name}
+                          </text>
+                        );
+                      }
+                      return (
+                        <text x={x} y={y} fill="black" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                          {`${name} ${(percent * 100).toFixed(0)}%`}
+                        </text>
+                      );
+                    }}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
                     {paymentDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
@@ -1108,10 +1129,37 @@ export default function Analytics() {
               </ResponsiveContainer>
             </Card>
             <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">배달/가게 매출 비중</h3>
+              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가게/배달 매출 비중</h3>
               <ResponsiveContainer width="100%" height={300}>
                 <PieChart>
-                  <Pie data={salesTypeDistribution} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} outerRadius={100} fill="#8884d8" dataKey="value">
+                  <Pie
+                    data={salesTypeDistribution}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, percent, x, y, cx, cy, midAngle, innerRadius, outerRadius }) => {
+                      if (windowWidth < 768) {
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const xPos = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                        const yPos = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                        return (
+                          <text x={xPos} y={yPos} fill="black" textAnchor="middle" dominantBaseline="central">
+                            {name}
+                          </text>
+                        );
+                      }
+                      return (
+                        <text x={x} y={y} fill="black" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
+                          {`${name} ${(percent * 100).toFixed(0)}%`}
+                        </text>
+                      );
+                    }}
+                    outerRadius={100}
+                    fill="#8884d8"
+                    dataKey="value"
+                    startAngle={270}
+                    endAngle={-90}
+                  >
                     {salesTypeDistribution.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
