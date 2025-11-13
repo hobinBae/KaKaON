@@ -117,9 +117,9 @@ public class PaymentServiceImpl implements PaymentService{
         eventPublisher.publishEvent(event);
 
         long t1 = System.currentTimeMillis();
-//        if(!detectAfterHoursTransaction(store, payment)){
-//            detectHighValueTransaction(store, payment);
-//        }
+        if(!detectAfterHoursTransaction(store, payment)){
+            detectHighValueTransaction(store, payment);
+        }
         long t2 = System.currentTimeMillis();
         log.info("[PERF] 이상거래 탐지 완료 시점: {} ms", (t2 - t1));
         return paymentMapper.fromEntity(payment);
