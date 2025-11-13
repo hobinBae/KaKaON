@@ -5,7 +5,10 @@ import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.s310.kakaon.domain.analytics.dto.CancelRateResponseDto;
 import com.s310.kakaon.domain.analytics.dto.MonthlySalesDto;
 import com.s310.kakaon.domain.analytics.dto.PaymentMethodRatioResponseDto;
+import com.s310.kakaon.domain.analytics.dto.StoreSalesResponseDto;
+import com.s310.kakaon.domain.member.entity.QMember;
 import com.s310.kakaon.domain.paymentstats.entity.QPaymentStats;
+import com.s310.kakaon.domain.store.entity.QStore;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +25,7 @@ public class PaymentStatsRepositoryImpl implements PaymentStatsRepositoryCustom 
 
     private final JPAQueryFactory queryFactory;
     QPaymentStats paymentStats = QPaymentStats.paymentStats;
+    QStore store = QStore.store;
 
     @Override
     public List<MonthlySalesDto> findMonthlySalesByYear(Long storeId, int year) {
@@ -128,6 +132,24 @@ public class PaymentStatsRepositoryImpl implements PaymentStatsRepositoryCustom 
                     .fetch();
 
     }
+
+    @Override
+    public List<StoreSalesResponseDto.StoreSalesDto> findStoreSalesByPeriod(Long memberId, String periodType, LocalDate startDate, LocalDate endDate) {
+
+        return queryFactory
+                .select(Projections.constructor(StoreSalesResponseDto.StoreSalesDto.class,
+                        store.id, store.name, paymentStats.totalSales.sum().longValue()))
+                .from(paymentStats)
+                .join(paymentStats.store, store)
+                .where(
+                        store.member.id.eq(memberId)
+                                .and(paymentStats.statsDate.between(startDate, endDate)))
+                .groupBy(store.id)
+                .orderBy(store.name.asc())
+                .fetch();
+
+    }
+
 
 
 }
