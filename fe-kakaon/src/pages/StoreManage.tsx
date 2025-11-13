@@ -101,7 +101,7 @@ const daysOfWeek = ['월', '화', '수', '목', '금', '토', '일'];
 const defaultBusinessHours: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
   acc[day] = {
     isClosed: false,
-    timeSlots: [{ start: '09:00', end: '18:00' }],
+    timeSlots: [{ start: '10:00', end: '22:00' }],
   };
   return acc;
 }, {} as BusinessHoursState);
@@ -109,7 +109,7 @@ const defaultBusinessHours: BusinessHoursState = daysOfWeek.reduce((acc, day) =>
 // BusinessHour[] 배열을 화면 표시용 객체로 변환
 const convertBusinessHours = (businessHours: StoreDetailResponse['businessHours']) => {
   const converted: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
-    acc[day] = { isClosed: true, timeSlots: [{ start: '09:00', end: '18:00' }] };
+    acc[day] = { isClosed: true, timeSlots: [{ start: '10:00', end: '22:00' }] };
     return acc;
   }, {} as BusinessHoursState);
 
@@ -208,11 +208,72 @@ export default function StoreManage() {
   }, [selectedStore]);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
+  const [isBusinessNumberErrorModalOpen, setIsBusinessNumberErrorModalOpen] = useState(false);
+  const [isRequiredFieldErrorModalOpen, setIsRequiredFieldErrorModalOpen] = useState(false);
+  const [isPhoneNumberErrorModalOpen, setIsPhoneNumberErrorModalOpen] = useState(false);
   
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
   const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
+
+  // 사업자번호 포맷팅 함수
+  const formatBusinessNumber = (value: string) => {
+    // 숫자만 추출
+    const numbers = value.replace(/[^\d]/g, '');
+
+    // 10자리까지만 허용
+    const limitedNumbers = numbers.slice(0, 10);
+
+    // XXX-XX-XXXXX 형식으로 포맷팅
+    if (limitedNumbers.length <= 3) {
+      return limitedNumbers;
+    } else if (limitedNumbers.length <= 5) {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+    } else {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 5)}-${limitedNumbers.slice(5)}`;
+    }
+  };
+
+  // 사업자번호 입력 핸들러
+  const handleBusinessNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatBusinessNumber(e.target.value);
+    setNewStoreBusinessNumber(formatted);
+  };
+
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (value: string) => {
+    // 숫자만 추출
+    const numbers = value.replace(/[^\d]/g, '');
+
+    // 10~12자리까지만 허용
+    const limitedNumbers = numbers.slice(0, 12);
+
+    // 글자 수에 따라 포맷팅
+    if (limitedNumbers.length <= 3) {
+      return limitedNumbers;
+    } else if (limitedNumbers.length <= 6) {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+    } else if (limitedNumbers.length === 10) {
+      // 10자리: XXX-XXX-XXXX
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 6)}-${limitedNumbers.slice(6)}`;
+    } else if (limitedNumbers.length === 11) {
+      // 11자리: XXX-XXXX-XXXX
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 7)}-${limitedNumbers.slice(7)}`;
+    } else if (limitedNumbers.length === 12) {
+      // 12자리: XXXX-XXXX-XXXX
+      return `${limitedNumbers.slice(0, 4)}-${limitedNumbers.slice(4, 8)}-${limitedNumbers.slice(8)}`;
+    } else {
+      // 7~9자리일 경우 일단 XXX-XXXX- 형식으로
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+    }
+  };
+
+  // 전화번호 입력 핸들러
+  const handlePhoneNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const formatted = formatPhoneNumber(e.target.value);
+    setNewStorePhone(formatted);
+  };
   const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
   const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
   const [newStorePhone, setNewStorePhone] = useState("");
@@ -318,8 +379,23 @@ export default function StoreManage() {
   };
 
   const handleAddStore = () => {
-    if (!newStoreBusinessHours) {
-      toast.error("영업시간을 설정해주세요.");
+    // 필수 입력 항목 검사
+    if (!newStoreName || !newStoreBusinessNumber || !newStorePhone || !newStoreBaseAddress || !newStoreDetailAddress || !newStoreBusinessHours) {
+      setIsRequiredFieldErrorModalOpen(true);
+      return;
+    }
+
+    // 사업자번호 유효성 검사
+    const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
+    if (businessNumberDigits.length !== 10) {
+      setIsBusinessNumberErrorModalOpen(true);
+      return;
+    }
+
+    // 전화번호 유효성 검사
+    const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
+    if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) {
+      setIsPhoneNumberErrorModalOpen(true);
       return;
     }
 
@@ -336,10 +412,10 @@ export default function StoreManage() {
 
     const newStoreData: StoreCreateRequest = {
       name: newStoreName,
-      businessNumber: newStoreBusinessNumber,
+      businessNumber: newStoreBusinessNumber.replace(/[^\d]/g, ''), // 하이픈 제거하고 숫자만 전송
       businessType: newStoreType,
       address: fullAddress, // 조합된 전체 주소를 사용함
-      phone: newStorePhone,
+      phone: newStorePhone.replace(/[^\d]/g, ''), // 하이픈 제거하고 숫자만 전송
       city: newStoreCity,
       state: newStoreState,
       postalCode: newStorePostalCode,
@@ -524,7 +600,12 @@ export default function StoreManage() {
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                <Input value={newStoreBusinessNumber} onChange={(e) => setNewStoreBusinessNumber(e.target.value)} />
+                <Input
+                  value={newStoreBusinessNumber}
+                  onChange={handleBusinessNumberChange}
+                  placeholder="000-00-00000"
+                  maxLength={12}
+                />
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">업종</label>
@@ -544,7 +625,12 @@ export default function StoreManage() {
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                <Input value={newStorePhone} onChange={(e) => setNewStorePhone(e.target.value)} />
+                <Input
+                  value={newStorePhone}
+                  onChange={handlePhoneNumberChange}
+                  // placeholder="000-0000-0000"
+                  maxLength={14}
+                />
               </div>
               <div className="col-span-2">
                 <label className="text-sm text-[#717182] mb-2 block">주소</label>
@@ -1032,6 +1118,57 @@ export default function StoreManage() {
           </Table>
         )}
       </Card>
+
+      {/* 필수 입력 항목 오류 모달 */}
+      <Dialog open={isRequiredFieldErrorModalOpen} onOpenChange={setIsRequiredFieldErrorModalOpen}>
+        <DialogContent className="w-auto max-w-xs">
+          <DialogHeader>
+            <DialogTitle>입력 오류</DialogTitle>
+            <DialogDescription>
+              모든 필수 항목을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsRequiredFieldErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 사업자번호 오류 모달 */}
+      <Dialog open={isBusinessNumberErrorModalOpen} onOpenChange={setIsBusinessNumberErrorModalOpen}>
+        <DialogContent className="w-auto max-w-xs">
+          <DialogHeader>
+            <DialogTitle>사업자번호 오류</DialogTitle>
+            <DialogDescription>
+              사업자번호는 10자리 숫자여야 합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsBusinessNumberErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 전화번호 오류 모달 */}
+      <Dialog open={isPhoneNumberErrorModalOpen} onOpenChange={setIsPhoneNumberErrorModalOpen}>
+        <DialogContent className="w-auto max-w-xs">
+          <DialogHeader>
+            <DialogTitle>전화번호 오류</DialogTitle>
+            <DialogDescription>
+              전화번호는 10~12자리 숫자여야 합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsPhoneNumberErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

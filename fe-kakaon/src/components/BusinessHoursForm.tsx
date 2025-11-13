@@ -112,7 +112,7 @@ export type BusinessHoursState = BusinessHours;
 const initialBusinessHours: BusinessHoursState = daysOfWeek.reduce((acc, day) => {
   acc[day] = {
     isClosed: false,
-    timeSlots: [{ start: '09:00', end: '18:00' }],
+    timeSlots: [{ start: '10:00', end: '22:00' }],
   };
   return acc;
 }, {} as BusinessHoursState);
