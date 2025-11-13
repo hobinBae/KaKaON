@@ -14,7 +14,6 @@ public class MailService {
 
     private final JavaMailSender mailSender;
 
-    @Async("mailExecutor")
     public void sendAlertMail(String to, String subject, String text){
         try{
             SimpleMailMessage message = new SimpleMailMessage();
