@@ -86,7 +86,7 @@ public class PaymentServiceImpl implements PaymentService{
         Payment savedPayment = paymentRepository.save(payment);
 
         // ✅ Redis 통계 즉시 반영
-        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
+        salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt(), payment.getDelivery());
 
         // 해당 결제가 CARD인 경우
         if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD)){
@@ -282,7 +282,7 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
-        salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now());
+        salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now(), payment.getDelivery());
 
         return paymentMapper.fromEntity(payment);
     }

@@ -16,6 +16,7 @@ public class SalesStatsResponseDto {
     private Integer paymentCount;
     private Integer cancelCount;
     private Double cancelRate;
+    private Integer deliverySales;
     private List<HourlySales> hourlySales;
 
     @NoArgsConstructor

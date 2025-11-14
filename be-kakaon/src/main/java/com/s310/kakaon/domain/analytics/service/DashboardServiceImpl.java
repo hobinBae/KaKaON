@@ -159,7 +159,7 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate firstDay = date.withDayOfMonth(1);
         LocalDate lastDay = date.withDayOfMonth(date.lengthOfMonth());
 
-        List<MonthlySalesResponseDto.DailySales> dailSalesList =
+        List<MonthlySalesResponseDto.DailySales> dailySalesList =
                 paymentStatsRepository.findByStoreIdAndStatsDateBetween(storeId, firstDay, lastDay)
                         .stream()
                         .sorted(Comparator.comparing(PaymentStats::getStatsDate))
@@ -169,11 +169,25 @@ public class DashboardServiceImpl implements DashboardService {
                                 .deliverySales(ps.getDeliverySales())
                                 .totalSales(ps.getTotalSales())
                                 .build()
-                        ).toList();
+                        ).collect(Collectors.toList());
+
+        // Redis에서 오늘 매출 조회 (yyyyMMdd 형식 사용)
+        String redisDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        Integer todayTotalSales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales();
+        Integer todayDeliverySales = salesCacheService.getSalesStats(storeId, redisDate).getDeliverySales();
+
+        MonthlySalesResponseDto.DailySales today = MonthlySalesResponseDto.DailySales.builder()
+                .date(LocalDate.now().toString())
+                .storeSales(todayTotalSales-todayDeliverySales)
+                .deliverySales(todayDeliverySales)
+                .totalSales(todayTotalSales)
+                .build();
+        dailySalesList.add(today);
+
         return MonthlySalesResponseDto.builder()
                 .storeId(storeId)
                 .month(date.getYear() + "-" + String.format("%02d", date.getMonthValue()))
-                .dailySales(dailSalesList)
+                .dailySales(dailySalesList)
                 .build();
     }
 

@@ -23,6 +23,8 @@ public class SalesCacheServiceImpl implements SalesCacheService {
     private static final String SUM_KEY = "sales:sum:%d:%s";                                            // 순 매출
     private static final String SUM_CANCEL_KEY = "sales:sum:cancel:%d:%s";                              // 취소 매출
 
+    private static final String SUM_DELIVERY_KEY = "sales:sum:delivery:%d:%s";                          // 오늘 총 배달 매출 금액
+
     private static final String COUNT_PAYMENT_KEY = "sales:count:payment:%d:%s";                        // 오늘 총 결제 건수
     private static final String COUNT_CANCEL_KEY = "sales:count:cancel:%d:%s";                          // 오늘 총 취소 건수
 
@@ -32,7 +34,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
     private static final String RATE_CANCEL_KEY = "sales:hourly:rate:cancel:%d:%s:%02d";                // 시간대별 취소율
 
     @Override
-    public void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now) {
+    public void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now, Boolean isDelivery) {
         String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int hour = now.getHour();
 
@@ -42,12 +44,15 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         redisTemplate.opsForValue().increment(String.format(COUNT_PAYMENT_KEY, storeId, date));
         redisTemplate.opsForValue().increment(String.format(COUNT_HOURLY_PAYMENT_KEY, storeId, date, hour));
 
+        if(Boolean.TRUE.equals(isDelivery)){
+            redisTemplate.opsForValue().increment(String.format(SUM_DELIVERY_KEY, storeId, date), amount.doubleValue());
+        }
         // TTL 설정
         setTtlForSalesKey(storeId, date);
     }
 
     @Override
-    public void updateCancelStats(Long storeId, Integer amount, LocalDateTime now) {
+    public void updateCancelStats(Long storeId, Integer amount, LocalDateTime now, Boolean isDelivery) {
         String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
         int hour = now.getHour();
 
@@ -56,6 +61,10 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         redisTemplate.opsForValue().increment(String.format(SUM_KEY, storeId, date), -amount.doubleValue());
         redisTemplate.opsForValue().increment(String.format(HOURLY_KEY, storeId, date, hour), -amount.doubleValue());
         redisTemplate.opsForValue().increment(String.format(COUNT_HOURLY_CANCEL_KEY, storeId, date, hour));
+
+        if(Boolean.TRUE.equals(isDelivery)){
+            redisTemplate.opsForValue().increment(String.format(SUM_DELIVERY_KEY, storeId, date), -amount.doubleValue());
+        }
 
         // TTL 설정
         setTtlForSalesKey(storeId, date);
@@ -68,6 +77,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         redisTemplate.expire(String.format(SUM_KEY, storeId, date), ttl);
         redisTemplate.expire(String.format(SUM_GROSS_KEY, storeId, date), ttl);
         redisTemplate.expire(String.format(SUM_CANCEL_KEY, storeId, date), ttl);
+        redisTemplate.expire(String.format(SUM_DELIVERY_KEY, storeId, date), ttl);
 
         redisTemplate.expire(String.format(COUNT_PAYMENT_KEY, storeId, date), ttl);
         redisTemplate.expire(String.format(COUNT_CANCEL_KEY, storeId, date), ttl);
@@ -101,6 +111,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         Integer totalSalesVal = getIntValue(String.format(SUM_KEY, storeId, date));
         Integer paymentCountVal = getIntValue(String.format(COUNT_PAYMENT_KEY, storeId, date));
         Integer cancelCountVal = getIntValue(String.format(COUNT_CANCEL_KEY, storeId, date));
+        Integer deliverySalesVal =  getIntValue(String.format(SUM_DELIVERY_KEY, storeId, date));
 
 
         // 시간대별 매출 조회
@@ -135,6 +146,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
                 .totalSales(totalSalesVal)
                 .paymentCount(paymentCountVal)
                 .cancelCount(cancelCountVal)
+                .deliverySales(deliverySalesVal)
                 .hourlySales(hourlySales)
                 .build();
 
