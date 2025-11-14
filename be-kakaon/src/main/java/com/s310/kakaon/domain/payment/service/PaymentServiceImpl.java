@@ -95,30 +95,27 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt(), payment.getDelivery());
 
-        // 해당 결제가 CARD인 경우
-        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD)){
-            // Kafka 이벤트 발행
-            PaymentEventDto event = PaymentEventDto.builder()
-                    .paymentId(savedPayment.getId())
-                    .storeId(savedPayment.getStore().getId())
-                    .orderId(savedPayment.getOrder().getOrderId())
-                    .authorizationNo(savedPayment.getAuthorizationNo())
-                    .amount(savedPayment.getAmount())
-                    .paymentMethod(savedPayment.getPaymentMethod().name())
-                    .status(savedPayment.getStatus().name())
-                    .approvedAt(savedPayment.getApprovedAt())
-                    .canceledAt(savedPayment.getCanceledAt())
-                    .isDelivery(savedPayment.getDelivery())
-                    .createdDateTime(savedPayment.getCreatedDateTime())
-                    .storeLatitude(savedPayment.getStore().getLatitude())
-                    .storeLongitude(savedPayment.getStore().getLongitude())
-                    .storeName(savedPayment.getStore().getName())
-                    .paymentUuid(request.getPaymentUuid())
-                    .build();
+        // Kafka 이벤트 발행
+        PaymentEventDto event = PaymentEventDto.builder()
+                .paymentId(savedPayment.getId())
+                .storeId(savedPayment.getStore().getId())
+                .orderId(savedPayment.getOrder().getOrderId())
+                .authorizationNo(savedPayment.getAuthorizationNo())
+                .amount(savedPayment.getAmount())
+                .paymentMethod(savedPayment.getPaymentMethod().name())
+                .status(savedPayment.getStatus().name())
+                .approvedAt(savedPayment.getApprovedAt())
+                .canceledAt(savedPayment.getCanceledAt())
+                .isDelivery(savedPayment.getDelivery())
+                .createdDateTime(savedPayment.getCreatedDateTime())
+                .storeLatitude(savedPayment.getStore().getLatitude())
+                .storeLongitude(savedPayment.getStore().getLongitude())
+                .storeName(savedPayment.getStore().getName())
+                .paymentUuid(request.getPaymentUuid())
+                .build();
 
-            // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
-            eventPublisher.publishEvent(event);
-        }
+        // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
+        eventPublisher.publishEvent(event);
 
 
         long t1 = System.currentTimeMillis();

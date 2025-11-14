@@ -23,10 +23,11 @@ export default function Intro() {
         return;
       }
 
-      const { type, accessToken } = event.data;
+      const { type, accessToken, member } = event.data;
       if (type === 'LOGIN_SUCCESS' && accessToken) {
         setToken(accessToken);
-        login();
+        // 임시 member 객체 또는 실제 전달받은 member 객체 사용
+        login(member || { memberId: 0, email: '', nickname: '', provider: 'KAKAO', role: 'USER' });
         navigate('/dashboard');
       } else if (type === 'LOGIN_FAILURE') {
         alert('로그인에 실패했습니다. 다시 시도해주세요.');
@@ -42,7 +43,7 @@ export default function Intro() {
   }, [navigate, login]);
 
   return (
-    <div className="bg-white text-gray-800 dark:bg-gray-900 dark:text-white">
+    <div className="bg-white text-gray-800 dark:bg-gray-900 dark:text-white overflow-hidden">
       <IntroHeader />
       <main>
         <Hero />

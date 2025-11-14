@@ -22,6 +22,7 @@ import { useCreateOrder } from '@/lib/hooks/useOrders';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AdminPinModal from '@/components/AdminPinModal';
+import CardSelectionModal from '@/components/CardSelectionModal';
 
 const FrontKiosk = () => {
   const {
@@ -48,9 +49,11 @@ const FrontKiosk = () => {
   const [newProductImage, setNewProductImage] = useState<string | null>(null);
   const [editingProduct, setEditingProduct] = useState(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
   const [countdown, setCountdown] = useState(3);
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
+  const [selectedCardNumber, setSelectedCardNumber] = useState<string | null>(null);
 
   useEffect(() => {
     if (!selectedStoreId && stores && stores.length > 0) {
@@ -78,6 +81,25 @@ const FrontKiosk = () => {
   const totalAmount = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
 
+  const handlePaymentMethodChange = (value: string) => {
+    setPaymentMethod(value);
+    if (value === '카드') {
+      setIsCardModalOpen(true);
+    }
+  };
+
+  const handleCardSelected = (card: { cardNumber: string }) => {
+    setSelectedCardNumber(card.cardNumber);
+    setIsCardModalOpen(false);
+  };
+
+  const handleCardModalClose = () => {
+    setIsCardModalOpen(false);
+    if (!selectedCardNumber) {
+      setPaymentMethod(null);
+    }
+  };
+
   const handlePayment = () => {
     if (cart.length > 0 && selectedStoreId && products && paymentMethod) {
       const paymentMethodMap = {
@@ -100,7 +122,13 @@ const FrontKiosk = () => {
         return sum + product.price * item.quantity;
       }, 0);
 
-      const orderData = {
+      const orderData: {
+        items: { menuId: number; price: number; quantity: number }[];
+        totalAmount: number;
+        paymentMethod: string;
+        orderType: string;
+        paymentUuid?: string;
+      } = {
         items: validCartItems.map(item => {
           const product = products.find(p => p.id === item.id)!;
           return {
@@ -114,6 +142,12 @@ const FrontKiosk = () => {
         orderType: orderType === 'dine-in' ? 'STORE' : 'DELIVERY',
       };
 
+      if (convertedPaymentMethod === 'CARD' && selectedCardNumber) {
+        orderData.paymentUuid = selectedCardNumber;
+      }
+
+      console.log('Order Data:', orderData);
+
       createOrderMutation.mutate({
         storeId: Number(selectedStoreId),
         orderData,
@@ -122,7 +156,8 @@ const FrontKiosk = () => {
           clearCart();
           setIsPaymentModalOpen(false);
           setIsPaymentComplete(true);
-          setPaymentMethod('');
+          setPaymentMethod(null);
+          setSelectedCardNumber(null);
         },
         onError: (error: any) => {
           console.error("Order creation failed:", error);
@@ -205,6 +240,11 @@ const FrontKiosk = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50">
+      <CardSelectionModal
+        isOpen={isCardModalOpen}
+        onClose={handleCardModalClose}
+        onCardSelect={handleCardSelected}
+      />
       {!orderType ? (
         <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
           <img src={logoImg} alt="KaKaON Logo" className="h-24 mb-12" />
@@ -389,10 +429,10 @@ const FrontKiosk = () => {
           <div className="py-6 space-y-8">
             <div>
               <Label className="text-2xl font-semibold">결제 수단</Label>
-              <RadioGroup onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4 mt-4">
+              <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange} className="grid grid-cols-2 gap-4 mt-4">
                 {['카드', '현금', '카카오페이', '계좌'].map(method => (
                   <Label key={method} htmlFor={method} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-6 cursor-pointer hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-yellow-400 [&:has([data-state=checked])]:bg-yellow-300 h-24">
-                    <RadioGroupItem value={method.toLowerCase()} id={method} className="sr-only" />
+                    <RadioGroupItem value={method} id={method} className="sr-only" />
                     <span className="text-2xl font-medium">{method}</span>
                   </Label>
                 ))}

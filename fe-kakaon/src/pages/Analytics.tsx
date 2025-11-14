@@ -600,8 +600,8 @@ export default function Analytics() {
         break;
       }
       case 'this-week': {
-        from = startOfWeek(today, { weekStartsOn: 1 });
-        to = endOfWeek(today, { weekStartsOn: 1 });
+        from = addDays(today, -6);
+        to = today;
         break;
       }
       case 'this-month': {

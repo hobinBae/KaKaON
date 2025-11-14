@@ -25,26 +25,26 @@ const metrics = [
 export default function SocialProof() {
   return (
     <Section id="social-proof" className="bg-gray-50 dark:bg-gray-900">
-      <div className="text-center space-y-4 mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold">이미 많은 사장님들이 경험하고 있습니다</h2>
+      <div className="text-center space-y-3 md:space-y-4 mb-10 md:mb-12">
+        <h2 className="text-3xl sm:text-4xl font-bold px-4 sm:px-0">이미 많은 사장님들이 경험하고 있습니다</h2>
       </div>
       
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-8 mb-16 text-center">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4 mb-12 md:mb-16 text-center">
         {metrics.map((metric) => (
             <div key={metric.label}>
                 <p className="text-4xl md:text-5xl font-bold text-[#FEE500]">{metric.value}</p>
-                <p className="text-gray-600 dark:text-gray-400">{metric.label}</p>
+                <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">{metric.label}</p>
             </div>
         ))}
       </div>
 
       {/* Testimonials */}
-      <div className="grid md:grid-cols-2 gap-8">
+      <div className="grid md:grid-cols-2 gap-6 md:gap-8">
         {testimonials.map((testimonial) => (
           <Card key={testimonial.author}>
             <CardContent className="pt-6">
-              <p className="mb-4">"{testimonial.quote}"</p>
+              <p className="mb-4 text-base sm:text-lg">"{testimonial.quote}"</p>
               <div className="flex items-center">
                 <img src={testimonial.avatar} alt={testimonial.author} className="w-12 h-12 rounded-full mr-4" />
                 <div>
