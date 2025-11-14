@@ -12,7 +12,6 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
   AlertDialog,
@@ -40,13 +39,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import CardSelectionModal from '@/components/CardSelectionModal';
 
 const ITEMS_PER_PAGE = 24;
 
 const Pos = () => {
   const {
-    addTransaction,
-    cancelTransaction,
     cart,
     addToCart,
     removeFromCart,
@@ -57,7 +55,7 @@ const Pos = () => {
   const { data: stores, isLoading: isLoadingStores } = useMyStores();
   const { selectedStoreId, setSelectedStoreId } = useBoundStore();
   const { data: products, isLoading: isLoadingProducts } = useMenus(selectedStoreId ? Number(selectedStoreId) : null);
-  const { data: transactions, isLoading: isLoadingTransactions } = useOrders(selectedStoreId ? Number(selectedStoreId) : null);
+  const { data: transactions } = useOrders(selectedStoreId ? Number(selectedStoreId) : null);
   const createMenuMutation = useCreateMenu();
   const createOrderMutation = useCreateOrder();
   const updateMenuMutation = useUpdateMenu();
@@ -73,12 +71,13 @@ const Pos = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [view, setView] = useState('products'); // 'products' or 'history'
+  const [view, setView] = useState('products');
   const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
-  const { data: selectedTransaction, isLoading: isLoadingTransactionDetail } = useOrderDetail(selectedTransactionId);
+  const { data: selectedTransaction } = useOrderDetail(selectedTransactionId);
   const [isAddProductDialogOpen, setIsAddProductDialogOpen] = useState(false);
   const [historyCurrentPage, setHistoryCurrentPage] = useState(1);
   const [selectedHistoryDate, setSelectedHistoryDate] = useState(new Date());
+  const [isCardModalOpen, setIsCardModalOpen] = useState(false);
 
   useEffect(() => {
     if (!selectedStoreId && stores && stores.length > 0) {
@@ -151,8 +150,20 @@ const Pos = () => {
     setNewProductPrice(onlyNumbers ? Number(onlyNumbers).toLocaleString('ko-KR') : '');
   };
 
+  const handlePaymentMethodChange = (value: string) => {
+    setPaymentMethod(value);
+    if (value === '카드') {
+      setIsCardModalOpen(true);
+    }
+  };
+
+  const handleCardSelected = (card) => {
+    console.log('Selected card:', card);
+    setIsCardModalOpen(false);
+  };
+
   const handlePayment = () => {
-    if (cart.length > 0 && selectedStoreId && products && paymentMethod) {
+    if (cart.length > 0 && selectedStoreId && paymentMethod) {
       const paymentMethodMap = {
         '카드': 'CARD',
         '계좌': 'TRANSFER',
@@ -161,33 +172,16 @@ const Pos = () => {
       };
       const convertedPaymentMethod = paymentMethodMap[paymentMethod] || paymentMethod.toUpperCase();
 
-      const validCartItems = cart.filter(item => products.some(p => p.id === item.id));
-      
-      if (validCartItems.length !== cart.length) {
-        console.error("Cart contains items not found in products list.");
-        return;
-      }
-
-      const calculatedTotalAmount = validCartItems.reduce((sum, item) => {
-        const product = products.find(p => p.id === item.id)!;
-        return sum + product.price * item.quantity;
-      }, 0);
-
       const orderData = {
-        items: validCartItems.map(item => {
-          const product = products.find(p => p.id === item.id)!;
-          return {
-            menuId: item.id,
-            price: product.price,
-            quantity: item.quantity,
-          };
-        }),
-        totalAmount: calculatedTotalAmount,
+        items: cart.map(item => ({
+          menuId: item.id,
+          price: item.price,
+          quantity: item.quantity,
+        })),
+        totalAmount,
         paymentMethod: convertedPaymentMethod,
         orderType: orderType.toUpperCase(),
       };
-
-      console.log("Creating order with data:", orderData);
 
       createOrderMutation.mutate({
         storeId: Number(selectedStoreId),
@@ -198,12 +192,6 @@ const Pos = () => {
           setIsPaymentDialogOpen(false);
           setPaymentMethod(null);
         },
-        onError: (error: any) => {
-          console.error("Order creation failed:", error);
-          if (error.response) {
-            console.error("Server response:", error.response.data);
-          }
-        }
       });
     }
   };
@@ -234,9 +222,13 @@ const Pos = () => {
     }
   };
 
-
   return (
     <div className="flex h-screen bg-gray-200 font-sans p-10 gap-4">
+      <CardSelectionModal 
+        isOpen={isCardModalOpen} 
+        onClose={() => setIsCardModalOpen(false)} 
+        onCardSelect={handleCardSelected} 
+      />
       <div className="w-[65%] flex flex-col gap-4">
         <header className="flex-shrink-0 h-16 bg-gray-600 text-white rounded-xl flex items-center justify-between px-6">
           <Select value={selectedStoreId ?? ""} onValueChange={(val) => setSelectedStoreId(val)}>
@@ -298,7 +290,7 @@ const Pos = () => {
           ) : (
             <div className="flex-1 flex flex-col min-h-0">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold">주문 내역</h2>
+                <h2 className="text-2xl font-bold">주문 내역(최근 7일)</h2>
                 <div className="flex items-center gap-2">
                   <Button variant="outline" size="icon" onClick={() => setSelectedHistoryDate(prev => addDays(prev, -1))} disabled={differenceInCalendarDays(new Date(), selectedHistoryDate) >= 6}>
                     <ChevronLeft className="h-4 w-4" />
@@ -421,9 +413,7 @@ const Pos = () => {
             <DialogHeader>
               <DialogTitle>결제 상세정보</DialogTitle>
             </DialogHeader>
-            {isLoadingTransactionDetail ? (
-              <p>로딩 중...</p>
-            ) : selectedTransaction ? (
+            {selectedTransaction ? (
               <div className="space-y-6">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -572,7 +562,7 @@ const Pos = () => {
                   </div>
                   <div>
                     <Label className="text-xl font-semibold">결제 수단</Label>
-                    <RadioGroup onValueChange={setPaymentMethod} className="grid grid-cols-2 gap-4 mt-4">
+                    <RadioGroup onValueChange={handlePaymentMethodChange} className="grid grid-cols-2 gap-4 mt-4">
                       {['카드', '계좌', '카카오페이', '현금'].map(method => (
                         <Label key={method} htmlFor={method} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-yellow-400 [&:has([data-state=checked])]:bg-yellow-300">
                           <RadioGroupItem value={method} id={method} className="sr-only" />
@@ -599,3 +589,4 @@ const Pos = () => {
 };
 
 export default Pos;
+

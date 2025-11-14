@@ -119,11 +119,12 @@ public class DuplicatePaymentDetector implements FraudDetector {
     }
 
     private String generateRedisKey(PaymentEventDto event) {
-        return String.format("%s%d-%s-%d",
+        return String.format("%s%d-%s-%d-%s",
                 REDIS_KEY_PREFIX,
                 event.getStoreId(),
                 event.getPaymentMethod(),
-                event.getAmount()
+                event.getAmount(),
+                event.getPaymentUuid()
         );
     }
 
