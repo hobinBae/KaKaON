@@ -17,7 +17,12 @@
     "paths": {
       "@/*": ["src/*"]
     },
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+
+    // Vite 환경을 위한 타입스크립트 옵션 추가 (IDE 타입 추론 강화용)
+    "module": "ESNext",
+    "target": "ESNext",
+    "moduleResolution": "bundler"
   },
 
   // TypeScript가 소스 코드를 찾을 기본 포함 경로

@@ -6,6 +6,7 @@ interface OrderRequest {
   items: { menuId: number; price: number; quantity: number }[];
   orderType: string;
   paymentMethod: string;
+  paymentUuid?: string;
 }
 
 const createOrder = async ({ storeId, orderData }: { storeId: number; orderData: OrderRequest }) => {

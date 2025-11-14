@@ -13,11 +13,12 @@ export default function FinalCTA() {
 
   return (
     <Section id="final-cta" className="text-center bg-gray-50 dark:bg-gray-900">
-      <div className="space-y-6">
-        <h2 className="text-3xl md:text-4xl font-bold">
-          지금 바로 시작하여 매출 관리를 혁신하세요
+      <div className="space-y-6 md:space-y-8">
+        <h2 className="text-3xl sm:text-4xl font-bold px-4 sm:px-0">
+          지금 바로 시작하여 <br className="sm:hidden" />
+          매출 관리를 혁신하세요
         </h2>
-        <Button size="lg" className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
+        <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
           무료로 시작하기
         </Button>
       </div>

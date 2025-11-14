@@ -20,23 +20,23 @@ export default function IntroHeader() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container h-14 flex items-center justify-between">
+      <div className="container h-16 flex items-center justify-between px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2">
-          <img src={logoImg} alt="KaKaON Logo" className="h-8" />
+          <img src={logoImg} alt="KaKaON Logo" className="h-9 sm:h-10" />
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2 sm:gap-4">
           {isLoggedIn ? (
             <>
-              <Button variant="ghost" asChild>
-                <Link to="/dashboard">대시보드 가기</Link>
+              <Button variant="ghost" asChild className="text-sm sm:text-base">
+                <Link to="/dashboard">대시보드</Link>
               </Button>
-              <Button onClick={() => logout()} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90">
+              <Button onClick={() => logout()} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 text-sm sm:text-base">
                 로그아웃
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={handleLogin}>
+              <Button variant="ghost" onClick={handleLogin} className="text-sm sm:text-base">
                 로그인
               </Button>
             </>

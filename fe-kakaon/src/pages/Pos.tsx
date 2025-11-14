@@ -66,6 +66,7 @@ const Pos = () => {
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
+  const [selectedCardNumber, setSelectedCardNumber] = useState<string | null>(null);
   const [orderType, setOrderType] = useState('store');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -157,9 +158,16 @@ const Pos = () => {
     }
   };
 
-  const handleCardSelected = (card) => {
-    console.log('Selected card:', card);
+  const handleCardSelected = (card: { cardNumber: string }) => {
+    setSelectedCardNumber(card.cardNumber);
     setIsCardModalOpen(false);
+  };
+
+  const handleCardModalClose = () => {
+    setIsCardModalOpen(false);
+    if (!selectedCardNumber) {
+      setPaymentMethod(null);
+    }
   };
 
   const handlePayment = () => {
@@ -172,7 +180,13 @@ const Pos = () => {
       };
       const convertedPaymentMethod = paymentMethodMap[paymentMethod] || paymentMethod.toUpperCase();
 
-      const orderData = {
+      const orderData: {
+        items: { menuId: number; price: number; quantity: number }[];
+        totalAmount: number;
+        paymentMethod: string;
+        orderType: string;
+        paymentUuid?: string;
+      } = {
         items: cart.map(item => ({
           menuId: item.id,
           price: item.price,
@@ -183,6 +197,12 @@ const Pos = () => {
         orderType: orderType.toUpperCase(),
       };
 
+      if (convertedPaymentMethod === 'CARD' && selectedCardNumber) {
+        orderData.paymentUuid = selectedCardNumber;
+      }
+
+      console.log('Order Data:', orderData);
+
       createOrderMutation.mutate({
         storeId: Number(selectedStoreId),
         orderData,
@@ -191,6 +211,7 @@ const Pos = () => {
           clearCart();
           setIsPaymentDialogOpen(false);
           setPaymentMethod(null);
+          setSelectedCardNumber(null);
         },
       });
     }
@@ -226,7 +247,7 @@ const Pos = () => {
     <div className="flex h-screen bg-gray-200 font-sans p-10 gap-4">
       <CardSelectionModal 
         isOpen={isCardModalOpen} 
-        onClose={() => setIsCardModalOpen(false)} 
+        onClose={handleCardModalClose} 
         onCardSelect={handleCardSelected} 
       />
       <div className="w-[65%] flex flex-col gap-4">
@@ -562,7 +583,7 @@ const Pos = () => {
                   </div>
                   <div>
                     <Label className="text-xl font-semibold">결제 수단</Label>
-                    <RadioGroup onValueChange={handlePaymentMethodChange} className="grid grid-cols-2 gap-4 mt-4">
+                    <RadioGroup value={paymentMethod} onValueChange={handlePaymentMethodChange} className="grid grid-cols-2 gap-4 mt-4">
                       {['카드', '계좌', '카카오페이', '현금'].map(method => (
                         <Label key={method} htmlFor={method} className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 cursor-pointer hover:bg-accent hover:text-accent-foreground [&:has([data-state=checked])]:border-yellow-400 [&:has([data-state=checked])]:bg-yellow-300">
                           <RadioGroupItem value={method} id={method} className="sr-only" />
@@ -589,4 +610,3 @@ const Pos = () => {
 };
 
 export default Pos;
-

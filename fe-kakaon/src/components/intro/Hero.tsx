@@ -99,23 +99,24 @@ export default function Hero() {
       </div>
 
       {/* Constrained content */}
-      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 md:px-6 py-12 md:py-20 lg:py-24">
-        <div className="flex flex-col items-center space-y-6">
-        <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white">
-          <TypingAnimation duration={1.5}>
-            복잡한 매출 관리, <span className="text-primary">카카온</span>으로 간편하게
-          </TypingAnimation>
-        </h1>
-        <p
-          className="max-w-3xl text-lg text-white/90 opacity-0 animate-slide-bottom"
-          style={{ animationDelay: '1.6s' }}
-        >
-          {subtitleLine1}
-          <br />
-          {subtitleLine2}
-        </p>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
+      <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:py-28">
+        <div className="flex flex-col items-center space-y-6 md:space-y-8">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white text-center w-full overflow-hidden">
+            <TypingAnimation duration={1.5}>
+              복잡한 매출 관리, <br className="sm:hidden" />
+              <span className="text-primary">카카온</span>으로 간편하게
+            </TypingAnimation>
+          </h1>
+          <p
+            className="max-w-xl md:max-w-3xl text-base sm:text-lg text-white/90 opacity-0 animate-slide-bottom text-center"
+            style={{ animationDelay: '1.6s' }}
+          >
+            {subtitleLine1}
+            <br className="hidden md:block" />
+            {subtitleLine2}
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-4">
+            <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
               무료로 시작하기
             </Button>
             <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">

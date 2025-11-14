@@ -23,23 +23,23 @@ const benefits = [
 export default function Benefits() {
   return (
     <Section id="benefits">
-      <div className="text-center space-y-4 mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold">카카온이 제공하는 핵심 가치</h2>
-        <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400">
+      <div className="text-center space-y-3 md:space-y-4 mb-10 md:mb-12">
+        <h2 className="text-3xl sm:text-4xl font-bold">카카온이 제공하는 핵심 가치</h2>
+        <p className="max-w-2xl mx-auto text-base sm:text-lg text-gray-600 dark:text-gray-400 px-4 sm:px-0">
           단순한 매출 조회를 넘어, 데이터 기반의 스마트한 매장 관리를 경험해보세요.
         </p>
       </div>
-      <div className="grid md:grid-cols-3 gap-8">
+      <div className="grid md:grid-cols-3 gap-6 md:gap-8">
         {benefits.map((benefit) => (
-          <Card key={benefit.title} className="text-center">
-            <CardHeader>
+          <Card key={benefit.title} className="text-center p-2">
+            <CardHeader className="pb-4">
               <div className="mx-auto bg-gray-100 dark:bg-gray-800 rounded-full p-4 w-fit">
                 {benefit.icon}
               </div>
             </CardHeader>
             <CardContent className="space-y-2">
-              <CardTitle>{benefit.title}</CardTitle>
-              <p className="text-gray-600 dark:text-gray-400">{benefit.description}</p>
+              <CardTitle className="text-xl">{benefit.title}</CardTitle>
+              <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">{benefit.description}</p>
             </CardContent>
           </Card>
         ))}
