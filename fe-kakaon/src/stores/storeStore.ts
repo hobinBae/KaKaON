@@ -24,6 +24,16 @@ interface AppState {
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, amount: number) => void;
   clearCart: () => void;
+
+  // --- Business Hours State ---
+  businessHours: {
+    [storeId: string]: {
+      sessionStartTime: Date | null;
+      sessionEndTime: Date | null;
+    };
+  };
+  setSessionStartTime: (storeId: string, time: Date | null) => void;
+  setSessionEndTime: (storeId: string, time: Date | null) => void;
 }
 
 // Zustand 스토어를 생성했음
@@ -91,4 +101,34 @@ export const useBoundStore = create<AppState>((set, get) => ({
     });
   },
   clearCart: () => set({ cart: [] }),
+
+  // --- Business Hours State ---
+  businessHours: {},
+  setSessionStartTime: (storeId, time) =>
+    set((state) => {
+      const currentStoreHours = state.businessHours[storeId] || { sessionStartTime: null, sessionEndTime: null };
+      return {
+        businessHours: {
+          ...state.businessHours,
+          [storeId]: {
+            ...currentStoreHours,
+            sessionStartTime: time,
+            sessionEndTime: null, // 영업 시작 시 종료 시간은 항상 초기화
+          },
+        },
+      };
+    }),
+  setSessionEndTime: (storeId, time) =>
+    set((state) => {
+      const currentStoreHours = state.businessHours[storeId] || { sessionStartTime: null, sessionEndTime: null };
+      return {
+        businessHours: {
+          ...state.businessHours,
+          [storeId]: {
+            ...currentStoreHours, // sessionStartTime 보존
+            sessionEndTime: time,
+          },
+        },
+      };
+    }),
 }));

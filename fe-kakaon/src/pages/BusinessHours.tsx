@@ -20,46 +20,68 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 export default function BusinessHours() {
-  const { selectedStoreId } = useBoundStore();
+  const { 
+    selectedStoreId, 
+    businessHours, 
+    setSessionStartTime, 
+    setSessionEndTime 
+  } = useBoundStore();
+  
   const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
   const { data: storeDetail } = useStoreById(Number(selectedStoreId));
   const { mutate: updateStatus } = useUpdateOperationStatus();
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
-  const [sessionStartTime, setSessionStartTime] = useState<Date | null>(null);
-  const [sessionEndTime, setSessionEndTime] = useState<Date | null>(null);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+
+  const storeBusinessHours = selectedStoreId ? businessHours[selectedStoreId] : null;
+  const sessionStartTime = storeBusinessHours?.sessionStartTime ?? null;
+  const sessionEndTime = storeBusinessHours?.sessionEndTime ?? null;
 
   const isBusinessOpen = operationStatus?.status === 'OPEN';
   const prevIsBusinessOpen = usePrevious(isBusinessOpen);
+  const prevSelectedStoreId = usePrevious(selectedStoreId);
 
   // 세션 시작 및 종료 시간 관리
   useEffect(() => {
-    // 1. 페이지 로드 시: 서버 상태에 따라 초기 시간 설정
-    if (prevIsBusinessOpen === undefined && operationStatus?.updatedAt) {
+    if (!selectedStoreId) return;
+
+    const isStoreChanged = prevSelectedStoreId !== selectedStoreId;
+
+    // Handle status changes (OPEN/CLOSE) only when the store has NOT changed
+    if (!isStoreChanged) {
+      if (isBusinessOpen && !prevIsBusinessOpen) {
+        setSessionStartTime(selectedStoreId, new Date());
+      } else if (!isBusinessOpen && prevIsBusinessOpen && operationStatus?.updatedAt) {
+        setSessionEndTime(selectedStoreId, new Date(operationStatus.updatedAt));
+      }
+    } 
+    // Handle initial state loading when the component loads for the first time or the store changes
+    else if (operationStatus?.updatedAt) {
       const serverTime = new Date(operationStatus.updatedAt);
       if (isBusinessOpen) {
-        setSessionStartTime(serverTime);
-      } else {
-        // 영업 시작 시간을 유지하기 위해 마감 시에는 시작 시간을 초기화하지 않음
-        if(operationStatus.status === 'CLOSED' && operationStatus.updatedAt) {
-          setSessionStartTime(new Date(operationStatus.updatedAt));
+        // If we switched to a new store and it's open, set its start time if not already present in global state
+        if (!sessionStartTime) {
+          setSessionStartTime(selectedStoreId, serverTime);
         }
-        setSessionEndTime(serverTime);
+      } else {
+        // If we switched to a new store and it's closed, set its end time if not already present
+        if (!sessionEndTime) {
+          setSessionEndTime(selectedStoreId, serverTime);
+        }
       }
-      return; 
     }
-
-    // 2. 영업 시작으로 상태 변경 시 (CLOSED -> OPEN)
-    if (isBusinessOpen && !prevIsBusinessOpen) {
-      setSessionStartTime(new Date()); // 정확한 클라이언트 현재 시간으로 설정
-      setSessionEndTime(null);
-    } 
-    // 3. 영업 종료로 상태 변경 시 (OPEN -> CLOSED)
-    else if (!isBusinessOpen && prevIsBusinessOpen && operationStatus?.updatedAt) {
-      setSessionEndTime(new Date(operationStatus.updatedAt));
-    }
-  }, [isBusinessOpen, prevIsBusinessOpen, operationStatus]);
+  }, [
+    isBusinessOpen, 
+    prevIsBusinessOpen, 
+    operationStatus, 
+    selectedStoreId, 
+    prevSelectedStoreId, 
+    setSessionStartTime, 
+    setSessionEndTime, 
+    sessionStartTime, 
+    sessionEndTime
+  ]);
 
   // 영업 상태일 때 경과 시간을 계산하는 타이머를 관리
   useEffect(() => {

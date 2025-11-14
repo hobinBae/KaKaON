@@ -26,27 +26,33 @@ const steps = [
 export default function HowItWorks() {
   return (
     <Section id="how-it-works">
-      <div className="text-center space-y-4 mb-12">
-        <h2 className="text-3xl md:text-4xl font-bold">시작하는 방법</h2>
-        <p className="max-w-2xl mx-auto text-lg text-gray-600 dark:text-gray-400">
+      <div className="text-center space-y-3 md:space-y-4 mb-12 md:mb-16">
+        <h2 className="text-3xl sm:text-4xl font-bold">시작하는 방법</h2>
+        <p className="max-w-2xl mx-auto text-base sm:text-lg text-gray-600 dark:text-gray-400 px-4 sm:px-0">
           단 4단계만으로 복잡한 매출 관리를 끝낼 수 있습니다.
         </p>
       </div>
-      <div className="relative grid md:grid-cols-4 gap-8">
-        {/* Dashed line connector for desktop */}
-        <div className="absolute top-[38.5%] left-0 w-full h-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
-        
-        {steps.map((step) => (
-          <div key={step.step} className="relative flex flex-col items-center text-center">
-            <div className="mb-4 bg-white dark:bg-gray-900 z-10">
-              <div className="w-12 h-12 rounded-full bg-[#FEE500] flex items-center justify-center text-[#3C1E1E] font-bold text-xl">
-                {step.step}
+      <div className="relative max-w-xs mx-auto md:max-w-none">
+        {/* Vertical connector for mobile */}
+        <div className="absolute top-6 left-6 h-full border-l-2 border-dashed border-gray-200 dark:border-gray-700 md:hidden" />
+        {/* Horizontal connector for desktop */}
+        <div className="absolute top-6 left-0 w-full h-px bg-gray-200 dark:bg-gray-700 hidden md:block" />
+
+        <div className="grid gap-12 md:grid-cols-4 md:gap-8">
+          {steps.map((step) => (
+            <div key={step.step} className="relative flex md:flex-col items-center md:items-center text-left md:text-center">
+              <div className="mb-0 md:mb-4 bg-white dark:bg-gray-900 z-10 mr-6 md:mr-0">
+                <div className="w-12 h-12 rounded-full bg-[#FEE500] flex items-center justify-center text-[#3C1E1E] font-bold text-xl shrink-0">
+                  {step.step}
+                </div>
+              </div>
+              <div className="flex-1">
+                <h3 className="text-lg sm:text-xl font-bold mb-1 sm:mb-2">{step.title}</h3>
+                <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">{step.description}</p>
               </div>
             </div>
-            <h3 className="text-xl font-bold mb-2">{step.title}</h3>
-            <p className="text-gray-600 dark:text-gray-400">{step.description}</p>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </Section>
   );
