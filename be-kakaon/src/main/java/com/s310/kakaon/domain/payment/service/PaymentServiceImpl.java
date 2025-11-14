@@ -303,6 +303,17 @@ public class PaymentServiceImpl implements PaymentService{
         paymentCancelRepository.save(cancel);
 
         payment.cancel();
+        String redisKey = REDIS_KEY_PREFIX + payment.getStore().getId();
+        //여기서 디비를 업데이트할지 레디스를 업데이트 할지 정해야한다.
+        String startTimeStr = stringRedisTemplate.opsForHash().get(redisKey, "startTime").toString();
+
+        if(startTimeStr != null){
+            //시작보다 크다면 레디스 반영
+
+            //시작보다 작다면 집계함수 업데이트
+        }else{
+
+        }
         salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now());
 
         return paymentMapper.fromEntity(payment);
