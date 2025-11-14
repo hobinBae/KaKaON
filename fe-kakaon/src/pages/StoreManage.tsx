@@ -293,7 +293,7 @@ export default function StoreManage() {
   useEffect(() => {
     if (selectedStore) {
       setEditingStoreName(selectedStore.name);
-      setEditingStorePhone(selectedStore.phone);
+      setEditingStorePhone(formatPhoneNumber(selectedStore.phone));
       setEditingStoreType(selectedStore.businessType);
       setEditingBusinessHours(convertBusinessHours(selectedStore.businessHours));
     }
@@ -475,7 +475,7 @@ export default function StoreManage() {
   
     const updatedData: StoreUpdateRequest = {
       name: editingStoreName,
-      phone: editingStorePhone,
+      phone: editingStorePhone.replace(/[^\d]/g, ''), // 하이픈 제거하고 숫자만 전송
       businessType: editingStoreType,
       businessHours: businessHours,
     };
@@ -572,28 +572,28 @@ export default function StoreManage() {
   // };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Page Title */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
-          <h1 className="text-[#333333] mb-1">가맹점 관리</h1>
+          <h1 className="text-[#333333] mb-1 text-xl md:text-2xl">가맹점 관리</h1>
           <p className="text-sm text-[#717182]">
             여러 매장의 종합 분석 및 정보 관리
           </p>
         </div>
         <Dialog open={isAddingStore} onOpenChange={setIsAddingStore}>
           <DialogTrigger asChild>
-            <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none">
+            <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               가맹점 추가
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>새 가맹점 추가</DialogTitle>
               <DialogDescription>추가할 가맹점의 정보를 입력하세요.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">상호명</label>
                 <Input value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} />
@@ -661,7 +661,7 @@ export default function StoreManage() {
                       영업시간 설정
                     </Button>
                   </DialogTrigger>
-                  <DialogContent>
+                  <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
                     <DialogHeader className="text-left">
                       <DialogTitle>영업시간 상세 설정</DialogTitle>
                       <DialogDescription>
@@ -690,8 +690,8 @@ export default function StoreManage() {
       </div>
 
       {/* Filters */}
-      <Card className="p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-        <div className="flex items-center gap-2">
+      <Card className="p-3 md:p-4 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#717182]" />
             <Input
@@ -706,14 +706,16 @@ export default function StoreManage() {
               }}
             />
           </div>
-          <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
-          <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8" onClick={() => {
-            setSearchTerm("");
-            setAppliedSearchTerm("");
-          }}>
-            <RotateCw className="w-4 h-4 mr-1" />
-            초기화
-          </Button>
+          <div className="flex gap-2">
+            <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-9 sm:h-8 flex-1 sm:flex-initial" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
+            <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-9 sm:h-8 flex-1 sm:flex-initial" onClick={() => {
+              setSearchTerm("");
+              setAppliedSearchTerm("");
+            }}>
+              <RotateCw className="w-4 h-4 mr-1" />
+              초기화
+            </Button>
+          </div>
         </div>
       </Card>
 
@@ -728,7 +730,337 @@ export default function StoreManage() {
             {appliedSearchTerm ? "검색 결과가 없습니다." : "등록된 매장이 없습니다."}
           </div>
         ) : (
-          <Table>
+          <>
+            {/* Mobile Card View */}
+            <div className="md:hidden divide-y divide-[rgba(0,0,0,0.08)]">
+              {filteredStores.map((store) => (
+                <div key={store.storeId} className="p-4 space-y-3">
+                  <div
+                    className="flex items-start justify-between cursor-pointer"
+                    onClick={() => handleStoreClick(store)}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        {favoriteStore?.storeId === store.storeId && (
+                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                        )}
+                        <h3 className="font-medium text-[#333333]">{store.name}</h3>
+                        <Badge
+                          className={`rounded text-xs ${
+                            store.status === 'OPEN'
+                              ? 'bg-[#4CAF50] text-white'
+                              : 'bg-[#717182] text-white'
+                          }`}
+                        >
+                          {store.status === 'OPEN' ? '영업중' : '마감'}
+                        </Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-[#717182]">매출: </span>
+                          <span className="text-[#333333] font-medium">₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M</span>
+                        </div>
+                        <div>
+                          <span className="text-[#717182]">취소율: </span>
+                          {store.cancelRate !== undefined ? (
+                            <Badge
+                              variant="outline"
+                              className={`rounded text-xs ${
+                                store.cancelRate > 3.5
+                                  ? "border-[#FF4D4D] text-[#FF4D4D]"
+                                  : "border-[#717182] text-[#717182]"
+                              }`}
+                            >
+                              {store.cancelRate}%
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-[#717182]">-</span>
+                          )}
+                        </div>
+                        <div>
+                          <span className="text-[#717182]">알림: </span>
+                          {(store.unreadCount ?? 0) > 0 ? (
+                            <Badge variant="destructive" className="rounded text-xs">
+                              {store.unreadCount}건
+                            </Badge>
+                          ) : (
+                            <span className="text-xs text-[#717182]">없음</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGlobalSelectedStoreId(String(store.storeId));
+                        navigate('/transactions');
+                      }}
+                    >
+                      거래내역
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="rounded-lg flex-1 text-xs"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGlobalSelectedStoreId(String(store.storeId));
+                        navigate('/analytics');
+                      }}
+                    >
+                      매출분석
+                    </Button>
+                  </div>
+
+                  {/* Mobile Expanded Detail */}
+                  {selectedStoreId === store.storeId && (
+                    <div className="mt-4 pt-4 border-t border-[rgba(0,0,0,0.08)]">
+                      {isStoreDetailLoading ? (
+                        <div className="text-center p-8">상세 정보를 불러오는 중...</div>
+                      ) : selectedStore ? (
+                        <div className="space-y-4">
+                          <Tabs defaultValue="basic" className="w-full">
+                            <div className="flex flex-col gap-3">
+                              <TabsList className="bg-[#F5F5F5] rounded-lg p-1 w-full">
+                                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E] flex-1">
+                                  기본정보
+                                </TabsTrigger>
+                                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E] flex-1">
+                                  알림설정
+                                </TabsTrigger>
+                              </TabsList>
+                              <div className="flex items-center justify-between">
+                                <label htmlFor="favorite-toggle-mobile" className="text-sm font-medium text-gray-700">
+                                  대표 가맹점으로 설정
+                                </label>
+                                <Switch
+                                  id="favorite-toggle-mobile"
+                                  checked={favoriteStore?.storeId === selectedStore.storeId}
+                                  onCheckedChange={() => handleToggleFavorite(selectedStore.storeId)}
+                                />
+                              </div>
+                            </div>
+
+                            <TabsContent value="basic" className="mt-4">
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                                  <Input value={editingStoreName} onChange={(e) => setEditingStoreName(e.target.value)} className="rounded-lg" />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                                  <Input value={formatBusinessNumber(selectedStore.businessNumber)} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                  <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                  <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="RESTAURANT">음식업</SelectItem>
+                                      <SelectItem value="RETAIL">소매업</SelectItem>
+                                      <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
+                                      <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
+                                      <SelectItem value="LODGING">숙박업</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                  <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div>
+                                  <div className="flex items-center justify-between mb-2">
+                                    <label className="text-sm text-[#717182]">영업시간</label>
+                                    <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                      <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">수정</Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+                                        <DialogHeader>
+                                          <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                          <DialogDescription>
+                                            요일별 영업시간과 휴무일을 설정하세요.
+                                          </DialogDescription>
+                                        </DialogHeader>
+                                        <BusinessHoursForm
+                                          initialState={convertBusinessHours(selectedStore.businessHours)}
+                                          onStateChange={setEditingBusinessHours}
+                                        />
+                                        <DialogFooter>
+                                          <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
+                                        </DialogFooter>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                  <div className="border rounded-lg p-3 space-y-2 bg-white">
+                                    {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
+                                      <div key={day} className="flex justify-between text-sm">
+                                        <span className="font-semibold">{day}</span>
+                                        {hours.isClosed ? (
+                                          <span className="text-gray-500">휴무일</span>
+                                        ) : (
+                                          <div>
+                                            {hours.timeSlots.map((slot, index) => (
+                                              <span key={index}>{slot.start} - {slot.end}</span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-end">
+                                  <Button onClick={handleUpdateStore} className="w-full">수정 완료</Button>
+                                </div>
+
+                                <Card className="p-4 border-[#FF4D4D] border">
+                                  <div className="space-y-3">
+                                    <div>
+                                      <h3 className="text-[#FF4D4D] text-sm font-medium mb-1">가맹점 삭제</h3>
+                                      <p className="text-xs text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                                    </div>
+                                    <Button variant="destructive" className="rounded-lg w-full" onClick={() => handleDeleteStore(selectedStore.storeId)}>
+                                      가맹점 삭제
+                                    </Button>
+                                  </div>
+                                </Card>
+                              </div>
+                            </TabsContent>
+
+                            <TabsContent value="alerts" className="mt-4">
+                              <div className="space-y-4">
+                                {alertRecipients.map((recipient) => (
+                                  <Fragment key={recipient.id}>
+                                    {editingRecipientId === recipient.id ? (
+                                      <div className="p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)] space-y-4">
+                                        <Input
+                                          placeholder="이름"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.name || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, name: e.target.value })}
+                                        />
+                                        <Input
+                                          placeholder="직위"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.position || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, position: e.target.value })}
+                                        />
+                                        <Input
+                                          type="email"
+                                          placeholder="이메일 주소"
+                                          className="rounded-lg"
+                                          value={editingRecipientData?.email || ''}
+                                          onChange={(e) => setEditingRecipientData({ ...editingRecipientData!, email: e.target.value })}
+                                        />
+                                        <div className="flex gap-2">
+                                          <Button variant="ghost" onClick={() => setEditingRecipientId(null)} className="flex-1">취소</Button>
+                                          <Button
+                                            className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none flex-1"
+                                            onClick={handleUpdateRecipient}
+                                          >
+                                            저장
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center justify-between p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)]">
+                                        <div className="flex-1 min-w-0">
+                                          <p className="text-sm text-[#333333] truncate">{recipient.name} ({recipient.position})</p>
+                                          <p className="text-xs text-[#717182] truncate">{recipient.email}</p>
+                                        </div>
+                                        <div className="flex items-center gap-2 ml-2">
+                                          <Switch
+                                            checked={recipient.active}
+                                            onCheckedChange={() => handleToggleAlertRecipient(recipient)}
+                                          />
+                                          <Button variant="ghost" size="icon" onClick={() => {
+                                            setEditingRecipientId(recipient.id);
+                                            setEditingRecipientData({ name: recipient.name, position: recipient.position, email: recipient.email });
+                                          }}>
+                                            <Pencil className="w-4 h-4" />
+                                          </Button>
+                                          <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                            <X className="w-4 h-4" />
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </Fragment>
+                                ))}
+                              </div>
+
+                              {isAddingAlert && (
+                                <div className="p-4 bg-white rounded-lg border border-[rgba(0,0,0,0.08)] space-y-4 mt-4">
+                                  <Input
+                                    placeholder="이름"
+                                    className="rounded-lg"
+                                    value={newRecipient.name}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, name: e.target.value })}
+                                  />
+                                  <Input
+                                    placeholder="직위"
+                                    className="rounded-lg"
+                                    value={newRecipient.position}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, position: e.target.value })}
+                                  />
+                                  <Input
+                                    type="email"
+                                    placeholder="이메일 주소"
+                                    className="rounded-lg"
+                                    value={newRecipient.email}
+                                    onChange={(e) => setNewRecipient({ ...newRecipient, email: e.target.value })}
+                                  />
+                                  <div className="flex gap-2">
+                                    <Button variant="ghost" onClick={() => setIsAddingAlert(false)} className="flex-1">취소</Button>
+                                    <Button
+                                      className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none flex-1"
+                                      onClick={handleAddRecipient}
+                                    >
+                                      저장
+                                    </Button>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="flex justify-center mt-6">
+                                <Button
+                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none w-full"
+                                  onClick={() => setIsAddingAlert(true)}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  추가
+                                </Button>
+                              </div>
+                            </TabsContent>
+                          </Tabs>
+                        </div>
+                      ) : (
+                        <div className="text-center p-8 text-red-500">상세 정보를 불러오는 데 실패했습니다.</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Desktop Table View */}
+            <Table className="hidden md:table">
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
                 <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
@@ -751,7 +1083,7 @@ export default function StoreManage() {
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableHead>
-                <TableHead className="text-[#333333]"></TableHead>
+                <TableHead className="text-[#333333] hidden md:table-cell"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -759,12 +1091,11 @@ export default function StoreManage() {
                 <Fragment key={store.storeId}>
                   <TableRow
                     key={store.storeId}
-                    className={`border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer ${
-                      selectedStoreId === store.storeId ? 'bg-[#FFFAE6]' : ''
-                    }`}
+                    className="border-b border-[rgba(0,0,0,0.08)] hover:bg-[#F5F5F5] cursor-pointer"
+                    style={{ backgroundColor: selectedStoreId === store.storeId ? '#FFFAE6' : 'transparent' }}
                     onClick={() => handleStoreClick(store)}
                   >
-                    <TableCell className="pl-2 md:pl-1.5">
+                    <TableCell className="pl-2 md:pl-1.5" style={{ backgroundColor: 'transparent' }}>
                       <div className="flex items-center gap-1">
                         {/* 별 아이콘을 위한 고정 너비 컨테이너 추가 */}
                         <div className="w-4 h-4 flex-shrink-0">
@@ -775,7 +1106,7 @@ export default function StoreManage() {
                         <span className="text-sm text-[#333333] truncate">{store.name}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
                       <div>
                         <p className="text-sm text-[#333333]">
                           ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
@@ -783,7 +1114,7 @@ export default function StoreManage() {
                         {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
                       </div>
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
                       {store.cancelRate !== undefined ? (
                         <Badge
                           variant="outline"
@@ -799,7 +1130,7 @@ export default function StoreManage() {
                         <span className="text-xs text-[#717182]">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
                       {/* 목록 조회 시에는 unreadCount를 사용 */}
                       {(store.unreadCount ?? 0) > 0 ? (
                         <Badge
@@ -812,7 +1143,7 @@ export default function StoreManage() {
                         <span className="text-xs text-[#717182]">없음</span>
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
                       <Badge
                         className={`rounded ${
                           store.status === 'OPEN'
@@ -823,7 +1154,7 @@ export default function StoreManage() {
                         {store.status === 'OPEN' ? '영업중' : '마감'}
                       </Badge>
                     </TableCell>
-                    <TableCell className="w-[200px] hidden md:table-cell">
+                    <TableCell className="w-[200px] hidden md:table-cell" style={{ backgroundColor: 'transparent' }}>
                       <div className="flex items-center gap-2">
                         <div className="w-full h-2.5 relative">
                           <div
@@ -836,7 +1167,7 @@ export default function StoreManage() {
                         </span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-right hidden md:table-cell">
+                    <TableCell className="text-right hidden md:table-cell" style={{ backgroundColor: 'transparent' }}>
                       <div className="flex gap-2 justify-end">
                         <Button
                           variant="outline"
@@ -869,136 +1200,130 @@ export default function StoreManage() {
                   {/* Expanded Detail Row */}
                   {selectedStoreId === store.storeId && (
                     <TableRow key={`${store.storeId}-detail`}>
-                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-6">
+                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-4 md:p-6">
                         {isStoreDetailLoading ? (
                           <div className="text-center p-8">상세 정보를 불러오는 중...</div>
                         ) : selectedStore ? (
-                          <div className="space-y-6">
+                          <div className="space-y-4 md:space-y-6">
                             <Tabs defaultValue="basic" className="w-full">
-                            <div className="flex items-center justify-between">
-                              <TabsList className="bg-[#F5F5F5] rounded-lg p-1">
-                                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-0">
+                              <TabsList className="bg-[#F5F5F5] rounded-lg p-1 w-full md:w-auto">
+                                <TabsTrigger value="basic" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E] flex-1 md:flex-initial">
                                   기본정보
                                 </TabsTrigger>
-                                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E]">
+                                <TabsTrigger value="alerts" className="rounded-lg data-[state=active]:bg-[#FEE500] data-[state=active]:text-[#3C1E1E] flex-1 md:flex-initial">
                                   알림설정
                                 </TabsTrigger>
                               </TabsList>
                               {/* 대표 가맹점 설정 토글 스위치 추가 */}
-                              <div className="flex items-center space-x-2">
+                              <div className="flex items-center justify-between md:space-x-2">
+                                <label htmlFor="favorite-toggle" className="text-sm font-medium text-gray-700">
+                                  대표 가맹점으로 설정
+                                </label>
                                 <Switch
                                   id="favorite-toggle"
                                   checked={favoriteStore?.storeId === selectedStore.storeId}
                                   onCheckedChange={() => handleToggleFavorite(selectedStore.storeId)}
                                 />
-                                <label htmlFor="favorite-toggle" className="text-sm font-medium text-gray-700">
-                                  대표 가맹점으로 설정
-                                </label>
                               </div>
                             </div>
 
-                            <TabsContent value="basic" className="mt-6">
-                              <div className="space-y-6">
-                              <div className="grid grid-cols-2 gap-6">
+                            <TabsContent value="basic" className="mt-4 md:mt-6">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">상호명</label>
                                   <Input value={editingStoreName} onChange={(e) => setEditingStoreName(e.target.value)} className="rounded-lg" />
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                                  <Input value={selectedStore.businessNumber} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-6">
-                                <div className="space-y-6">
-                                  <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
-                                    <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                                    <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
-                                      <SelectTrigger className="w-full">
-                                        <SelectValue />
-                                      </SelectTrigger>
-                                      <SelectContent>
-                                        <SelectItem value="RESTAURANT">음식업</SelectItem>
-                                        <SelectItem value="RETAIL">소매업</SelectItem>
-                                        <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
-                                        <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
-                                        <SelectItem value="LODGING">숙박업</SelectItem>
-                                      </SelectContent>
-                                    </Select>
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(e.target.value)} className="rounded-lg" />
-                                  </div>
-                                  <div>
-                                    <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                                    <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                  </div>
+                                  <Input value={formatBusinessNumber(selectedStore.businessNumber)} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                 </div>
                                 <div>
-                                    <div className="flex items-center justify-between mb-2">
-                                      <label className="text-sm text-[#717182]">영업시간</label>
-                                      <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
-                                        <DialogTrigger asChild>
-                                          <Button variant="outline" size="sm">수정</Button>
-                                        </DialogTrigger>
-                                        <DialogContent className="max-w-2xl">
-                                          <DialogHeader>
-                                            <DialogTitle>영업시간 상세 설정</DialogTitle>
-                                            <DialogDescription>
-                                              요일별 영업시간과 휴무일을 설정하세요.
-                                            </DialogDescription>
-                                          </DialogHeader>
-                                          <BusinessHoursForm 
-                                            initialState={convertBusinessHours(selectedStore.businessHours)}
-                                            onStateChange={setEditingBusinessHours}
-                                          />
-                                          <DialogFooter>
-                                            <Button onClick={() => setIsBusinessHoursModalOpen(false)}>확인</Button>
-                                          </DialogFooter>
-                                        </DialogContent>
-                                      </Dialog>
-                                    </div>
-                                  <div className="border rounded-lg p-4 space-y-2 bg-white">
+                                  <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                  <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                  <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
+                                    <SelectTrigger className="w-full">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="RESTAURANT">음식업</SelectItem>
+                                      <SelectItem value="RETAIL">소매업</SelectItem>
+                                      <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
+                                      <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
+                                      <SelectItem value="LODGING">숙박업</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                </div>
+                                <div>
+                                  <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                  <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                </div>
+                                <div className="md:col-span-2">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <label className="text-sm text-[#717182]">영업시간</label>
+                                    <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                      <DialogTrigger asChild>
+                                        <Button variant="outline" size="sm">수정</Button>
+                                      </DialogTrigger>
+                                      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+                                        <DialogHeader>
+                                          <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                          <DialogDescription>
+                                            요일별 영업시간과 휴무일을 설정하세요.
+                                          </DialogDescription>
+                                        </DialogHeader>
+                                        <BusinessHoursForm
+                                          initialState={convertBusinessHours(selectedStore.businessHours)}
+                                          onStateChange={setEditingBusinessHours}
+                                        />
+                                        <DialogFooter>
+                                          <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
+                                        </DialogFooter>
+                                      </DialogContent>
+                                    </Dialog>
+                                  </div>
+                                  <div className="border rounded-lg p-3 md:p-4 space-y-2 bg-white">
                                     {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
-                                      <div key={day} className="grid grid-cols-[3rem_1fr] items-center">
+                                      <div key={day} className="flex justify-between items-center text-sm">
                                         <span className="font-semibold">{day}</span>
-                                          {hours.isClosed ? (
-                                            <span className="text-gray-500">휴무일</span>
-                                          ) : (
-                                            <div>
-                                              {hours.timeSlots.map((slot, index) => (
-                                                <span key={index} className="text-sm">{slot.start} - {slot.end}</span>
-                                              ))}
-                                            </div>
-                                          )}
-                                        </div>
-                                      ))}
+                                        {hours.isClosed ? (
+                                          <span className="text-gray-500">휴무일</span>
+                                        ) : (
+                                          <div>
+                                            {hours.timeSlots.map((slot, index) => (
+                                              <span key={index}>{slot.start} - {slot.end}</span>
+                                            ))}
+                                          </div>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                <div className="flex justify-end md:col-span-2">
+                                  <Button onClick={handleUpdateStore} className="w-full md:w-auto">수정 완료</Button>
+                                </div>
+
+                                {/* Danger Zone */}
+                                <Card className="p-4 md:p-6 border-[#FF4D4D] border md:col-span-2">
+                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                    <div>
+                                      <h3 className="text-[#FF4D4D] mb-1 text-sm md:text-base">가맹점 삭제</h3>
+                                      <p className="text-xs md:text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
                                     </div>
+                                    <Button variant="destructive" className="rounded-lg w-full md:w-auto" onClick={() => handleDeleteStore(selectedStore.storeId)}>
+                                      가맹점 삭제
+                                    </Button>
                                   </div>
-                                </div>
+                                </Card>
                               </div>
-
-                              <div className="flex justify-end mt-6">
-                                <Button onClick={handleUpdateStore}>수정 완료</Button>
-                              </div>
-
-                              {/* Danger Zone */}
-                              <Card className="p-6 mt-6 border-[#FF4D4D] border">
-                                <div className="flex items-center justify-between">
-                                  <div>
-                                    <h3 className="text-[#FF4D4D] mb-1">가맹점 삭제</h3>
-                                    <p className="text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
-                                  </div>
-                                  <Button variant="destructive" className="rounded-lg" onClick={() => handleDeleteStore(selectedStore.storeId)}>
-                                    가맹점 삭제
-                                  </Button>
-                                </div>
-                              </Card>
                             </TabsContent>
 
                             <TabsContent value="alerts" className="mt-6">
@@ -1120,12 +1445,13 @@ export default function StoreManage() {
               ))}
             </TableBody>
           </Table>
+          </>
         )}
       </Card>
 
       {/* 필수 입력 항목 오류 모달 */}
       <Dialog open={isRequiredFieldErrorModalOpen} onOpenChange={setIsRequiredFieldErrorModalOpen}>
-        <DialogContent className="w-auto max-w-xs">
+        <DialogContent className="w-[90vw] max-w-xs">
           <DialogHeader>
             <DialogTitle>입력 오류</DialogTitle>
             <DialogDescription>
@@ -1142,7 +1468,7 @@ export default function StoreManage() {
 
       {/* 사업자번호 오류 모달 */}
       <Dialog open={isBusinessNumberErrorModalOpen} onOpenChange={setIsBusinessNumberErrorModalOpen}>
-        <DialogContent className="w-auto max-w-xs">
+        <DialogContent className="w-[90vw] max-w-xs">
           <DialogHeader>
             <DialogTitle>사업자번호 오류</DialogTitle>
             <DialogDescription>
@@ -1159,7 +1485,7 @@ export default function StoreManage() {
 
       {/* 전화번호 오류 모달 */}
       <Dialog open={isPhoneNumberErrorModalOpen} onOpenChange={setIsPhoneNumberErrorModalOpen}>
-        <DialogContent className="w-auto max-w-xs">
+        <DialogContent className="w-[90vw] max-w-xs">
           <DialogHeader>
             <DialogTitle>전화번호 오류</DialogTitle>
             <DialogDescription>
