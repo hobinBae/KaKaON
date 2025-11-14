@@ -27,6 +27,9 @@ public class OrderRequestDto {
 
     @NotNull(message = "결제 수단은 필수입니다.")
     private PaymentMethod paymentMethod;
+    
+    @NotNull(message = "결제 수단의 ID는 필수입니다.")
+    private String paymentUuid;
 
     // 내부 OrderItemDto 클래스
     @Getter

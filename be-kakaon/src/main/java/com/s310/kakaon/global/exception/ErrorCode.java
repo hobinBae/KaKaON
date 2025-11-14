@@ -46,6 +46,8 @@ public enum ErrorCode {
 
     PAYMENT_CANCEL_NOT_FOUND("PAYMENT_CANCEL_NOT_FOUND", HttpStatus.NOT_FOUND, "결제 취소 내역을 찾을 수 없습니다."),
 
+    PAYMENT_INFO_NOT_FOUND("PAYMENT_INFO_NOT_FOUND", HttpStatus.NOT_FOUND, "등록되지 않은 카드 번호/카카오페이 바코드 번호입니다."),
+
     // CSV 업로드 관련
     INVALID_CSV_FORMAT("INVALID_CSV_FORMAT", HttpStatus.BAD_REQUEST, "CSV 파일 형식이 올바르지 않습니다."),
     CSV_UPLOAD_FAILED("CSV_UPLOAD_FAILED", HttpStatus.BAD_REQUEST, "CSV 업로드에 실패했습니다."),

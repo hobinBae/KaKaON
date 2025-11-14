@@ -27,13 +27,13 @@ public class OrderProcessService {
                 .amount(request.getTotalAmount())
                 .paymentMethod(request.getPaymentMethod())
                 .delivery(request.getOrderType() == OrderType.DELIVERY)
+                .paymentUuid(request.getPaymentUuid())
                 .build();
 
         paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
         order.updateStatus(request.getTotalAmount());
 
         return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
-
     }
 
 }
