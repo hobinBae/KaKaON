@@ -30,7 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams, useCancelRateByPeriod, usePaymentMethodRatioByPeriod } from "@/lib/hooks/useAnalytics";
+import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams, useCancelRateByPeriod, usePaymentMethodRatioByPeriod, useSalesByStores } from "@/lib/hooks/useAnalytics";
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
 import { CancelRateResponse } from "@/types/api";
@@ -187,6 +187,11 @@ export default function Analytics() {
   const [activePeriod, setActivePeriod] = useState<string>("this-month");
   const [showCalendar, setShowCalendar] = useState(false);
   const [activeTab, setActiveTab] = useState<string>("sales-trend");
+
+  const { data: salesByStoresData } = useSalesByStores(
+    apiParams,
+    { enabled: activeTab === 'store-comparison' }
+  );
   const [startDateInput, setStartDateInput] = useState<string>("");
   const [endDateInput, setEndDateInput] = useState<string>("");
   const [alertOpen, setAlertOpen] = useState(false);
@@ -411,37 +416,23 @@ export default function Analytics() {
   const totalSales = cancelRateData?.cancelRateList.reduce((acc, item) => acc + item.totalSales, 0) || 0;
   const overallCancelRate = totalSales > 0 ? (totalCancellations / totalSales) * 100 : 0;
   
-  // 가맹점별 매출 비교 데이터 처리 로직을 useMemo로 분리하여 불필요한 재실행을 방지했음
   const storeComparisonData = useMemo(() => {
-    if (!dateRange?.from || !dateRange?.to || !stores) return [];
+    if (!salesByStoresData || !stores) return [];
 
-    // const filteredData = allSalesData.filter(d => {
-    //   const date = new Date(d.date);
-    //   return date >= startOfDay(dateRange.from!) && date <= endOfDay(dateRange.to!);
-    // });
-
-    const selectedStores = stores.filter(store => selectedStoreIds.includes(store.storeId));
-    // const totalPeriodSales = filteredData.reduce((acc, cur) => acc + cur.sales, 0);
-    const averageSales = selectedStores.length > 0 ? (salesData?.totalSales || 0) / selectedStores.length : 0;
-
-    // storeId를 기반으로 일관된 랜덤 값을 생성하여 데이터가 변하지 않도록 수정했음
-    const result = [];
-    for (let i = 0; i < selectedStores.length; i++) {
-      const store = selectedStores[i];
-      const pseudoRandom = (seed: number) => {
-        const x = Math.sin(seed) * 10000;
-        return x - Math.floor(x);
-      };
-      const salesValue = Math.floor(averageSales * (0.8 + pseudoRandom(store.storeId) * 0.4));
-      result.push({
-        index: i,
-        displayName: `${i + 1}. ${store.name}`,
-        name: store.name,
-        sales: salesValue
+    const selectedStoresData = salesByStoresData.storeSalesList
+      .filter((d: any) => selectedStoreIds.includes(d.storeId))
+      .map((d: any, index: number) => {
+        const store = stores.find(s => s.storeId === d.storeId);
+        return {
+          index,
+          displayName: `${index + 1}. ${store?.name || d.storeId}`,
+          name: store?.name || d.storeId,
+          sales: d.totalSales,
+        };
       });
-    }
-    return result;
-  }, [dateRange, selectedStoreIds, stores, salesData]);
+
+    return selectedStoresData;
+  }, [salesByStoresData, selectedStoreIds, stores]);
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
@@ -1057,6 +1048,7 @@ export default function Analytics() {
                   fill="#FEE500"
                   radius={[0, 8, 8, 0]}
                   maxBarSize={30}
+                  label={{ position: 'right', formatter: (value: number) => `${value.toLocaleString()}원` }}
                 />
               </BarChart>
             </ResponsiveContainer>

@@ -63,7 +63,7 @@ export default function BusinessHours() {
 
   // 영업 상태일 때 경과 시간을 계산하는 타이머를 관리
   useEffect(() => {
-    let timer: number | undefined;
+    let timer: any;
 
     if (isBusinessOpen && sessionStartTime) {
       const updateElapsed = () => {
@@ -112,19 +112,19 @@ export default function BusinessHours() {
   return (
     <div className="flex flex-col items-center justify-start h-full p-4 pt-10">
       <Card className="w-full max-w-md p-8 rounded-2xl shadow-lg text-center">
-        <h1 className="text-2xl text-gray-800 mb-2">영업 상태 관리</h1>
+       
         {storeDetail && (
-          <p className="text-4xl font-bold text-gray-900 mb-6">⏰ {storeDetail.name}</p>
+          <p className="text-2xl md:text-4xl font-bold text-gray-900 mb-6 whitespace-nowrap">{storeDetail.name}</p>
         )}
 
         {isBusinessOpen ? (
           <>
-            <p className="text-gray-500 mb-6">영업 경과 시간</p>
+            <p className="text-gray-500 mb-0">영업 경과 시간</p>
             <ElapsedTimeClock elapsedSeconds={elapsedSeconds} />
           </>
         ) : (
           <>
-            <p className="text-gray-500 mb-6">현재 시각</p>
+            <p className="text-gray-500 mb-0">현재 시각</p>
             <Clock />
           </>
         )}
