@@ -197,6 +197,10 @@ export default function StoreManage() {
   const [editingRecipientId, setEditingRecipientId] = useState<number | null>(null);
   const [editingRecipientData, setEditingRecipientData] = useState<{ name: string; position: string; email: string } | null>(null);
 
+  // 알림 수신자 삭제 확인 모달을 위한 상태
+  const [isDeleteRecipientModalOpen, setIsDeleteRecipientModalOpen] = useState(false);
+  const [recipientToDelete, setRecipientToDelete] = useState<number | null>(null);
+
   // selectedStore 데이터가 변경될 때 알림 수신자 목록 상태를 API 응답값으로 업데이트했음
   useEffect(() => {
     if (selectedStore) {
@@ -343,17 +347,26 @@ export default function StoreManage() {
     }
   };
 
-  const handleDeleteRecipient = (alertId: number) => {
-    if (!selectedStoreId) return;
-    
-    deleteAlertRecipient({ storeId: selectedStoreId, alertId }, {
+  const openDeleteRecipientModal = (alertId: number) => {
+    setRecipientToDelete(alertId);
+    setIsDeleteRecipientModalOpen(true);
+  };
+
+  const handleDeleteRecipient = () => {
+    if (!selectedStoreId || !recipientToDelete) return;
+
+    deleteAlertRecipient({ storeId: selectedStoreId, alertId: recipientToDelete }, {
       onSuccess: () => {
         toast.success("알림 수신자가 삭제되었습니다.");
         // TODO: 목록 API가 없으므로 임시로 로컬 상태를 업데이트합니다.
-        setAlertRecipients(prev => prev.filter(r => r.id !== alertId));
+        setAlertRecipients(prev => prev.filter(r => r.id !== recipientToDelete));
+        setIsDeleteRecipientModalOpen(false);
+        setRecipientToDelete(null);
       },
       onError: (error) => {
         toast.error("알림 수신자 삭제에 실패했습니다.", { description: error.message });
+        setIsDeleteRecipientModalOpen(false);
+        setRecipientToDelete(null);
       }
     });
   };
@@ -995,7 +1008,7 @@ export default function StoreManage() {
                                           }}>
                                             <Pencil className="w-4 h-4" />
                                           </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                          <Button variant="ghost" size="icon" onClick={() => openDeleteRecipientModal(recipient.id)}>
                                             <X className="w-4 h-4" />
                                           </Button>
                                         </div>
@@ -1380,7 +1393,7 @@ export default function StoreManage() {
                                           }}>
                                             <Pencil className="w-4 h-4" />
                                           </Button>
-                                          <Button variant="ghost" size="icon" onClick={() => handleDeleteRecipient(recipient.id)}>
+                                          <Button variant="ghost" size="icon" onClick={() => openDeleteRecipientModal(recipient.id)}>
                                             <X className="w-4 h-4" />
                                           </Button>
                                         </div>
@@ -1495,6 +1508,36 @@ export default function StoreManage() {
           <DialogFooter>
             <Button onClick={() => setIsPhoneNumberErrorModalOpen(false)} className="w-full">
               확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 알림 수신자 삭제 확인 모달 */}
+      <Dialog open={isDeleteRecipientModalOpen} onOpenChange={setIsDeleteRecipientModalOpen}>
+        <DialogContent className="w-[90vw] max-w-md">
+          <DialogHeader>
+            <DialogTitle>알림 수신자 삭제</DialogTitle>
+            <DialogDescription>
+              정말로 이 알림 수신자를 삭제하시겠습니까?
+              <br />
+              삭제된 수신자는 더 이상 알림을 받을 수 없습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button
+              variant="ghost"
+              onClick={() => setIsDeleteRecipientModalOpen(false)}
+              className="w-full sm:w-auto"
+            >
+              취소
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteRecipient}
+              className="w-full sm:w-auto"
+            >
+              삭제
             </Button>
           </DialogFooter>
         </DialogContent>
