@@ -52,13 +52,13 @@ const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
       <PopoverTrigger asChild>
         <Button
           variant="outline"
-          className={cn("w-24 justify-start font-normal", disabled && "opacity-50 cursor-not-allowed")}
+          className={cn("w-20 sm:w-24 justify-start font-normal text-xs sm:text-sm", disabled && "opacity-50 cursor-not-allowed")}
           disabled={disabled}
         >
           {time}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0 flex">
+      <PopoverContent className="w-auto p-0 flex" align="start">
         <div ref={hourRef} className="flex flex-col h-48 overflow-y-auto scrollbar-hide">
           {hoursOptions.map((h) => (
             <Button
@@ -66,7 +66,7 @@ const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
               variant={h === hour ? 'default' : 'ghost'}
               data-hour={h}
               onClick={() => handleHourChange(h)}
-              className="rounded-none"
+              className="rounded-none text-xs sm:text-sm"
             >
               {h}
             </Button>
@@ -79,7 +79,7 @@ const TimePicker = ({ value, onChange, disabled }: TimePickerProps) => {
               variant={m === minute ? 'default' : 'ghost'}
               data-minute={m}
               onClick={() => handleMinuteChange(m)}
-              className="rounded-none"
+              className="rounded-none text-xs sm:text-sm"
             >
               {m}
             </Button>
@@ -152,29 +152,28 @@ export function BusinessHoursForm({ initialState, onStateChange }: BusinessHours
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3 sm:space-y-4">
       <h3 className="text-sm text-[#717182] mb-2 block">영업시간 설정</h3>
-      <div className="space-y-3 border p-4 rounded-md">
+      <div className="space-y-2 sm:space-y-3 border p-3 sm:p-4 rounded-md max-h-[50vh] sm:max-h-[60vh] overflow-y-auto">
         {daysOfWeek.map((day) => (
-          <div key={day} className="flex items-center gap-3">
-            <Label className="w-8 flex-shrink-0 font-semibold text-base">{day}</Label>
-            <div className="flex-1 flex items-center gap-2">
+          <div key={day} className="flex items-center gap-2 sm:gap-3">
+            <Label className="w-6 sm:w-8 flex-shrink-0 font-semibold text-sm sm:text-base">{day}</Label>
+            <div className="flex items-center gap-1 sm:gap-2 flex-1">
               <TimePicker
                   value={businessHours[day].timeSlots[0].start}
                   onChange={(value) => handleTimeChange(day, 0, 'start', value)}
                   disabled={businessHours[day].isClosed}
               />
-              <span>~</span>
+              <span className="text-xs sm:text-base">~</span>
               <TimePicker
                   value={businessHours[day].timeSlots[0].end}
                   onChange={(value) => handleTimeChange(day, 0, 'end', value)}
                   disabled={businessHours[day].isClosed}
               />
             </div>
-            <div className="flex items-center gap-2 flex-shrink-0">
-              <Label htmlFor={`holiday-${day}`} className="text-sm text-gray-600">
-                <span className="sm:hidden">휴무</span>
-                <span className="hidden sm:inline">휴무일 지정</span>
+            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+              <Label htmlFor={`holiday-${day}`} className="text-xs sm:text-sm text-gray-600 whitespace-nowrap">
+                휴무
               </Label>
               <Checkbox
                   id={`holiday-${day}`}
