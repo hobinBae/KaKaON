@@ -138,12 +138,13 @@ public class PaymentStatsRepositoryImpl implements PaymentStatsRepositoryCustom 
 
         return queryFactory
                 .select(Projections.constructor(StoreSalesResponseDto.StoreSalesDto.class,
-                        store.id, store.name, paymentStats.totalSales.sum().longValue()))
-                .from(paymentStats)
-                .join(paymentStats.store, store)
-                .where(
-                        store.member.id.eq(memberId)
-                                .and(paymentStats.statsDate.between(startDate, endDate)))
+                        store.id, store.name, paymentStats.totalSales.sum().coalesce(0).longValue()))
+                .from(store)
+                .leftJoin(paymentStats)
+                .on(
+                        paymentStats.store.eq(store)
+                                        .and(paymentStats.statsDate.between(startDate, endDate)))
+                .where(store.member.id.eq(memberId))
                 .groupBy(store.id)
                 .orderBy(store.name.asc())
                 .fetch();
