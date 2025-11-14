@@ -2,7 +2,6 @@ package com.s310.kakaon.domain.payment.service;
 
 import com.s310.kakaon.domain.alert.dto.AlertEvent;
 import com.s310.kakaon.domain.alert.entity.AlertType;
-import com.s310.kakaon.domain.alert.service.AlertService;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
@@ -10,29 +9,23 @@ import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.*;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.entity.PaymentCancel;
-import com.s310.kakaon.domain.payment.entity.PaymentInfo;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
-import com.s310.kakaon.domain.payment.producer.PaymentEventProducer;
 import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
-import com.s310.kakaon.domain.payment.repository.PaymentInfoRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
-import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
-import jakarta.transaction.TransactionScoped;
+
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.hibernate.annotations.ManyToAny;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -64,7 +57,6 @@ public class PaymentServiceImpl implements PaymentService{
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
     private final ApplicationEventPublisher eventPublisher;
-    private final PaymentInfoRepository paymentInfoRepository;
 
     @Override
     @Transactional
@@ -78,12 +70,6 @@ public class PaymentServiceImpl implements PaymentService{
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
-        PaymentInfo paymentInfo = null;
-        if(request.getPaymentMethod().equals(PaymentMethod.CARD)){
-            paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
-                    .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
-        }
-
         validateStoreOwner(store, member);
 
         String authorizationNo;
@@ -95,7 +81,7 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.toEntity(store, order, authorizationNo, paymentInfo, request);
+        Payment payment = paymentMapper.toEntity(store, order, authorizationNo, request);
 
         Payment savedPayment = paymentRepository.save(payment);
 
@@ -103,7 +89,7 @@ public class PaymentServiceImpl implements PaymentService{
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
         // 해당 결제가 CARD인 경우
-        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD) && !savedPayment.getPaymentInfo().getPaymentUuid().equals("0000-0000-0000-0000")){
+        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD)){
             // Kafka 이벤트 발행
             PaymentEventDto event = PaymentEventDto.builder()
                     .paymentId(savedPayment.getId())
@@ -120,7 +106,7 @@ public class PaymentServiceImpl implements PaymentService{
                     .storeLatitude(savedPayment.getStore().getLatitude())
                     .storeLongitude(savedPayment.getStore().getLongitude())
                     .storeName(savedPayment.getStore().getName())
-                    .paymentUuid(savedPayment.getPaymentInfo().getPaymentUuid())
+                    .paymentUuid(request.getPaymentUuid())
                     .build();
 
             // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
@@ -210,11 +196,6 @@ public class PaymentServiceImpl implements PaymentService{
                         continue;
                     }
 
-                    // PaymentInfo 생성 (CSV 업로드용 더미 데이터)
-                    PaymentInfo paymentInfo = PaymentInfo.builder()
-                            .paymentUuid("CSV_UPLOAD_" + authorizationNo)
-                            .build();
-
                     // Payment 생성 (Order는 null)
                     Payment payment = Payment.builder()
                             .store(store)
@@ -226,7 +207,7 @@ public class PaymentServiceImpl implements PaymentService{
                             .approvedAt(approvedAt)
                             .canceledAt(canceledAt)
                             .delivery(isDelivery)
-                            .paymentInfo(paymentInfo)
+                            .paymentUuid("CSV_UPLOAD_" + authorizationNo)
                             .build();
 
                     paymentRepository.save(payment);
