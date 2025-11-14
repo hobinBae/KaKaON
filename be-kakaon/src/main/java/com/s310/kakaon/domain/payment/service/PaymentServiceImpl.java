@@ -67,6 +67,8 @@ public class PaymentServiceImpl implements PaymentService{
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentInfoRepository paymentInfoRepository;
 
+
+
     @Override
     @Transactional
     public PaymentResponseDto registerPayment(Long memberId, Long storeId, Long orderId, PaymentCreateRequestDto request) {

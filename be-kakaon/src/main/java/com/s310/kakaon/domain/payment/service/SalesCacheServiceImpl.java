@@ -31,6 +31,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
     private static final String COUNT_HOURLY_CANCEL_KEY = "sales:hourly:count:cancel:%d:%s:%02d";       // 시간대별 취소 건수
     private static final String RATE_CANCEL_KEY = "sales:hourly:rate:cancel:%d:%s:%02d";                // 시간대별 취소율
 
+
     @Override
     public void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now) {
         String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -41,6 +42,8 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         redisTemplate.opsForValue().increment(String.format(HOURLY_KEY, storeId, date, hour), amount.doubleValue());
         redisTemplate.opsForValue().increment(String.format(COUNT_PAYMENT_KEY, storeId, date));
         redisTemplate.opsForValue().increment(String.format(COUNT_HOURLY_PAYMENT_KEY, storeId, date, hour));
+
+        operationCancelRate(storeId, date, hour);
 
         // TTL 설정
         setTtlForSalesKey(storeId, date);
@@ -56,6 +59,9 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         redisTemplate.opsForValue().increment(String.format(SUM_KEY, storeId, date), -amount.doubleValue());
         redisTemplate.opsForValue().increment(String.format(HOURLY_KEY, storeId, date, hour), -amount.doubleValue());
         redisTemplate.opsForValue().increment(String.format(COUNT_HOURLY_CANCEL_KEY, storeId, date, hour));
+
+        // 시간대 취소율 계산 후 레디스에 저장
+        operationCancelRate(storeId, date, hour);
 
         // TTL 설정
         setTtlForSalesKey(storeId, date);
@@ -112,11 +118,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
             Integer hourlyCancel = getIntValue(String.format(COUNT_HOURLY_CANCEL_KEY, storeId, date, hour));
 
             // 시간대 취소율 계산 후 레디스에 저장
-            double cancelRate = calcCancelRate(hourlyPayment, hourlyCancel);
-            redisTemplate.opsForValue().set(
-                    String.format(RATE_CANCEL_KEY, storeId, date, hour),
-                    String.valueOf(cancelRate)
-            );
+            double cancelRate = operationCancelRate(storeId, date, hour);
 
             hourlySales.add(SalesStatsResponseDto.HourlySales.builder()
                     .hour(hour)
@@ -139,4 +141,21 @@ public class SalesCacheServiceImpl implements SalesCacheService {
                 .build();
 
     }
+
+    public double operationCancelRate(Long storeId, String date, int hour){
+        Integer hourlyPayment = getIntValue(String.format(COUNT_HOURLY_PAYMENT_KEY, storeId, date, hour));
+        Integer hourlyCancel = getIntValue(String.format(COUNT_HOURLY_CANCEL_KEY, storeId, date, hour));
+
+        // 시간대 취소율 계산 후 레디스에 저장
+        double cancelRate = calcCancelRate(hourlyPayment, hourlyCancel);
+        redisTemplate.opsForValue().set(
+                String.format(RATE_CANCEL_KEY, storeId, date, hour),
+                String.valueOf(cancelRate)
+        );
+
+        return cancelRate;
+    }
+
+
+
 }
