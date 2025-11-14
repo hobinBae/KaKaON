@@ -39,8 +39,8 @@ export const useCancelOrder = () => {
   });
 };
 
-const getOrders = async (storeId: number): Promise<Transaction[]> => {
-  const response = await apiClient.get(`/orders?storeId=${storeId}`);
+const getOrders = async (storeId: number, size: number = 1000): Promise<Transaction[]> => {
+  const response = await apiClient.get(`/orders?storeId=${storeId}&size=${size}`);
   const orders = response.data.data.content;
   return orders.map((order: any) => ({
     id: order.orderId,
@@ -59,10 +59,10 @@ const getOrders = async (storeId: number): Promise<Transaction[]> => {
   }));
 };
 
-export const useOrders = (storeId: number | null) => {
+export const useOrders = (storeId: number | null, size?: number) => {
   return useQuery({
-    queryKey: ["orders", storeId],
-    queryFn: () => getOrders(storeId!),
+    queryKey: ["orders", storeId, size],
+    queryFn: () => getOrders(storeId!, size),
     enabled: !!storeId,
   });
 };

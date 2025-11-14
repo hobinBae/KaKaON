@@ -107,41 +107,37 @@ export default function Transactions() {
       status: statusFilter,
       paymentMethod: selectedMethods,
       orderType: orderTypeFilter,
-      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
-      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd'T'HH:mm:ss") : undefined,
+      startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
+      endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+      activePeriod: activePeriod,
     }
   );
 
-  const rawTransactions = ordersData?.transactions || [];
-  const filteredTransactions = rawTransactions.filter(tx => {
-    // 날짜 필터
-    if (dateRange?.from && dateRange?.to) {
-      const txDate = new Date(tx.date);
-      if (txDate < dateRange.from || txDate > dateRange.to) {
-        return false;
-      }
-    }
-    // 결제수단 필터
-    if (!selectedMethods.includes('all') && !selectedMethods.includes(tx.paymentMethod)) {
-      return false;
-    }
-    // 결제상태 필터
-    if (statusFilter !== 'all' && tx.status !== statusFilter) {
-      return false;
-    }
-    // 주문구분 필터
-    if (orderTypeFilter !== 'all') {
-      const isDelivery = tx.orderType === '배달 주문';
-      if (orderTypeFilter === 'delivery' && !isDelivery) return false;
-      if (orderTypeFilter === 'store' && isDelivery) return false;
-    }
-    // 승인번호 검색 필터
-    if (appliedSearchTerm && tx.id && !tx.id.toString().includes(appliedSearchTerm)) {
-      return false;
-    }
-    return true;
-  });
-  const totalPages = ordersData?.totalPages || 0;
+  const paymentMethodMapToKorean: { [key: string]: string } = {
+    'CARD': '카드',
+    'TRANSFER': '계좌',
+    'KAKAOPAY': '카카오페이',
+    'CASH': '현금',
+  };
+
+  const transactions: Transaction[] = (ordersData?.data?.content || []).map((payment: any) => ({
+    id: payment.authorizationCode || payment.paymentId,
+    orderId: payment.orderId,
+    items: [],
+    total: payment.amount,
+    date: payment.approvedAt,
+    storeId: String(payment.storeId),
+    orderType: payment.delivery ? '배달 주문' : '가게 주문',
+    paymentMethod: paymentMethodMapToKorean[payment.paymentMethod] || payment.paymentMethod,
+    status: payment.status === 'APPROVED' ? 'completed' : 'cancelled',
+  }));
+
+  const totalPages = ordersData?.data?.pageable?.totalPages || 0;
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    setAppliedSearchTerm(''); // 페이지 변경 시 검색어 초기화
+  };
 
   const handlePeriodChange = (value: string) => {
     if (!value) return;
@@ -155,16 +151,16 @@ export default function Transactions() {
         to = endOfDay(today);
         break;
       case 'this-week':
-        from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
-        to = endOfWeek(today, { weekStartsOn: 1 });
+        from = startOfDay(addDays(today, -6)); // 7 days including today
+        to = endOfDay(today);
         break;
       case 'this-month':
-        from = startOfMonth(today);
-        to = endOfMonth(today);
+        from = startOfDay(startOfMonth(today)); // Start of month to today
+        to = endOfDay(today);
         break;
       case 'this-year':
-        from = startOfYear(today);
-        to = endOfYear(today);
+        from = startOfDay(startOfYear(today)); // Start of year to today
+        to = endOfDay(today);
         break;
       default:
         from = startOfDay(today);
@@ -189,7 +185,7 @@ export default function Transactions() {
   };
 
   const handleDownloadCSV = () => {
-    if (!filteredTransactions.length) {
+    if (!transactions.length) {
       showAlert("다운로드할 데이터가 없습니다.");
       return;
     }
@@ -197,7 +193,7 @@ export default function Transactions() {
     const headers = ["결제시간", "주문구분", "결제수단", "결제상태", "승인번호", "금액"];
     const csvContent = [
       headers.join(','),
-      ...filteredTransactions.map(tx => [
+      ...transactions.map(tx => [
         `"${format(new Date(tx.date), 'yyyy-MM-dd HH:mm:ss')}"`,
         tx.orderType,
         tx.paymentMethod,
@@ -811,7 +807,7 @@ export default function Transactions() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTransactions.map((tx) => (
+              {transactions.map((tx) => (
                 <TableRow
                   key={tx.id}
                   className={`hover:bg-[#F5F5F5] cursor-pointer ${tx.status === 'cancelled' ? 'opacity-60' : ''}`}
@@ -846,14 +842,10 @@ export default function Transactions() {
         </div>
 
         <div className="flex items-center justify-end p-4 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="rounded" onClick={() => setCurrentPage(p => Math.max(0, p - 1))} disabled={currentPage === 0}>이전</Button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <Button key={i} size="sm" variant={currentPage === i ? 'default' : 'outline'} className="rounded" onClick={() => setCurrentPage(i)}>
-                {i + 1}
-              </Button>
-            ))}
-            <Button size="sm" variant="outline" className="rounded" onClick={() => setCurrentPage(p => Math.min(totalPages - 1, p + 1))} disabled={currentPage === totalPages - 1}>다음</Button>
+          <div className="flex items-center gap-4">
+            <Button size="sm" variant="outline" className="rounded" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 0}>이전</Button>
+            <span className="text-sm text-gray-600">{currentPage + 1} / {totalPages}</span>
+            <Button size="sm" variant="outline" className="rounded" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= totalPages - 1}>다음</Button>
           </div>
         </div>
       </Card>
