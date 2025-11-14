@@ -3,6 +3,7 @@ package com.s310.kakaon.domain.order.controller;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.order.dto.*;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.order.service.OrderProcessService;
 import com.s310.kakaon.domain.order.service.OrderService;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
@@ -28,9 +29,9 @@ import java.util.List;
 @Slf4j
 public class OrderController {
     //결제 내역 등록
-    private final PaymentService paymentService;
     private final MemberService memberService;
     private final OrderService orderService;
+    private final OrderProcessService orderProcessService;
 
     /** 장바구니 주문하기 */
     @Operation(
@@ -51,7 +52,7 @@ public class OrderController {
 
         long start = System.currentTimeMillis();
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-        OrderResponseDto response = orderService.createOrderAndPayment(memberId, storeId, request);
+        OrderResponseDto response = orderProcessService.createOrderAndPayment(memberId, storeId, request);
         long end = System.currentTimeMillis();
         log.info("[PERF] 주문 처리 총 소요 시간: {} ms", (end - start));
 
