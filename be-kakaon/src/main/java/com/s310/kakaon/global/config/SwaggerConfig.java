@@ -75,6 +75,11 @@ public class SwaggerConfig {
         return GroupedOpenApi.builder().group("06-menus").pathsToMatch("/api/v1/menus/**").build();
     }
 
+    @Bean
+    public GroupedOpenApi paymentInfoApi() {
+        return GroupedOpenApi.builder().group("07-payment-info").pathsToMatch("/api/v1/payment-info/**").build();
+    }
+
 
 
 
