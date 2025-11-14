@@ -56,9 +56,8 @@ public class Payment extends BaseEntity {
     @Column(name = "is_delivery", nullable = false, columnDefinition = "TINYINT(1)")
     private Boolean delivery = false;
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "payment_info_id", nullable = true)
-    private PaymentInfo paymentInfo;
+    @Column(name = "payment_uuid", nullable = true, length = 100)
+    private String paymentUuid;
 
     public void cancel(){
         this.canceledAt = LocalDateTime.now();

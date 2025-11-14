@@ -5,7 +5,6 @@ import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
 import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
 import com.s310.kakaon.domain.payment.dto.PaymentStatus;
 import com.s310.kakaon.domain.payment.entity.Payment;
-import com.s310.kakaon.domain.payment.entity.PaymentInfo;
 import com.s310.kakaon.domain.store.entity.Store;
 import org.springframework.stereotype.Component;
 
@@ -30,7 +29,7 @@ public class PaymentMapper {
                 .build();
     }
 
-    public Payment toEntity(Store store, Orders order, String authorizationNo, PaymentInfo paymentInfo, PaymentCreateRequestDto request){
+    public Payment toEntity(Store store, Orders order, String authorizationNo, PaymentCreateRequestDto request){
         return Payment.builder()
                 .store(store)
                 .order(order)
@@ -40,7 +39,7 @@ public class PaymentMapper {
                 .status(PaymentStatus.APPROVED)
                 .approvedAt(LocalDateTime.now())
                 .delivery(Boolean.TRUE.equals(request.getDelivery()))
-                .paymentInfo(paymentInfo)
+                .paymentUuid(request.getPaymentUuid())
                 .build();
     }
 
