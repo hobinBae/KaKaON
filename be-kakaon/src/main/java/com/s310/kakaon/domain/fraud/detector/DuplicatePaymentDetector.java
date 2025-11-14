@@ -28,6 +28,12 @@ public class DuplicatePaymentDetector implements FraudDetector {
 
     @Override
     public List<AlertEvent> detect(PaymentEventDto event) {
+
+        // 필수 정보 없으면 탐지 스킵
+        if (event.getPaymentUuid() == null) {
+            return Collections.emptyList();
+        }
+
         String redisKey = generateRedisKey(event);
 
         // Redis Transaction 또는 Lua Script 사용 권장
