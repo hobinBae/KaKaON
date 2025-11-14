@@ -359,7 +359,7 @@ public class PaymentServiceImpl implements PaymentService{
                         payment.getAmount(),
                         payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "",
                         payment.getStatus() != null ? payment.getStatus().name() : "",
-                        payment.getDelivery() != null && payment.getDelivery() ? "배달" : "포장",
+                        payment.getDelivery() != null && payment.getDelivery() ? "배달" : "매장",
                         payment.getApprovedAt() != null ? payment.getApprovedAt().format(formatter) : "",
                         payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : ""
 
