@@ -619,7 +619,7 @@ export default function Transactions() {
 
             {/* 하단 요약/버튼 */}
             <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-2 flex-wrap gap-3">
-              <div className="text-sm text-[#333]">
+              <div className="text-md text-[#333]">
                 {dateRange?.from && dateRange?.to && (<>{format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")} <span className="text-[#007AFF] ml-1">({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)</span></>)}
               </div>
               <div className="flex gap-2 items-center">
@@ -890,7 +890,7 @@ export default function Transactions() {
 
               {selectedTransaction.status === 'cancelled' && (
                 <Card className="p-4 bg-[#FF4D4D]/5 border-[#FF4D4D]/20 rounded-lg">
-                  <div className="text-sm text-[#FF4D4D]">⚠️ 이 거래는 취소되었습니다. 관련 이상거래 알림을 확인하세요.</div>
+                  <div className="text-sm text-[#FF4D4D]">이 거래는 취소되었습니다. </div>
                 </Card>
               )}
 

@@ -1,5 +1,4 @@
 import { Card } from "@/components/ui/card";
-import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ComposedChart } from "recharts";
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, ReactNode, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -33,24 +32,12 @@ import {
 import { useSalesByPeriod, useSalesByHourly, SalesPeriodParams, useCancelRateByPeriod, usePaymentMethodRatioByPeriod, useSalesByStores } from "@/lib/hooks/useAnalytics";
 import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores } from "@/lib/hooks/useStores";
-import { CancelRateResponse } from "@/types/api";
-
-// --- Helper Functions & Dummy Data ---
-
-// 가맹점별 매출 그래프 Y축 커스텀 틱 (가로 그래프용)
-const StoreComparisonTick = ({ x, y, payload }: { x: number, y: number, payload: { value: string } }) => {
-  const parts = payload.value.split('. ');
-  const index = parts[0];
-  const name = parts.slice(1).join('. ');
-  return (
-    <g transform={`translate(${x},${y})`}>
-      <text x={0} y={0} dy={4} textAnchor="end" fill="#666" className="text-xs">
-        <tspan x="-5" className="tablet:hidden">{index}</tspan>
-        <tspan x="-5" className="hidden tablet:inline">{name}</tspan>
-      </text>
-    </g>
-  );
-};
+import SalesTrend from "@/components/analytics/SalesTrend";
+import HourlySales from "@/components/analytics/HourlySales";
+import SalesVsLabor from "@/components/analytics/SalesVsLabor";
+import StoreComparison from "@/components/analytics/StoreComparison";
+import CancellationRate from "@/components/analytics/CancellationRate";
+import PaymentMethod from "@/components/analytics/PaymentMethod";
 
 // 커스텀 달력 캡션 컴포넌트
 function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
@@ -60,11 +47,9 @@ function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; on
   const years = Array.from({ length: 10 }, (_, i) => currentYear - 9 + i);
   const months = Array.from({ length: 12 }, (_, i) => i);
 
-  // 현재 표시된 월이 오늘의 월과 같거나 이후인지 확인
   const isCurrentOrFutureMonth = displayMonth.getFullYear() > currentYear ||
     (displayMonth.getFullYear() === currentYear && displayMonth.getMonth() >= currentMonth);
 
-  // 선택된 년도가 현재 년도인지 확인
   const isCurrentYear = displayMonth.getFullYear() === currentYear;
 
   return (
@@ -133,15 +118,6 @@ function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; on
   );
 }
 
-const formatYAxis = (tick: number) => {
-  if (tick >= 100000) {
-    return `${(tick / 1000000).toFixed(1)}M`;
-  }
-  return `${(tick / 1000).toFixed(0)}K`;
-};
-
-// --- Component ---
-
 export default function Analytics() {
   const { selectedStoreId, setSelectedStoreId } = useBoundStore();
   const { data: stores } = useMyStores();
@@ -156,13 +132,13 @@ export default function Analytics() {
 
   const storeId = selectedStoreId ? parseInt(selectedStoreId, 10) : 0;
 
-  const { data: salesData, isLoading: isSalesLoading } = useSalesByPeriod(
+  const { data: salesData } = useSalesByPeriod(
     storeId,
     apiParams,
     { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' && apiParams.periodType !== 'TODAY' }
   );
 
-  const { data: hourlySalesData, isLoading: isHourlySalesLoading } = useSalesByHourly(
+  const { data: hourlySalesData } = useSalesByHourly(
     storeId,
     apiParams,
     { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' }
@@ -174,7 +150,7 @@ export default function Analytics() {
     { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' && apiParams.periodType !== 'TODAY' }
   );
 
-  const { data: paymentMethodRatioData, isLoading: isPaymentMethodRatioLoading } = usePaymentMethodRatioByPeriod(
+  const { data: paymentMethodRatioData } = usePaymentMethodRatioByPeriod(
     storeId,
     apiParams,
     { enabled: storeId > 0 && apiParams.periodType !== 'TODAY' }
@@ -205,7 +181,6 @@ export default function Analytics() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // State for processed chart data
   const [selectedStoreIds, setSelectedStoreIds] = useState<number[]>([]);
   const [periodSales, setPeriodSales] = useState<{time?: string; date?: string; month?: string; sales: number}[]>([]);
   const [xAxisDataKey, setXAxisDataKey] = useState<string>('date');
@@ -222,7 +197,7 @@ export default function Analytics() {
       if (activePeriod === 'this-week') {
         setXAxisDataKey('date');
         const weekData = Array.from({ length: 7 }).map((_, i) => {
-          const currentDate = addDays(today, -6 + i); // 오늘 포함 과거 7일
+          const currentDate = addDays(today, -6 + i);
           const dateKey = format(currentDate, 'yyyy-MM-dd');
           return {
             date: format(currentDate, 'MM/dd'),
@@ -267,7 +242,7 @@ export default function Analytics() {
           };
         });
         setPeriodSales(yearData);
-      } else if (dateRange?.from && dateRange?.to) { // RANGE
+      } else if (dateRange?.from && dateRange?.to) {
         setXAxisDataKey('date');
         const diff = differenceInCalendarDays(dateRange.to, dateRange.from);
         const rangeData = Array.from({ length: diff + 1 }).map((_, i) => {
@@ -398,7 +373,7 @@ export default function Analytics() {
           cancelRate: monthData ? monthData.total / monthData.count : 0,
         };
       });
-    } else if (dateRange?.from && dateRange?.to) { // RANGE
+    } else if (dateRange?.from && dateRange?.to) {
       const diff = differenceInCalendarDays(dateRange.to, dateRange.from);
       return Array.from({ length: diff + 1 }).map((_, i) => {
         const currentDate = addDays(dateRange.from!, i);
@@ -413,8 +388,6 @@ export default function Analytics() {
   }, [cancelRateData, activePeriod, dateRange]);
 
   const totalCancellations = cancelRateData?.cancelRateList.reduce((acc, item) => acc + item.cancelSales, 0) || 0;
-  const totalSales = cancelRateData?.cancelRateList.reduce((acc, item) => acc + item.totalSales, 0) || 0;
-  const overallCancelRate = totalSales > 0 ? (totalCancellations / totalSales) * 100 : 0;
   
   const storeComparisonData = useMemo(() => {
     if (!salesByStoresData || !stores) return [];
@@ -438,30 +411,25 @@ export default function Analytics() {
     handlePeriodChange(activePeriod);
   }, []);
 
-  // stores 데이터 로드 시 모든 가맹점을 기본으로 선택
   useEffect(() => {
     if (stores) {
       setSelectedStoreIds(stores.map(s => s.storeId));
     }
   }, []);
 
-  // 인건비 대비 매출 탭 선택 시 기본값으로 올해 선택
   useEffect(() => {
     if (activeTab === "sales-vs-labor") {
       handlePeriodChange("this-year");
     }
   }, [activeTab]);
 
-  // dateRange가 변경될 때 input 필드도 업데이트 (activePeriod가 없을 때만)
   useEffect(() => {
-    // 기간 버튼(이번주, 이번달 등)을 클릭한 경우에는 input 필드 비우기
     if (activePeriod) {
       setStartDateInput("");
       setEndDateInput("");
       return;
     }
 
-    // 직접 입력이나 달력 선택의 경우에만 input 필드 업데이트
     if (dateRange?.from) {
       setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
     } else {
@@ -480,13 +448,8 @@ export default function Analytics() {
   };
 
   const handleDateInputChange = (type: 'start' | 'end', value: string) => {
-    // 숫자만 추출
     const digitsOnly = value.replace(/[^\d]/g, '');
-
-    // 최대 8자리까지만 허용
     const truncated = digitsOnly.slice(0, 8);
-
-    // 자동으로 점 추가 (yyyy.MM.dd 형식)
     let formatted = truncated;
     if (truncated.length > 4) {
       formatted = truncated.slice(0, 4) + '.' + truncated.slice(4);
@@ -505,7 +468,6 @@ export default function Analytics() {
   const handleDateInputBlur = (type: 'start' | 'end') => {
     const value = type === 'start' ? startDateInput : endDateInput;
 
-    // 빈 값이면 초기화
     if (!value) {
       if (type === 'start') {
         setDateRange({ from: undefined, to: dateRange?.to });
@@ -515,11 +477,9 @@ export default function Analytics() {
       return;
     }
 
-    // 날짜 파싱 시도 (yyyy.MM.dd 형식)
     const parsedDate = parse(value, 'yyyy.MM.dd', new Date());
 
     if (!isValid(parsedDate)) {
-      // 유효하지 않은 날짜면 이전 값으로 복원
       if (type === 'start' && dateRange?.from) {
         setStartDateInput(format(dateRange.from, "yyyy.MM.dd"));
       } else if (type === 'end' && dateRange?.to) {
@@ -531,7 +491,6 @@ export default function Analytics() {
       return;
     }
 
-    // 오늘 이후 날짜 체크
     if (parsedDate > new Date()) {
       showAlert('오늘 이후의 날짜는 선택할 수 없습니다.');
       if (type === 'start' && dateRange?.from) {
@@ -546,7 +505,6 @@ export default function Analytics() {
     }
 
     if (type === 'start') {
-      // 시작일 설정
       if (dateRange?.to && parsedDate > dateRange.to) {
         showAlert('시작일은 종료일보다 이전이어야 합니다.');
         if (dateRange?.from) {
@@ -557,7 +515,6 @@ export default function Analytics() {
         return;
       }
 
-      // 시작일 변경 시에도 종료일과의 6개월 제한 체크
       if (dateRange?.to) {
         const maxDate = addDays(parsedDate, 180);
         if (dateRange.to > maxDate) {
@@ -574,7 +531,6 @@ export default function Analytics() {
       setDateRange({ from: parsedDate, to: dateRange?.to });
       setActivePeriod("");
     } else {
-      // 종료일 설정
       if (dateRange?.from && parsedDate < dateRange.from) {
         showAlert('종료일은 시작일보다 이후여야 합니다.');
         if (dateRange?.to) {
@@ -585,7 +541,6 @@ export default function Analytics() {
         return;
       }
 
-      // 6개월 제한 체크
       if (dateRange?.from) {
         const maxDate = addDays(dateRange.from, 180);
         if (parsedDate > maxDate) {
@@ -608,22 +563,18 @@ export default function Analytics() {
     if (!day) return;
 
     if (!dateRange?.from || dateRange.to) {
-      // Start new selection
       setDateRange({ from: day, to: undefined });
       setActivePeriod("");
     } else {
-      // End of selection
-      // 같은 날짜를 두 번 클릭한 경우 (당일 조회)
       if (format(day, 'yyyy-MM-dd') === format(dateRange.from, 'yyyy-MM-dd')) {
         setDateRange({ from: day, to: day });
         setShowCalendar(false);
         setActivePeriod("");
       } else if (day > dateRange.from) {
         setDateRange({ from: dateRange.from, to: day });
-        setShowCalendar(false); // Close on valid range selection
+        setShowCalendar(false);
         setActivePeriod("");
       } else {
-        // Clicked date is before start date, so reset and start new selection
         setDateRange({ from: day, to: undefined });
         setActivePeriod("");
       }
@@ -649,18 +600,18 @@ export default function Analytics() {
         break;
       }
       case 'this-week': {
-        from = startOfWeek(today, { weekStartsOn: 1 }); // Monday as the first day of the week
-        to = endOfWeek(today, { weekStartsOn: 1 }); // Sunday (display full week)
+        from = startOfWeek(today, { weekStartsOn: 1 });
+        to = endOfWeek(today, { weekStartsOn: 1 });
         break;
       }
       case 'this-month': {
         from = startOfMonth(today);
-        to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
+        to = endOfDay(addDays(today, -1));
         break;
       }
       case 'this-year': {
         from = startOfYear(today);
-        to = endOfDay(addDays(today, -1)); // Exclude today, only up to yesterday
+        to = endOfDay(addDays(today, -1));
         break;
       }
       case 'last-year': {
@@ -684,14 +635,12 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
         <h1 className="text-[#333333] mb-1">매출분석</h1>
         <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
       </div>
 
       <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab} value={activeTab}>
-        {/* Mobile Dropdown */}
         <div className="tablet:hidden mb-4">
           <Select value={activeTab} onValueChange={setActiveTab}>
             <SelectTrigger className="w-full">
@@ -707,17 +656,15 @@ export default function Analytics() {
             </SelectContent>
           </Select>
         </div>
-        {/* Desktop Tabs */}
-        <TabsList className="hidden tablet:grid w-full grid-cols-6 bg-[#F5F5F7] p-1 rounded-lg h-10">
+        <TabsList className="hidden tablet:grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
             <TabsTrigger value="hourly-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">시간대별 매출</TabsTrigger>
-            <TabsTrigger value="sales-vs-labor" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">인건비 대비 매출</TabsTrigger>
+            {/* <TabsTrigger value="sales-vs-labor" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">인건비 대비 매출</TabsTrigger> */}
             <TabsTrigger value="store-comparison" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">가맹점별 매출</TabsTrigger>
             <TabsTrigger value="cancellation-rate" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">취소율 추이</TabsTrigger>
             <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
         </TabsList>
 
-        {/* Filters */}
         <Card className="p-4 tablet:p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-4">
           <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4">
             <div className="text-sm font-semibold text-[#333]">조회기간</div>
@@ -789,24 +736,19 @@ export default function Analytics() {
                       }}
                       locale={ko}
                       modifiers={{
-                        sunday: (date) => date.getDay() === 0, // 일요일
-                        saturday: (date) => date.getDay() === 6, // 토요일
+                        sunday: (date) => date.getDay() === 0,
+                        saturday: (date) => date.getDay() === 6,
                       }}
                       modifiersClassNames={{
                         sunday: "rounded-l-full",
                         saturday: "rounded-r-full",
                       }}
                       disabled={(date) => {
-                        // 오늘 이후 날짜는 선택 불가
                         if (date > new Date()) return true;
-
-                        // 시작일이 선택되고 종료일이 선택되지 않은 경우
                         if (dateRange?.from && !dateRange?.to) {
-                          // 시작일로부터 180일(6개월) 이후 날짜는 선택 불가
                           const maxDate = addDays(dateRange.from, 180);
                           if (date > maxDate) return true;
                         }
-
                         return false;
                       }}
                       formatters={{
@@ -836,7 +778,6 @@ export default function Analytics() {
             </div>
           </div>
 
-          {/* 가맹점 선택 필터 (가맹점별 매출 탭에서만 보임) */}
           {activeTab === 'store-comparison' && stores && stores.length > 1 && (
             <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4 mt-4">
               <div className="text-sm font-semibold text-[#333]">가맹점 선택</div>
@@ -924,10 +865,9 @@ export default function Analytics() {
             </div>
           )}
 
-          {/* 하단 요약/버튼 */}
           <div className="flex flex-col tablet:flex-row justify-between items-start tablet:items-center pt-4 border-t border-gray-200 mt-4 gap-3">
             <div className="w-full tablet:w-auto">
-              <div className="text-sm text-[#333]">
+              <div className="text-md text-[#333]">
                 {dateRange?.from && dateRange?.to && (
                   <>
                     {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
@@ -937,8 +877,8 @@ export default function Analytics() {
                   </>
                 )}
               </div>
-              {activeTab !== 'sales-trend' && activeTab !== 'cancellation-rate' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
-                <div className="text-xs text-red-500 mt-1">
+              {activeTab !== 'sales-trend' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
+                <div className="text-md text-red-500 mt-1">
                   * 오늘 매출은 영업 종료 후 반영됩니다.
                 </div>
               )}
@@ -952,219 +892,29 @@ export default function Analytics() {
                 </div>
               </div>
             )}
-            {/* <div className="flex gap-2">
-              <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm">
-                <RotateCw className="w-4 h-4 mr-1" />
-                초기화
-              </Button>
-              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm">
-                조회하기
-              </Button>
-            </div> */}
           </div>
         </Card>
 
         <TabsContent value="sales-trend">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">기간별 매출 추이</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={periodSales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey={xAxisDataKey} stroke="#717182" dy={10} />
-                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
-                <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </Card>
+          <SalesTrend data={periodSales} xAxisDataKey={xAxisDataKey} />
         </TabsContent>
         <TabsContent value="hourly-sales">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">
-              {activePeriod === 'today' ? '시간대별 매출' : '시간대별 평균 매출'}
-            </h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={hourlySales} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="time" stroke="#717182" dy={10} />
-                <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                  formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
-                />
-                <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
+          <HourlySales data={hourlySales} activePeriod={activePeriod} />
         </TabsContent>
-        <TabsContent value="sales-vs-labor">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">인건비 대비 매출 비율</h3>
-            <ResponsiveContainer width="100%" height={300}>
-              <ComposedChart data={salesVsLabor} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis dataKey="month" stroke="#717182" />
-                <YAxis yAxisId="left" stroke="#717182" tickFormatter={formatYAxis} />
-                <YAxis yAxisId="right" orientation="right" stroke="#FF4D4D" unit="%" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                  formatter={(value: number, name: string) => {
-                    if (name === '인건비 비율') return [`${value}%`, name];
-                    return [`${value.toLocaleString()}원`, name];
-                  }}
-                />
-                <Legend />
-                <Bar yAxisId="left" dataKey="sales" fill="#FEE500" name="매출" radius={[8, 8, 0, 0]} />
-                <Bar yAxisId="left" dataKey="labor" fill="#3C1E1E" name="인건비" radius={[8, 8, 0, 0]} />
-                <Line yAxisId="right" type="monotone" dataKey="laborRatio" stroke="#FF4D4D" strokeWidth={2} name="인건비 비율" dot={{ fill: '#FF4D4D', r: 4 }} />
-              </ComposedChart>
-            </ResponsiveContainer>
-          </Card>
-        </TabsContent>
+        {/* <TabsContent value="sales-vs-labor">
+          <SalesVsLabor data={salesVsLabor} />
+        </TabsContent> */}
         <TabsContent value="store-comparison">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가맹점별 매출</h3>
-            <ResponsiveContainer width="100%" height={Math.max(300, storeComparisonData.length * 50)}>
-              <BarChart
-                data={storeComparisonData}
-                layout="horizontal"
-                margin={{ top: 5, right: 30, left: 100, bottom: 5 }}
-              >
-                <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                <XAxis
-                  type="number"
-                  stroke="#717182"
-                  tickFormatter={formatYAxis}
-                />
-                <YAxis
-                  type="category"
-                  dataKey="displayName"
-                  stroke="#717182"
-                  tick={StoreComparisonTick}
-                  width={90}
-                />
-                <Bar
-                  dataKey="sales"
-                  fill="#FEE500"
-                  radius={[0, 8, 8, 0]}
-                  maxBarSize={30}
-                  label={{ position: 'right', formatter: (value: number) => `${value.toLocaleString()}원` }}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </Card>
+          <StoreComparison data={storeComparisonData} />
         </TabsContent>
         <TabsContent value="cancellation-rate">
-          <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-[#333333] text-center tablet:text-left">취소율 추이</h3>
-              <div className="text-right">
-                <p className="text-sm text-gray-500">총 취소 건수: {totalCancellations}건</p>
-              </div>
-            </div>
-            {isCancelRateLoading ? (
-              <div className="h-[300px] flex items-center justify-center">로딩중...</div>
-            ) : (
-              <ResponsiveContainer width="100%" height={300}>
-                <LineChart data={cancelChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
-                  <XAxis dataKey={activePeriod === 'this-year' ? 'month' : 'date'} stroke="#717182" dy={10} />
-                  <YAxis stroke="#717182" tickFormatter={(tick) => `${Math.round(tick)}%`} />
-                  <Tooltip
-                    contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-                    formatter={(value: number) => [`${value.toFixed(2)}%`, '취소율']}
-                  />
-                  <Line type="linear" dataKey="cancelRate" stroke="#FF4D4D" strokeWidth={3} dot={{ fill: '#FF4D4D', r: 4 }} />
-                </LineChart>
-              </ResponsiveContainer>
-            )}
-          </Card>
+          <CancellationRate data={cancelChartData} activePeriod={activePeriod} totalCancellations={totalCancellations} isLoading={isCancelRateLoading} />
         </TabsContent>
         <TabsContent value="payment-method">
-          <div className="grid grid-cols-1 tablet:grid-cols-2 gap-6">
-            <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">결제수단별 비중</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={paymentDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent, x, y, cx, cy, midAngle, innerRadius, outerRadius }) => {
-                      if (windowWidth < 768) {
-                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const xPos = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                        const yPos = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                        return (
-                          <text x={xPos} y={yPos} fill="black" textAnchor="middle" dominantBaseline="central">
-                            {name}
-                          </text>
-                        );
-                      }
-                      return (
-                        <text x={x} y={y} fill="black" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                          {`${name} ${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      );
-                    }}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                  >
-                    {paymentDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-            <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
-              <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">가게/배달 매출 비중</h3>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={salesTypeDistribution}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent, x, y, cx, cy, midAngle, innerRadius, outerRadius }) => {
-                      if (windowWidth < 768) {
-                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const xPos = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                        const yPos = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                        return (
-                          <text x={xPos} y={yPos} fill="black" textAnchor="middle" dominantBaseline="central">
-                            {name}
-                          </text>
-                        );
-                      }
-                      return (
-                        <text x={x} y={y} fill="black" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                          {`${name} ${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      );
-                    }}
-                    outerRadius={100}
-                    fill="#8884d8"
-                    dataKey="value"
-                    startAngle={270}
-                    endAngle={-90}
-                  >
-                    {salesTypeDistribution.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </Card>
-          </div>
+          <PaymentMethod paymentDistribution={paymentDistribution} salesTypeDistribution={salesTypeDistribution} windowWidth={windowWidth} />
         </TabsContent>
       </Tabs>
 
-      {/* 카카오 스타일 경고 다이얼로그 */}
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent className="sm:max-w-[280px] rounded-xl border-0 shadow-xl p-5 gap-3">
           <AlertDialogHeader className="text-center pb-0 gap-2">
