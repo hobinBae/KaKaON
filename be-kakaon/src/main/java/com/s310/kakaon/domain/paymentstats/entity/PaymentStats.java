@@ -1,5 +1,6 @@
 package com.s310.kakaon.domain.paymentstats.entity;
 
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.global.entity.BaseEntity;
 import jakarta.persistence.Column;
@@ -74,4 +75,37 @@ public class PaymentStats extends BaseEntity{
     @Builder.Default
     @Column(name = "delivery_sales", nullable = false)
     private Integer deliverySales = 0;
+
+    public void applyPayment(Integer amount, PaymentMethod method, Boolean delivery) {
+        this.totalSales += amount;
+        this.salesCnt += 1;
+
+        switch (method) {
+            case CARD -> this.cardSales += amount;
+            case KAKAOPAY -> this.kakaoSales += amount;
+            case CASH -> this.cashSales += amount;
+            case TRANSFER -> this.transferSales += amount;
+        }
+
+        if (delivery) {
+            this.deliverySales += amount;
+        }
+    }
+
+    public void applyCancel(Integer amount, PaymentMethod method, Boolean delivery) {
+        this.totalCancelSales += amount;
+        this.cancelCnt += 1;
+        this.totalSales -= amount;
+
+        switch (method) {
+            case CARD -> this.cardSales -= amount;
+            case KAKAOPAY -> this.kakaoSales -= amount;
+            case CASH -> this.cashSales -= amount;
+            case TRANSFER -> this.transferSales -= amount;
+        }
+
+        if (delivery) {
+            this.deliverySales -= amount;
+        }
+    }
 }

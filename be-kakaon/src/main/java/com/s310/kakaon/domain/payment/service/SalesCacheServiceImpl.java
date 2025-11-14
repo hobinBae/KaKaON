@@ -68,8 +68,11 @@ public class SalesCacheServiceImpl implements SalesCacheService {
         // 시간대 취소율 계산 후 레디스에 저장
         operationCancelRate(storeId, date, hour);
 
-        if(Boolean.TRUE.equals(isDelivery)){
-            redisTemplate.opsForValue().increment(String.format(SUM_DELIVERY_KEY, storeId, date), -amount.doubleValue());
+        if (isDelivery != null) {
+            if (Boolean.TRUE.equals(isDelivery)) {
+                redisTemplate.opsForValue()
+                        .increment(String.format(SUM_DELIVERY_KEY, storeId, date), -amount.doubleValue());
+            }
         }
 
         // TTL 설정

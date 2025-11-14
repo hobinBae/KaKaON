@@ -57,6 +57,25 @@ public class PaymentStatsHourly {
     private Double hourlyCancelRate;
 
 
+    public void applyPaymentHourly(int amount) {
+        this.hourlyTotalSales += amount;
+        this.hourlyPaymentCount += 1;
+        recalcRate();
+    }
+
+    public void applyCancelHourly(int amount) {
+        this.hourlyTotalSales -= amount;
+        this.hourlyCancelCount += 1;
+        recalcRate();
+    }
+
+    private void recalcRate() {
+        if (this.hourlyPaymentCount == 0) {
+            this.hourlyCancelRate = 0.0;
+        } else {
+            this.hourlyCancelRate = (this.hourlyCancelCount * 100.0) / this.hourlyPaymentCount;
+        }
+    }
 
 
 
