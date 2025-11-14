@@ -10,6 +10,7 @@ interface PaymentFilters {
   orderType?: string;
   startDate?: string;
   endDate?: string;
+  authorizationNo?: string;
   activePeriod?: string;
 }
 
@@ -23,6 +24,9 @@ const getPayments = async (storeId: number, filters: PaymentFilters) => {
   }
   if (filters.endDate) {
     params.append('endDate', filters.endDate);
+  }
+  if (filters.authorizationNo) {
+    params.append('authorizationNo', filters.authorizationNo);
   }
   if (filters.status && filters.status !== 'all') {
     params.append('status', filters.status === 'completed' ? 'APPROVED' : 'CANCELLED');
@@ -58,6 +62,7 @@ export const usePayments = (storeId: number | null, filters: PaymentFilters) => 
       filters.orderType,
       filters.startDate,
       filters.endDate,
+      filters.authorizationNo,
       filters.activePeriod,
     ],
     queryFn: () => getPayments(storeId!, filters),
