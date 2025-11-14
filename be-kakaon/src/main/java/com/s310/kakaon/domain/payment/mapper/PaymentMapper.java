@@ -18,7 +18,7 @@ public class PaymentMapper {
         return PaymentResponseDto.builder()
                 .paymentId(payment.getId())
                 .storeId(payment.getStore().getId())
-                .orderId(payment.getOrder().getOrderId())
+                .orderId(payment.getOrder() != null ? payment.getOrder().getOrderId() : null)
                 .storeName(payment.getStore().getName())
                 .status(payment.getStatus())
                 .amount(payment.getAmount())
