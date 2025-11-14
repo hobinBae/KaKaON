@@ -79,8 +79,11 @@ public class PaymentServiceImpl implements PaymentService{
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
-        PaymentInfo paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
-                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
+        PaymentInfo paymentInfo = null;
+        if(request.getPaymentMethod().equals(PaymentMethod.CARD) || request.getPaymentMethod().equals(PaymentMethod.KAKAOPAY)){
+            paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
+                    .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
+        }
 
         validateStoreOwner(store, member);
 

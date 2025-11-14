@@ -57,7 +57,7 @@ public class Payment extends BaseEntity {
     private Boolean delivery = false;
 
     @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
-    @JoinColumn(name = "payment_info_id", nullable = false)
+    @JoinColumn(name = "payment_info_id", nullable = true)
     private PaymentInfo paymentInfo;
 
     public void cancel(){
