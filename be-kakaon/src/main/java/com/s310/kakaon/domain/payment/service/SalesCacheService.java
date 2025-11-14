@@ -12,7 +12,7 @@ public interface SalesCacheService {
      * @param amount 결제 금액
      * @param now 결제 발생 시각
      */
-    void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now);
+    void updatePaymentStats(Long storeId, Integer amount, LocalDateTime now, Boolean isDelivery);
 
 
     /**
@@ -21,7 +21,7 @@ public interface SalesCacheService {
      * @param amount 취소 금액
      * @param now 결제 취소 발생 시각
      */
-    void updateCancelStats(Long storeId, Integer amount, LocalDateTime now);
+    void updateCancelStats(Long storeId, Integer amount, LocalDateTime now, Boolean isDelivery);
 
     /**
      * 매출 통계 조회 (Redis 기준)
