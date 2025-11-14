@@ -4,7 +4,7 @@ import { Card } from '@/components/ui/card';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import AdminPinModal from '@/components/AdminPinModal';
 import { useBoundStore } from '@/stores/storeStore';
-import { useOperationStatus, useUpdateOperationStatus } from '@/lib/hooks/useStores';
+import { useOperationStatus, useUpdateOperationStatus, useStoreById } from '@/lib/hooks/useStores';
 import { toast } from 'sonner';
 import Clock from '@/components/Clock'; // 실시간 시계 컴포넌트
 import ElapsedTimeClock from '@/components/ElapsedTimeClock'; // 영업 경과 시간 시계 컴포넌트
@@ -22,6 +22,7 @@ function usePrevious<T>(value: T): T | undefined {
 export default function BusinessHours() {
   const { selectedStoreId } = useBoundStore();
   const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
+  const { data: storeDetail } = useStoreById(Number(selectedStoreId));
   const { mutate: updateStatus } = useUpdateOperationStatus();
 
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
@@ -111,8 +112,11 @@ export default function BusinessHours() {
   return (
     <div className="flex flex-col items-center justify-start h-full p-4 pt-10">
       <Card className="w-full max-w-md p-8 rounded-2xl shadow-lg text-center">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">영업 상태 관리</h1>
-        
+        <h1 className="text-2xl text-gray-800 mb-2">영업 상태 관리</h1>
+        {storeDetail && (
+          <p className="text-4xl font-bold text-gray-900 mb-6">⏰ {storeDetail.name}</p>
+        )}
+
         {isBusinessOpen ? (
           <>
             <p className="text-gray-500 mb-6">영업 경과 시간</p>

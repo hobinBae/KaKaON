@@ -19,6 +19,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
   Select,
@@ -98,7 +99,7 @@ export default function Transactions() {
 
   const paymentMethodOptions = ['카드', '계좌', '카카오페이', '현금'];
 
-  const { data: ordersData, isLoading } = usePayments(
+  const { data: ordersData } = usePayments(
     selectedStoreId ? Number(selectedStoreId) : null,
     {
       page: currentPage,
@@ -645,6 +646,7 @@ export default function Transactions() {
                 <ToggleGroupItem value="today" className={`${segmentItem} flex-1`}>오늘</ToggleGroupItem>
                 <ToggleGroupItem value="this-week" className={`${segmentItem} flex-1`}>이번주</ToggleGroupItem>
                 <ToggleGroupItem value="this-month" className={`${segmentItem} flex-1`}>이번달</ToggleGroupItem>
+                <ToggleGroupItem value="this-year" className={`${segmentItem} flex-1`}>올해</ToggleGroupItem>
               </ToggleGroup>
               <div className="relative flex items-center gap-2 w-full tablet:w-auto mt-2">
                 <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
@@ -911,6 +913,7 @@ export default function Transactions() {
       <AlertDialog open={alertOpen} onOpenChange={setAlertOpen}>
         <AlertDialogContent className="sm:max-w-[280px] rounded-xl border-0 shadow-xl p-5 gap-3">
           <AlertDialogHeader className="text-center pb-0 gap-2">
+            <AlertDialogTitle className="sr-only">알림</AlertDialogTitle>
             <div className="mx-auto mb-1 flex h-12 w-12 items-center justify-center rounded-full bg-[#FEE500]">
               <svg
                 className="h-6 w-6 text-[#3C1E1E]"

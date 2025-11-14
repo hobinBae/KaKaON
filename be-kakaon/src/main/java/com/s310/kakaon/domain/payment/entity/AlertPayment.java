@@ -38,4 +38,7 @@ public class AlertPayment {
     @JoinColumn(name = "alert_id", nullable = false)
     private Alert alert;
 
+    public void setAlert(Alert alert){
+        this.alert = alert;
+    }
 }

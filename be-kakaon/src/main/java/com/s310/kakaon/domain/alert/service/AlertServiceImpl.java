@@ -35,33 +35,17 @@ public class AlertServiceImpl implements AlertService{
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
     private final PaymentRepository paymentRepository;
-    private final AlertPaymentRepository alertPaymentRepository;
     private final AlertMapper alertMapper;
-    private final MailService mailService;
-
 
     @Override
     @Transactional
-    public void createAndSendAlert(AlertEvent event) {
+    public Alert createAlert(AlertEvent event) {
         Store store = storeRepository.findById(event.getStoreId())
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
-        List<AlertRecipient> alertRecipients = store.getAlertRecipient();
 
-        Alert alert = Alert.builder()
-                .alertUuid(event.getAlertUuid())
-                .store(store)
-                .alertType(event.getAlertType())
-                .description(event.getDescription())
-                .detectedAt(event.getDetectedAt())
-                .emailSent(false)
-                .checked(false)
-                .build();
-
-        alertRepository.save(alert);
-
+        Alert alert = alertMapper.fromAlertEvent(event, store);
 
         if(event.getPaymentId() != null){
-
             Payment payment = paymentRepository.findById(event.getPaymentId())
                     .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -70,38 +54,14 @@ public class AlertServiceImpl implements AlertService{
                     .alert(alert)
                     .build();
 
-            alertPaymentRepository.save(alertPayment);
-
+            alert.addAlertPayments(alertPayment);
         }
 
-        // 메일 내용 구성
-        String subject = "[이상거래 탐지 알림] " + alert.getAlertType().getDescription();
-        String text = String.format(
-                "가맹점: %s%n이상 탐지 유형: %s%n설명: %s%n발생 시각: %s",
-                store.getName(),
-                alert.getAlertType().getDescription(),
-                alert.getDescription(),
-                alert.getDetectedAt().format(DateTimeFormatter.ofPattern("yy.MM.dd HH:mm"))
-        );
+        alertRepository.save(alert);
 
-        // 가맹점 이메일로 전송 (Store 엔티티에 email 필드 있다고 가정)
-        mailService.sendAlertMail(store.getMember().getEmail(), subject, text);
-
-
-        if(!alertRecipients.isEmpty()){
-            for (AlertRecipient alertRecipient : alertRecipients) {
-                if(Boolean.TRUE.equals(alertRecipient.getActive())){
-                    mailService.sendAlertMail(alertRecipient.getEmail(), subject, text);
-                }
-            }
-        }
-
-        try{
-            alert.updateEmailSent();
-        }catch(Exception e){
-            log.warn("[메일 전송 실패] storeId={}, reason={}", store.getId(), e.getMessage());
-        }
+        return alert;
     }
+
 
     @Override
     @Transactional(readOnly = true)

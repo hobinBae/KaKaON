@@ -10,9 +10,11 @@ import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.*;
 import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.entity.PaymentCancel;
+import com.s310.kakaon.domain.payment.entity.PaymentInfo;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
 import com.s310.kakaon.domain.payment.producer.PaymentEventProducer;
 import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
+import com.s310.kakaon.domain.payment.repository.PaymentInfoRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.store.dto.StoreResponseDto;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -63,6 +65,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final SalesCacheService salesCacheService;
 //    private final PaymentEventProducer  paymentEventProducer;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentInfoRepository paymentInfoRepository;
 
     @Override
     @Transactional
@@ -76,6 +79,9 @@ public class PaymentServiceImpl implements PaymentService{
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
+        PaymentInfo paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
+                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
+
         validateStoreOwner(store, member);
 
         String authorizationNo;
@@ -87,7 +93,7 @@ public class PaymentServiceImpl implements PaymentService{
             exists = paymentRepository.existsByAuthorizationNo(authorizationNo);
         }while(exists);
 
-        Payment payment = paymentMapper.toEntity(store, order, authorizationNo ,request);
+        Payment payment = paymentMapper.toEntity(store, order, authorizationNo, paymentInfo, request);
 
         Payment savedPayment = paymentRepository.save(payment);
 

@@ -61,25 +61,6 @@ public class OrderServiceImpl implements OrderService{
 
     @Override
     @Transactional
-    public OrderResponseDto createOrderAndPayment(Long memberId, Long storeId, OrderRequestDto request) {
-
-        Orders order = createOrder(memberId, storeId, request);
-
-        PaymentCreateRequestDto payRequest = PaymentCreateRequestDto.builder()
-                .amount(request.getTotalAmount())
-                .paymentMethod(request.getPaymentMethod())
-                .delivery(request.getOrderType() == OrderType.DELIVERY)
-                .build();
-
-
-        paymentService.registerPayment(memberId, storeId, order.getOrderId(), payRequest);
-        order.updateStatus(request.getTotalAmount());
-
-        return orderMapper.fromEntity(order, request.getOrderType(), request.getPaymentMethod());
-    }
-
-    @Override
-    @Transactional
     public Orders createOrder(Long memberId, Long storeId, OrderRequestDto request) {
         memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
