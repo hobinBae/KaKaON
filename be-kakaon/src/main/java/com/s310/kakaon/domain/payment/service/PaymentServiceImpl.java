@@ -12,6 +12,10 @@ import com.s310.kakaon.domain.payment.entity.PaymentCancel;
 import com.s310.kakaon.domain.payment.mapper.PaymentMapper;
 import com.s310.kakaon.domain.payment.repository.PaymentCancelRepository;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
+import com.s310.kakaon.domain.paymentstats.entity.PaymentStatsHourly;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
+import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.dto.PageResponse;
@@ -57,6 +61,9 @@ public class PaymentServiceImpl implements PaymentService{
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
     private final ApplicationEventPublisher eventPublisher;
+    private final PaymentStatsRepository paymentStatsRepository;
+    private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
+
 
     @Override
     @Transactional
@@ -278,8 +285,65 @@ public class PaymentServiceImpl implements PaymentService{
 
         paymentCancelRepository.save(cancel);
 
+        Store store = storeRepository.findById(payment.getStore().getId())
+                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
         payment.cancel();
-        salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), LocalDateTime.now(), payment.getDelivery());
+
+        String redisKey = REDIS_KEY_PREFIX + store.getId();
+
+        Object startTimeObj = stringRedisTemplate.opsForHash().get(redisKey, "startTime");
+        LocalDateTime approveTime = payment.getApprovedAt();
+
+        //null 일 수도 있기 때문에 뺸다.
+        if(startTimeObj == null){
+            PaymentStats paymentStats = paymentStatsRepository.findByStoreIdAndStatsDate(store.getId(), payment.getApprovedAt()
+                    .toLocalDate()).orElse(null);
+
+            if(paymentStats != null){
+                PaymentStatsHourly hourly =
+                        paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(paymentStats.getId(),
+                                        payment.getApprovedAt().getHour())
+                                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_STATS_NOT_FOUND));
+
+                paymentStats.applyCancel(payment.getAmount(), payment.getPaymentMethod(), payment.getDelivery());
+                hourly.applyCancelHourly(payment.getAmount());
+
+            }else{
+                salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), payment.getApprovedAt() ,null);
+            }
+            return paymentMapper.fromEntity(payment);
+        }
+
+        LocalDateTime startTime = LocalDateTime.parse(startTimeObj.toString());
+
+         if(approveTime.isBefore(startTime) ){
+             //문제가 영업 시작을 안누를 수도 있음
+             //평소라면 그냥 집계된 테이블을 업데이트하면 되지만
+             //영업 첫날인 가맹점은 전날 데이터가 없음
+             //결국 통계를 찾지만 없음
+            // 없으니 집계 함수 업데이트
+             //영업을 시작 안하면 어떻게 해야할지 생각해봐야할듯
+             //결제 시간에 대한 데이터 때문에 영업 시작을 안눌러서 디비를 보는 경우에는 문제가 생김
+            PaymentStats paymentStats = paymentStatsRepository.findByStoreIdAndStatsDate(store.getId(), payment.getApprovedAt()
+                    .toLocalDate()).orElse(null);
+
+            if(paymentStats != null){
+                PaymentStatsHourly hourly =
+                        paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(paymentStats.getId(),
+                                        payment.getApprovedAt().getHour())
+                                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_STATS_NOT_FOUND));
+
+                paymentStats.applyCancel(payment.getAmount(), payment.getPaymentMethod(), payment.getDelivery());
+                hourly.applyCancelHourly(payment.getAmount());
+
+            }else{
+                salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), payment.getApprovedAt() ,null);
+            }
+        }else{
+            //시작시작 이후에 발생
+                salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), payment.getApprovedAt() ,null);
+        }
 
         return paymentMapper.fromEntity(payment);
     }

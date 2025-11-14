@@ -57,8 +57,10 @@ public enum ErrorCode {
     ALERT_NOT_FOUND("ALERT_NOT_FOUND", HttpStatus.NOT_FOUND, "이상 거래 알림을 찾을 수 없습니다."),
 
     INVALID_PERIOD("INVALID_PERIOD", HttpStatus.BAD_REQUEST, "잘못된 날짜 설정입니다."),
-    PERIOD_NOT_FOUND("PERIOD_NOT_FOUND", HttpStatus.NOT_FOUND, "조회 기간을 찾을 수 없습니다.")
-            ;
+    PERIOD_NOT_FOUND("PERIOD_NOT_FOUND", HttpStatus.NOT_FOUND, "조회 기간을 찾을 수 없습니다."),
+    PAYMENT_STATS_NOT_FOUND(" PAYMENT_STATS_NOT_FOUND", HttpStatus.NOT_FOUND, "매출 통계를 찾을 수 없습니다."),
+    PAYMENT_STATS_HOURLY_NOT_FOUND(" PAYMENT_STATS_HOURLY_NOT_FOUND", HttpStatus.NOT_FOUND, "시간대별 매출 통계를 찾을 수 없습니다.")
+    ;
 
     //
     // 필요한 에러 코드 계속 추가
