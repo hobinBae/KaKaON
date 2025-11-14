@@ -69,6 +69,7 @@ public class OrderServiceImpl implements OrderService{
                 .amount(request.getTotalAmount())
                 .paymentMethod(request.getPaymentMethod())
                 .delivery(request.getOrderType() == OrderType.DELIVERY)
+                .paymentUuid(request.getPaymentUuid())
                 .build();
 
 
