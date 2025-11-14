@@ -168,14 +168,15 @@ export default function StoreManage() {
   }, [sortedStores, appliedSearchTerm]);
 
   // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
-  const getSalesData = (store: Store, period: SalesPeriod) => {
+  const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
+    const totalSales = store.totalSales ?? 0;
     switch (period) {
       case "일별":
-        return store.todaySales ?? 0;
+        return Math.round(totalSales * 0.03); // 임시: 전체 매출의 3%를 오늘 매출로 가정
       case "주별":
-        return store.weeklySales ?? 0;
+        return Math.round(totalSales * 0.2); // 임시: 전체 매출의 20%를 이번주 매출로 가정
       case "월별":
-        return store.monthlySales ?? 0;
+        return totalSales; // 전체 매출을 이번달 매출로 사용
       default:
         return 0;
     }
@@ -214,7 +215,7 @@ export default function StoreManage() {
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
-  const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('FOOD');
+  const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
 
   // 사업자번호 포맷팅 함수
   const formatBusinessNumber = (value: string) => {
@@ -286,7 +287,7 @@ export default function StoreManage() {
   // 가맹점 정보 수정을 위한 상태
   const [editingStoreName, setEditingStoreName] = useState("");
   const [editingStorePhone, setEditingStorePhone] = useState("");
-  const [editingStoreType, setEditingStoreType] = useState<BusinessType>('FOOD');
+  const [editingStoreType, setEditingStoreType] = useState<BusinessType>('RESTAURANT');
   const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
 
   useEffect(() => {
@@ -430,7 +431,7 @@ export default function StoreManage() {
         // 상태 초기화
         setNewStoreName("");
         setNewStoreBusinessNumber("");
-        setNewStoreType("FOOD");
+        setNewStoreType("RESTAURANT");
         setNewStoreBaseAddress("");
         setNewStoreDetailAddress("");
         setNewStorePhone("");
@@ -616,7 +617,7 @@ export default function StoreManage() {
                     <SelectValue placeholder="업종을 선택하세요" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="FOOD">음식업</SelectItem>
+                    <SelectItem value="RESTAURANT">음식업</SelectItem>
                     <SelectItem value="RETAIL">소매업</SelectItem>
                     <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
                     <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
@@ -731,7 +732,7 @@ export default function StoreManage() {
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
                 <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
-                <TableHead className="text-[#333333] text-center">오늘매출</TableHead>
+                <TableHead className="text-[#333333] text-center">매출</TableHead>
                 <TableHead className="text-[#333333] text-center">취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
                 <TableHead className="text-[#333333] text-center">상태</TableHead>
@@ -777,22 +778,22 @@ export default function StoreManage() {
                     <TableCell className="text-center">
                       <div>
                         <p className="text-sm text-[#333333]">
-                          ₩{(store.todaySales ?? 0).toLocaleString()}
+                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
                         </p>
                         {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
                       </div>
                     </TableCell>
                     <TableCell className="text-center">
-                      {store.todayCancelRate !== undefined ? (
+                      {store.cancelRate !== undefined ? (
                         <Badge
                           variant="outline"
                           className={`rounded ${
-                            store.todayCancelRate > 3.5
+                            store.cancelRate > 3.5
                               ? "border-[#FF4D4D] text-[#FF4D4D]"
                               : "border-[#717182] text-[#717182]"
                           }`}
                         >
-                          {store.todayCancelRate}%
+                          {store.cancelRate}%
                         </Badge>
                       ) : (
                         <span className="text-xs text-[#717182]">-</span>
@@ -921,7 +922,7 @@ export default function StoreManage() {
                                         <SelectValue />
                                       </SelectTrigger>
                                       <SelectContent>
-                                        <SelectItem value="FOOD">음식업</SelectItem>
+                                        <SelectItem value="RESTAURANT">음식업</SelectItem>
                                         <SelectItem value="RETAIL">소매업</SelectItem>
                                         <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
                                         <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>

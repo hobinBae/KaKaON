@@ -26,7 +26,7 @@ export interface MemberUpdateRequest {
 }
 
 // ================== Store ==================
-export type BusinessType = 'FOOD' | 'RETAIL' | 'LIFE_SERVICE' | 'ENTERTAINMENT_SPORTS' | 'LODGING';
+export type BusinessType = 'RESTAURANT' | 'CAFE' | 'RETAIL' | 'LIFE_SERVICE' | 'ENTERTAINMENT_SPORTS' | 'LODGING';
 export type StoreStatus = 'OPEN' | 'CLOSED';
 
 export interface BusinessHour {

@@ -42,7 +42,7 @@ public class Store extends BaseEntity {
 
     //여기는 enum으로 할 수 있음
     @Enumerated(EnumType.STRING)
-    @Column(name = "business_type", nullable = false, length = 10)
+    @Column(name = "business_type", nullable = false, length = 30)
     private BusinessType businessType;
 
     @Column(name = "address", nullable = false, length = 255)
