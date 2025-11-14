@@ -14,6 +14,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 
 @Service
 @RequiredArgsConstructor
@@ -44,5 +47,17 @@ public class PaymentInfoServiceImpl implements PaymentInfoService{
 
         log.info("결제 수단 등록 완료: {}", savedPaymentInfo.getPaymentUuid());
         return paymentInfoMapper.fromEntity(savedPaymentInfo);
+    }
+
+    /**
+     * 결제 수단 목록 조회
+     */
+    @Override
+    public List<PaymentInfoResponseDto> getAllPaymentInfos() {
+        List<PaymentInfo> paymentInfos = paymentInfoRepository.findAll();
+
+        return paymentInfos.stream()
+                .map(paymentInfoMapper::fromEntity)
+                .collect(Collectors.toList());
     }
 }

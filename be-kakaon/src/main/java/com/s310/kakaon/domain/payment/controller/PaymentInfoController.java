@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 
 @Tag(name = "PaymentInfo", description = "결제 수단(카드 번호/카카오페이 바코드 번호) 관련 API")
 @RestController
@@ -43,5 +45,19 @@ public class PaymentInfoController {
 
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.of(HttpStatus.CREATED, "결제 수단 등록 성공", response, httpRequest.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "결제 수단 목록 조회",
+            description = "등록된 모든 결제 수단 목록을 조회합니다."
+    )
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<PaymentInfoResponseDto>>> getAllPaymentInfos(
+            HttpServletRequest httpRequest) {
+
+        List<PaymentInfoResponseDto> response = paymentInfoService.getAllPaymentInfos();
+
+        return ResponseEntity.ok(
+                ApiResponse.of(HttpStatus.OK, "결제 수단 목록 조회 성공", response, httpRequest.getRequestURI()));
     }
 }
