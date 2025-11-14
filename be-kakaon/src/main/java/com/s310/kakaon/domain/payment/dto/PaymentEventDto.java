@@ -27,6 +27,7 @@ public class PaymentEventDto implements Serializable {
     private LocalDateTime canceledAt;
     private Boolean isDelivery;
     private LocalDateTime createdDateTime;
+    private String paymentUuid;
 
     // 매장 위치 정보
     private BigDecimal storeLatitude;

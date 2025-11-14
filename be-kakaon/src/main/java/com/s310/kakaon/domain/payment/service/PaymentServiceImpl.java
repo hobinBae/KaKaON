@@ -63,7 +63,6 @@ public class PaymentServiceImpl implements PaymentService{
     private final StringRedisTemplate stringRedisTemplate;
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
-//    private final PaymentEventProducer  paymentEventProducer;
     private final ApplicationEventPublisher eventPublisher;
     private final PaymentInfoRepository paymentInfoRepository;
 
@@ -79,8 +78,11 @@ public class PaymentServiceImpl implements PaymentService{
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
-        PaymentInfo paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
-                .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
+        PaymentInfo paymentInfo = null;
+        if(request.getPaymentMethod().equals(PaymentMethod.CARD) || request.getPaymentMethod().equals(PaymentMethod.KAKAOPAY)){
+            paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
+                    .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
+        }
 
         validateStoreOwner(store, member);
 
@@ -100,27 +102,31 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
-        // Kafka 이벤트 발행
-        PaymentEventDto event = PaymentEventDto.builder()
-                .paymentId(savedPayment.getId())
-                .storeId(savedPayment.getStore().getId())
-                .orderId(savedPayment.getOrder().getOrderId())
-                .authorizationNo(savedPayment.getAuthorizationNo())
-                .amount(savedPayment.getAmount())
-                .paymentMethod(savedPayment.getPaymentMethod().name())
-                .status(savedPayment.getStatus().name())
-                .approvedAt(savedPayment.getApprovedAt())
-                .canceledAt(savedPayment.getCanceledAt())
-                .isDelivery(savedPayment.getDelivery())
-                .createdDateTime(savedPayment.getCreatedDateTime())
-                .storeLatitude(savedPayment.getStore().getLatitude())
-                .storeLongitude(savedPayment.getStore().getLongitude())
-                .storeName(savedPayment.getStore().getName())
-                .build();
+        // 해당 결제가 CARD 이거나 KAKAOPAY인 경우
+        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD) || savedPayment.getPaymentMethod().equals(PaymentMethod.KAKAOPAY)){
+            // Kafka 이벤트 발행
+            PaymentEventDto event = PaymentEventDto.builder()
+                    .paymentId(savedPayment.getId())
+                    .storeId(savedPayment.getStore().getId())
+                    .orderId(savedPayment.getOrder().getOrderId())
+                    .authorizationNo(savedPayment.getAuthorizationNo())
+                    .amount(savedPayment.getAmount())
+                    .paymentMethod(savedPayment.getPaymentMethod().name())
+                    .status(savedPayment.getStatus().name())
+                    .approvedAt(savedPayment.getApprovedAt())
+                    .canceledAt(savedPayment.getCanceledAt())
+                    .isDelivery(savedPayment.getDelivery())
+                    .createdDateTime(savedPayment.getCreatedDateTime())
+                    .storeLatitude(savedPayment.getStore().getLatitude())
+                    .storeLongitude(savedPayment.getStore().getLongitude())
+                    .storeName(savedPayment.getStore().getName())
+                    .paymentUuid(savedPayment.getPaymentInfo().getPaymentUuid())
+                    .build();
 
-//        paymentEventProducer.sendPaymentEvent(event);
-        // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
-        eventPublisher.publishEvent(event);
+            // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
+            eventPublisher.publishEvent(event);
+        }
+
 
         long t1 = System.currentTimeMillis();
         if(!detectAfterHoursTransaction(store, payment)){

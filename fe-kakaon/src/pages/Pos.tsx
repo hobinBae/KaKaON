@@ -86,6 +86,10 @@ const Pos = () => {
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
 
+  useEffect(() => {
+    clearCart();
+  }, [selectedStoreId, clearCart]);
+
   const dailyTransactions = useMemo(() => {
     if (!transactions) return [];
     return transactions
@@ -192,6 +196,7 @@ const Pos = () => {
         onSuccess: () => {
           clearCart();
           setIsPaymentDialogOpen(false);
+          setPaymentMethod(null);
         },
         onError: (error: any) => {
           console.error("Order creation failed:", error);
@@ -331,15 +336,14 @@ const Pos = () => {
                 </div>
               )}
               {historyTotalPages > 1 && (
-                <div className="flex justify-center items-center gap-2 pt-4">
-                  {[...Array(historyTotalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setHistoryCurrentPage(i + 1)}
-                      className={`h-2 w-2 rounded-full transition-colors ${historyCurrentPage === i + 1 ? 'bg-gray-800' : 'bg-gray-300 hover:bg-gray-400'}`}
-                      aria-label={`Go to page ${i + 1}`}
-                    />
-                  ))}
+                <div className="flex justify-center items-center gap-4 pt-4">
+                  <Button variant="outline" size="sm" onClick={() => setHistoryCurrentPage(p => Math.max(1, p - 1))} disabled={historyCurrentPage === 1}>
+                    이전
+                  </Button>
+                  <span>{historyCurrentPage} / {historyTotalPages}</span>
+                  <Button variant="outline" size="sm" onClick={() => setHistoryCurrentPage(p => Math.min(historyTotalPages, p + 1))} disabled={historyCurrentPage === historyTotalPages}>
+                    다음
+                  </Button>
                 </div>
               )}
             </div>
@@ -480,7 +484,7 @@ const Pos = () => {
                   {selectedTransaction.status === 'completed' && (
                      <AlertDialog>
                       <AlertDialogTrigger asChild>
-                        <Button variant="destructive" className="rounded-3xl">결제 취소</Button>
+                        <Button variant="destructive" className="rounded-3xl" disabled={selectedTransaction.status !== 'completed'}>결제 취소</Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>

@@ -76,3 +76,14 @@ export const usePaymentMethodRatioByPeriod = (storeId: number, params: SalesPeri
     enabled: !!storeId && storeId > 0 && (options?.enabled ?? true),
   });
 };
+
+export const useSalesByStores = (params: SalesPeriodParams, options?: { enabled?: boolean }) => {
+  return useQuery<any, Error>({
+    queryKey: ["salesByStores", params],
+    queryFn: async () => {
+      const res = await apiClient.get("/analytics/sales/stores", { params });
+      return res.data.data;
+    },
+    enabled: options?.enabled ?? true,
+  });
+};
