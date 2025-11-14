@@ -108,8 +108,8 @@ public class SamePaymentMethodDetector implements FraudDetector {
             return Collections.emptyList();
         }
 
-        // 4) 알림 생성 (윈도우 내 전체 결제 ID, 특히 event + suspiciousList)
-        List<Long> relatedPaymentIds = recentList.stream()
+        // 4) 알림 생성 (현재 이벤트와 '원거리 다른 매장'으로 감지된 결제들만)
+        List<Long> relatedPaymentIds = suspiciousList.stream()
                 .map(PaymentEventDto::getPaymentId)
                 .toList();
 
