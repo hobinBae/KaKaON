@@ -183,26 +183,22 @@ public class PaymentServiceImpl implements PaymentService{
                     }
 
                     // CSV 필드 파싱
-                    // 결제ID(0), 매장명(1), 주문ID(2), 승인번호(3), 금액(4), 결제수단(5), 상태(6), 배달여부(7), 승인일시(8), 취소일시(9)
-                    Long orderId = Long.parseLong(fields[2].trim());
-                    String authorizationNo = fields[3].trim();
-                    Integer amount = Integer.parseInt(fields[4].trim());
-                    PaymentMethod paymentMethod = PaymentMethod.valueOf(fields[5].trim());
-                    PaymentStatus status = PaymentStatus.valueOf(fields[6].trim());
-                    Boolean isDelivery = "배달".equals(fields[7].trim());
-                    LocalDateTime approvedAt = LocalDateTime.parse(fields[8].trim(), formatter);
+                    // 매장명(0), 승인번호(1), 금액(2), 결제수단(3), 상태(4), 배달여부(5), 승인일시(6), 취소일시(7)
+                    String storeName = fields[0].trim();
+                    String authorizationNo = fields[1].trim();
+                    Integer amount = Integer.parseInt(fields[2].trim());
+                    PaymentMethod paymentMethod = PaymentMethod.valueOf(fields[3].trim());
+                    PaymentStatus status = PaymentStatus.valueOf(fields[4].trim());
+                    Boolean isDelivery = "배달".equals(fields[5].trim());
+                    LocalDateTime approvedAt = LocalDateTime.parse(fields[6].trim(), formatter);
                     LocalDateTime canceledAt = null;
-                    if (fields.length > 9 && !fields[9].trim().isEmpty()) {
-                        canceledAt = LocalDateTime.parse(fields[9].trim(), formatter);
+                    if (fields.length > 7 && !fields[7].trim().isEmpty()) {
+                        canceledAt = LocalDateTime.parse(fields[7].trim(), formatter);
                     }
 
-                    // Order 찾기
-                    Orders order = orderRepository.findById(orderId)
-                            .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
-
-                    // Order가 해당 Store에 속하는지 확인
-                    if (!order.getStore().getId().equals(storeId)) {
-                        log.warn("라인 {} 스킵: 주문 {}가 매장 {}에 속하지 않음", i + 1, orderId, storeId);
+                    // 매장명 검증
+                    if (!storeName.equals(store.getName())) {
+                        log.warn("라인 {} 스킵: 매장명 불일치 (CSV: {}, 실제: {})", i + 1, storeName, store.getName());
                         failCount++;
                         continue;
                     }
@@ -214,10 +210,15 @@ public class PaymentServiceImpl implements PaymentService{
                         continue;
                     }
 
-                    // Payment 생성
+                    // PaymentInfo 생성 (CSV 업로드용 더미 데이터)
+                    PaymentInfo paymentInfo = PaymentInfo.builder()
+                            .paymentUuid("CSV_UPLOAD_" + authorizationNo)
+                            .build();
+
+                    // Payment 생성 (Order는 null)
                     Payment payment = Payment.builder()
                             .store(store)
-                            .order(order)
+                            .order(null)
                             .authorizationNo(authorizationNo)
                             .amount(amount)
                             .paymentMethod(paymentMethod)
@@ -225,6 +226,7 @@ public class PaymentServiceImpl implements PaymentService{
                             .approvedAt(approvedAt)
                             .canceledAt(canceledAt)
                             .delivery(isDelivery)
+                            .paymentInfo(paymentInfo)
                             .build();
 
                     paymentRepository.save(payment);
@@ -367,20 +369,18 @@ public class PaymentServiceImpl implements PaymentService{
             baos.write(0xBF);
 
             // CSV 헤더
-            writer.println("결제ID,매장명,주문ID,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시");
+            writer.println("매장명,승인번호,금액,결제수단,상태,배달여부,승인일시,취소일시");
 
             // CSV 데이터
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             for (PaymentResponseDto payment : paymentDtos) {
-                writer.printf("%d,%s,%d,%s,%d,%s,%s,%s,%s,%s%n",
-                        payment.getPaymentId(),
-                        escapeCsvField(store.getName()),
-                        payment.getOrderId(),
+                writer.printf("%s,%s,%d,%s,%s,%s,%s,%s%n",
+                        escapeCsvField(store.getName() != null ? store.getName() : ""),
                         escapeCsvField(payment.getAuthorizationCode()),
                         payment.getAmount(),
                         payment.getPaymentMethod() != null ? payment.getPaymentMethod().name() : "",
                         payment.getStatus() != null ? payment.getStatus().name() : "",
-                        payment.getDelivery() != null && payment.getDelivery() ? "배달" : "포장",
+                        payment.getDelivery() != null && payment.getDelivery() ? "배달" : "매장",
                         payment.getApprovedAt() != null ? payment.getApprovedAt().format(formatter) : "",
                         payment.getCanceledAt() != null ? payment.getCanceledAt().format(formatter) : ""
 
