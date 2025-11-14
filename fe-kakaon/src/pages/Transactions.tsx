@@ -225,7 +225,7 @@ export default function Transactions() {
       const contentDisposition = response.headers['content-disposition'];
       let filename = `transactions_${format(new Date(), "yyyyMMddHHmmss")}.csv`; // fallback
       if (contentDisposition) {
-        const filenameMatch = contentDisposition.match(/filename="?(.+)"?/);
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
         if (filenameMatch && filenameMatch.length > 1) {
           filename = decodeURI(filenameMatch[1]); // 한글 파일명 디코딩
         }
