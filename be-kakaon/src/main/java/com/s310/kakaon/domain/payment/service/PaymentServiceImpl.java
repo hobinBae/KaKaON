@@ -79,7 +79,7 @@ public class PaymentServiceImpl implements PaymentService{
                 .orElseThrow(() -> new ApiException(ErrorCode.ORDER_NOT_FOUND));
 
         PaymentInfo paymentInfo = null;
-        if(request.getPaymentMethod().equals(PaymentMethod.CARD) || request.getPaymentMethod().equals(PaymentMethod.KAKAOPAY)){
+        if(request.getPaymentMethod().equals(PaymentMethod.CARD)){
             paymentInfo = paymentInfoRepository.findByPaymentUuid(request.getPaymentUuid())
                     .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_INFO_NOT_FOUND));
         }
@@ -102,8 +102,8 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt());
 
-        // 해당 결제가 CARD 이거나 KAKAOPAY인 경우
-        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD) || savedPayment.getPaymentMethod().equals(PaymentMethod.KAKAOPAY)){
+        // 해당 결제가 CARD인 경우
+        if(savedPayment.getPaymentMethod().equals(PaymentMethod.CARD) && !savedPayment.getPaymentInfo().getPaymentUuid().equals("0000-0000-0000-0000")){
             // Kafka 이벤트 발행
             PaymentEventDto event = PaymentEventDto.builder()
                     .paymentId(savedPayment.getId())
