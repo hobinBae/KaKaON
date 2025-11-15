@@ -150,7 +150,7 @@ export type CartItem = Menu & { quantity: number };
 
 // ================== Transaction ==================
 export type Transaction = {
-  id: number;
+  id: number | string;
   orderId: number;
   items: { name: string; quantity: number; price: number }[];
   total: number;
@@ -160,6 +160,19 @@ export type Transaction = {
   paymentMethod: string;
   status: 'completed' | 'cancelled';
 };
+
+export interface PaymentResponse {
+  paymentId: number;
+  orderId: number;
+  authorizationCode: string;
+  amount: number;
+  paymentMethod: string;
+  status: 'APPROVED' | 'CANCELED';
+  approvedAt: string;
+  canceledAt?: string;
+  delivery: boolean;
+  storeId: number;
+}
 
 // 다른 도메인(Order, Menu 등)의 타입도 여기에 추가할 수 있음
 
@@ -291,4 +304,3 @@ export interface PaymentMethodRatioResponse {
   deliveryTotal: number;
   totalAmount: number;
 }
-

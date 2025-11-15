@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Checkbox } from "@/components/ui/checkbox";
 import { Calendar } from "@/components/ui/calendar";
 import { DateRange } from "react-day-picker";
-import { addDays, format, differenceInCalendarDays, startOfMonth, endOfMonth, startOfDay, endOfDay, startOfWeek, endOfWeek, startOfYear, endOfYear, parse, isValid, subMonths, addMonths, setYear, setMonth } from "date-fns";
+import { addDays, format, differenceInCalendarDays, startOfMonth, startOfDay, endOfDay, startOfYear, parse, isValid, subMonths, addMonths, setYear, setMonth } from "date-fns";
 import { ko } from "date-fns/locale";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import {
@@ -31,7 +31,7 @@ import {
 import { useBoundStore } from "@/stores/storeStore";
 import { usePayments } from "@/lib/hooks/usePayments";
 import { useOrderDetail } from "@/lib/hooks/useOrders";
-import { Transaction } from "@/types/api";
+import { Transaction, PaymentResponse } from "@/types/api";
 import apiClient from "@/lib/apiClient";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 
@@ -85,7 +85,6 @@ export default function Transactions() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [appliedSearchTerm, setAppliedSearchTerm] = useState('');
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['all']);
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDateInput, setStartDateInput] = useState<string>("");
@@ -109,6 +108,7 @@ export default function Transactions() {
       orderType: orderTypeFilter,
       startDate: dateRange?.from ? format(dateRange.from, "yyyy-MM-dd") : undefined,
       endDate: dateRange?.to ? format(dateRange.to, "yyyy-MM-dd") : undefined,
+      authorizationNo: searchTerm,
       activePeriod: activePeriod,
     }
   );
@@ -120,7 +120,7 @@ export default function Transactions() {
     'CASH': '현금',
   };
 
-  const transactions: Transaction[] = (ordersData?.data?.content || []).map((payment: any) => ({
+  const transactions: Transaction[] = (ordersData?.data?.content || []).map((payment: PaymentResponse) => ({
     id: payment.authorizationCode || payment.paymentId,
     orderId: payment.orderId,
     items: [],
@@ -136,7 +136,7 @@ export default function Transactions() {
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    setAppliedSearchTerm(''); // 페이지 변경 시 검색어 초기화
+    setSearchTerm(''); // 페이지 변경 시 검색어 초기화
   };
 
   const handlePeriodChange = (value: string) => {
@@ -178,41 +178,70 @@ export default function Transactions() {
     setActivePeriod("today");
     setOrderTypeFilter('all');
     setSearchTerm('');
-    setAppliedSearchTerm('');
     setSelectedMethods(['all']);
     setStatusFilter('all');
     setCurrentPage(0);
   };
 
-  const handleDownloadCSV = () => {
-    if (!transactions.length) {
-      showAlert("다운로드할 데이터가 없습니다.");
+  const handleDownloadCSV = async () => {
+    if (!selectedStoreId) {
+      showAlert("다운로드할 매장을 선택해주세요.");
       return;
     }
 
-    const headers = ["결제시간", "주문구분", "결제수단", "결제상태", "승인번호", "금액"];
-    const csvContent = [
-      headers.join(','),
-      ...transactions.map(tx => [
-        `"${format(new Date(tx.date), 'yyyy-MM-dd HH:mm:ss')}"`,
-        tx.orderType,
-        tx.paymentMethod,
-        tx.status === 'completed' ? '완료' : '취소',
-        tx.id,
-        tx.total
-      ].join(','))
-    ].join('\n');
+    // API 요청을 위한 파라미터 객체 생성
+    const params = new URLSearchParams();
+    if (dateRange?.from) params.append('startDate', format(dateRange.from, "yyyy-MM-dd"));
+    if (dateRange?.to) params.append('endDate', format(dateRange.to, "yyyy-MM-dd"));
+    if (activePeriod) params.append('activePeriod', activePeriod);
 
-    const blob = new Blob([`\uFEFF${csvContent}`], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    if (link.download !== undefined) {
-      const url = URL.createObjectURL(blob);
-      link.setAttribute("href", url);
-      link.setAttribute("download", `transactions_${format(new Date(), "yyyyMMddHHmmss")}.csv`);
-      link.style.visibility = 'hidden';
+    if (statusFilter && statusFilter !== 'all') {
+      params.append('status', statusFilter === 'completed' ? 'APPROVED' : 'CANCELED');
+    }
+    if (selectedMethods && !selectedMethods.includes('all')) {
+      const paymentMethodMapToEnglish: { [key: string]: string } = {
+        '카드': 'CARD',
+        '계좌': 'TRANSFER',
+        '카카오페이': 'KAKAOPAY',
+        '현금': 'CASH',
+      };
+      const englishMethods = selectedMethods.map(method => paymentMethodMapToEnglish[method] || method);
+      params.append('paymentMethod', englishMethods.join(','));
+    }
+    if (orderTypeFilter && orderTypeFilter !== 'all') {
+      params.append('orderType', orderTypeFilter);
+    }
+
+    try {
+      const response = await apiClient.get(`/payments/stores/${selectedStoreId}/export`, {
+        params,
+        responseType: 'blob', // 서버에서 byte[]로 응답하므로 blob으로 받음
+      });
+
+      const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement("a");
+
+      // 서버에서 보내준 파일명 사용
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = `transactions_${format(new Date(), "yyyyMMddHHmmss")}.csv`; // fallback
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch && filenameMatch.length > 1) {
+          filename = decodeURI(filenameMatch[1]); // 한글 파일명 디코딩
+        }
+      }
+      
+      const url = window.URL.createObjectURL(blob);
+      link.href = url;
+      link.setAttribute('download', filename);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("CSV download error:", error);
+      showAlert("CSV 다운로드 중 오류가 발생했습니다.");
     }
   };
 
@@ -624,9 +653,9 @@ export default function Transactions() {
               </div>
               <div className="flex gap-2 items-center">
                 <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 w-48" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                  onKeyDown={(e) => { if (e.key === 'Enter') setAppliedSearchTerm(searchTerm); }}
+                  onKeyDown={(e) => { if (e.key === 'Enter') setCurrentPage(0); }}
                 />
-                <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
+                <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setCurrentPage(0)}>검색</Button>
                 <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8" onClick={handleReset}><RotateCw className="w-4 h-4 mr-1" />초기화</Button>
               </div>
             </div>
@@ -776,9 +805,9 @@ export default function Transactions() {
             </div>
             <div className="flex gap-2 items-center w-full">
               <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 flex-1" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                onKeyDown={(e) => { if (e.key === 'Enter') setAppliedSearchTerm(searchTerm); }}
+                onKeyDown={(e) => { if (e.key === 'Enter') setCurrentPage(0); }}
               />
-              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8" onClick={() => setAppliedSearchTerm(searchTerm)}>검색</Button>
+              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8" onClick={() => setCurrentPage(0)}>검색</Button>
             </div>
           </div>
         </div>
@@ -814,7 +843,7 @@ export default function Transactions() {
                   onClick={() => setSelectedTransaction(tx)}
                 >
                   <TableCell className="text-[#717182] pl-6">
-                    <span className="hidden tablet:inline">{format(new Date(tx.date), 'yyyy.MM.dd (eee) HH:mm', { locale: ko })}</span>
+                    <span className="hidden tablet:inline">{format(new Date(tx.date), 'yyyy.MM.dd (eee) HH:mm:ss', { locale: ko })}</span>
                     <span className="tablet:hidden">{format(new Date(tx.date), 'MM.dd', { locale: ko })}</span>
                   </TableCell>
                   <TableCell className="text-[#717182]">
@@ -860,7 +889,7 @@ export default function Transactions() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <div className="text-sm text-[#717182] mb-1">결제시간</div>
-                  <div className="text-[#333333]">{format(new Date(selectedTransaction.date), 'yyyy.MM.dd (eee) HH:mm', { locale: ko })}</div>
+                  <div className="text-[#333333]">{format(new Date(selectedTransaction.date), 'yyyy.MM.dd (eee) HH:mm:ss', { locale: ko })}</div>
                 </div>
                 <div>
                   <div className="text-sm text-[#717182] mb-1">주문 구분</div>
