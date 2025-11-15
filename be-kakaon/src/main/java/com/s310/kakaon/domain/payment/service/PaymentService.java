@@ -26,6 +26,8 @@ public interface PaymentService {
 
     List<CancelRateAnomalyDto> findHourlyCancelRateAnomalies();
 
+    List<CancelRateAnomalyDto> redisFindHourlyCancelRateAnomalies();
+
     PaymentResponseDto getPaymentByAuthorizationNo(Long memberId, String authorizationNo);
 
 }

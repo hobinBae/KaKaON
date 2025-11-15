@@ -22,6 +22,8 @@ import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
+import java.time.LocalDate;
+import java.util.Set;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -310,7 +312,7 @@ public class PaymentServiceImpl implements PaymentService{
                 hourly.applyCancelHourly(payment.getAmount());
 
             }else{
-                //영업 첫날인데 영업시작을 안하고 거래를 했을 수도 있기때문에 
+                //영업 첫날인데 영업시작을 안하고 거래를 했을 수도 있기때문에
                 salesCacheService.updateCancelStats(payment.getStore().getId(), payment.getAmount(), payment.getApprovedAt() ,null);
             }
         }else{
@@ -407,6 +409,86 @@ public class PaymentServiceImpl implements PaymentService{
             log.error("CSV 생성 중 오류 발생", e);
             throw new ApiException(ErrorCode.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    public List<CancelRateAnomalyDto> redisFindHourlyCancelRateAnomalies(){
+
+        LocalDateTime now = LocalDateTime.now();
+        String date = now.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        int hour = now.getHour();
+        Set<String> keys = stringRedisTemplate.keys(
+                String.format("sales:hourly:rate:cancel:*:%s:%02d", date, hour)
+        );
+
+        if (keys == null || keys.isEmpty()) {
+            log.info("[CancelRate] 현재 시간({}시) 취소율 데이터 없음", hour);
+            return List.of();
+        }
+
+        List<CancelRateAnomalyDto> result = new ArrayList<>();
+
+        for (String key : keys) {
+            Long storeId = parseStoreId(key);
+            String storeName = parseStoreName(storeId);
+
+            String todayRateString = stringRedisTemplate.opsForValue().get(key);
+
+            if(todayRateString == null){
+                continue;
+            }
+
+            Double todayRate = Double.parseDouble(todayRateString);
+
+            //전주 동시간
+            LocalDate lastWeekDate = now.minusWeeks(1).toLocalDate();
+
+            PaymentStats paymentStats = paymentStatsRepository.findByStoreIdAndStatsDate(storeId, lastWeekDate)
+                    .orElse(null);
+
+            if(paymentStats == null){
+                log.info("해당 가맹점{}에 저번주 매출 통계가 없습니다.", storeId);
+                continue;
+            }
+
+            PaymentStatsHourly paymentStatsHourly = paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(
+                    paymentStats.getId(), hour).orElse(null);
+
+            if(paymentStatsHourly == null){
+                log.info("해당 가맹점{}에 저번주 같은 시간{} 매출 통계가 없습니다.", storeId, hour);
+                continue;
+            }
+
+            Double lastWeekRate = paymentStatsHourly.getHourlyCancelRate();
+
+            Double increase = todayRate - lastWeekRate;
+
+            if(increase >= 20.0){
+                result.add(
+                        CancelRateAnomalyDto.builder()
+                                .storeId(storeId)
+                                .storeName(storeName)
+                                .lastWeekCancelRate(lastWeekRate)
+                                .thisWeekCancelRate(todayRate)
+                                .increasePercent(increase)
+                                .build()
+                );
+            }
+
+        }
+        return result;
+
+
+    }
+
+    private Long parseStoreId(String key) {
+        // sales:hourly:rate:cancel:{storeId}:{yyyyMMdd}:{HH}
+        return Long.parseLong(key.split(":")[4]);
+    }
+
+    private String parseStoreName(Long storeId) {
+        return storeRepository.findById(storeId)
+                .map(Store::getName)
+                .orElse("가맹점 이름");
     }
 
     @Override
