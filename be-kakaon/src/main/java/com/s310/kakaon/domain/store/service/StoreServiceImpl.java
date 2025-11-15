@@ -4,6 +4,12 @@ import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.order.entity.Orders;
+import com.s310.kakaon.domain.order.repository.OrderRepository;
+import com.s310.kakaon.domain.payment.dto.PaymentMethod;
+import com.s310.kakaon.domain.payment.dto.PaymentStatus;
+import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
@@ -18,6 +24,8 @@ import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
+import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +37,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Random;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -139,31 +149,31 @@ public class StoreServiceImpl implements StoreService{
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
 
-        if(store.getOperationStatus().equals(OperationStatus.CLOSED)){
+        if (store.getOperationStatus().equals(OperationStatus.CLOSED)) {
             return OperationStatusUpdateResponseDto.builder()
                     .updatedAt(null)
                     .status(store.getOperationStatus())
                     .build();
-        }else{
-            String redisKey = REDIS_KEY_PREFIX + storeId;
-            String startTimeStr= stringRedisTemplate.opsForHash().get(redisKey, "startTime").toString();
+        }
 
-            LocalDateTime updatedAt;
-            try {
-                // Redis 값이 있으면 파싱
-                updatedAt = (startTimeStr != null) ? LocalDateTime.parse(startTimeStr) : store.getLastModifiedDateTime();
-            } catch (DateTimeParseException e) {
-                // 혹시 Redis 값이 깨져 있으면 DB 변경시간으로 처리
-                log.warn("[STORE {}] Redis 영업 시작 시각 파싱 실패, DB updatedDateTime으로 대체", storeId);
-                updatedAt = store.getLastModifiedDateTime();
+            String redisKey = REDIS_KEY_PREFIX + storeId;
+            Object startTimeObj = stringRedisTemplate.opsForHash().get(redisKey, "startTime");
+
+            LocalDateTime updatedAt = store.getLastModifiedDateTime();;
+
+            if(startTimeObj != null){
+                String startTime = startTimeObj.toString();
+                try{
+                    updatedAt = LocalDateTime.parse(startTime);
+                }catch(DateTimeParseException e){
+                    log.warn("[STORE {}] Redis 영업 시작 시각 파싱 실패, DB lastModified 로 대체. value={}", storeId, startTime);
+                }
             }
 
             return OperationStatusUpdateResponseDto.builder()
                     .updatedAt(updatedAt)
                     .status(store.getOperationStatus())
                     .build();
-        }
-
     }
 
     @Override
@@ -338,4 +348,104 @@ public class StoreServiceImpl implements StoreService{
             throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
         }
     }
+
+//    private final Random random = new Random();
+//    private final SecureRandom secureRandom = new SecureRandom();
+//
+//    private static final int STORE_COUNT = 10000;   // 요청당 1만 개 생성
+//    private static final int PAYMENTS_PER_STORE = 100; // 스토어당 결제 10개
+//    private final OrderRepository orderRepository;
+//    @Transactional
+//    public void generate(Long memberId) {
+//
+//        Member member = memberRepository.findById(memberId)
+//                .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+//
+//        log.info("=== 더미데이터 생성 시작 (memberId={}) ===", memberId);
+//
+//        for (int i = 0; i < STORE_COUNT; i++) {
+//
+//            Store store = storeRepository.save(
+//                    Store.builder()
+//                            .member(member)
+//                            .name("더미스토어_" + memberId + "_" + i)
+//                            .businessNumber(generateBizNum(memberId, i))
+//                            .businessType(BusinessType.RESTAURANT)
+//                            .address("서울 강남구 " + i)
+//                            .phone("02-" + String.format("%04d-%04d", i, i))
+//                            .city("서울")
+//                            .state("강남구")
+//                            .postalCode("06234")
+//                            .latitude(new BigDecimal("37.50" + (i % 100)))
+//                            .longitude(new BigDecimal("127.03" + (i % 100)))
+//                            .build()
+//            );
+//
+//            createPaymentsForStore(store, PAYMENTS_PER_STORE);
+//
+//            if ((i + 1) % 1000 == 0) {
+//                log.info("[생성중] {} / {} 완료...", i + 1, STORE_COUNT);
+//            }
+//        }
+//
+//        log.info("=== 더미데이터 생성 완료 (memberId={}) ===", memberId);
+//    }
+//
+//    private void createPaymentsForStore(Store store, int count) {
+//        PaymentMethod[] methods = PaymentMethod.values();
+//        PaymentStatus[] statuses = {
+//                PaymentStatus.APPROVED,
+//                PaymentStatus.APPROVED,
+//                PaymentStatus.CANCELED
+//        };
+//
+//        for (int i = 0; i < count; i++) {
+//
+//            int amount = (random.nextInt(41) + 10) * 1000;
+//
+//            LocalDateTime approvedAt = generateRandomDateRecent60Days();
+//            PaymentStatus status = statuses[random.nextInt(statuses.length)];
+//
+//            Orders order = orderRepository.save(
+//                    Orders.builder()
+//                            .store(store)
+//                            .totalAmount(amount)
+//                            .paidAmount(status == PaymentStatus.APPROVED ? amount : 0)
+//                            .status(status == PaymentStatus.APPROVED ? OrderStatus.CREATED : OrderStatus.CANCELED)
+//                            .build()
+//            );
+//
+//            paymentRepository.save(
+//                    Payment.builder()
+//                            .store(store)
+//                            .order(order)
+//                            .authorizationNo(generateAuthorizationNo())
+//                            .amount(amount)
+//                            .paymentMethod(methods[random.nextInt(methods.length)])
+//                            .status(status)
+//                            .approvedAt(approvedAt)
+//                            .canceledAt(status == PaymentStatus.CANCELED ? approvedAt.plusHours(1) : null)
+//                            .delivery(random.nextBoolean())
+//                            .build()
+//            );
+//        }
+//    }
+//
+//    private String generateAuthorizationNo() {
+//        return UUID.randomUUID().toString().replace("-", "").substring(0, 15);
+//    }
+//
+//    private String generateBizNum(Long memberId, int idx) {
+//        return String.format("%03d-%02d-%05d", memberId % 1000, memberId % 100, idx);
+//    }
+//
+//    private LocalDateTime generateRandomDateRecent60Days() {
+//        LocalDateTime end = LocalDateTime.now().minusDays(1).withHour(23).withMinute(59).withSecond(59);
+//        LocalDateTime start = end.minusDays(59).withHour(0).withMinute(0).withSecond(0);
+//        long startEpoch = start.toEpochSecond(java.time.ZoneOffset.UTC);
+//        long endEpoch = end.toEpochSecond(java.time.ZoneOffset.UTC);
+//        long randomEpoch = startEpoch + (long) (random.nextDouble() * (endEpoch - startEpoch));
+//        return LocalDateTime.ofEpochSecond(randomEpoch, 0, java.time.ZoneOffset.UTC);
+//    }
+
 }

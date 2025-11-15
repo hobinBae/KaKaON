@@ -25,4 +25,5 @@ public interface StoreService {
     FavoriteResponseDto toggleFavorite(Long memberId, Long storeId);
 
     FavoriteDetailResponseDto getFavorite(Long memberId);
+//    void generate(Long memberId);
 }
