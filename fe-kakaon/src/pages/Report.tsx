@@ -4,6 +4,7 @@ import { Download, Printer } from "lucide-react";
 import { format, subWeeks, startOfWeek, endOfWeek, subMonths, startOfMonth, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
+import logoSrc from "@/assets/logo.png"; // 로고 이미지를 import 합니다.
 // import OpenAI from "openai"; // AI 기능 주석 처리
 
 // --- 타입 정의 ---
@@ -253,7 +254,7 @@ export default function Report() {
         {/* 1. 헤더 영역 */}
         <header className="flex justify-between items-start pb-2 border-b-2 border-gray-900">
           <div>
-            <img src="/src/assets/logo.png" alt="KaKaON Logo" className="h-6 mb-2" />
+            <img src={logoSrc} alt="KaKaON Logo" className="h-6 mb-2" />
             <h2 className="text-lg font-bold">{data.title}</h2>
             <p className="text-xs">리포트 기간: {data.period}</p>
           </div>
