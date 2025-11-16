@@ -6,6 +6,36 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 인쇄용 전역 스타일 */
+@media print {
+  /* @page 규칙으로 용지 크기와 여백을 설정합니다. */
+  @page {
+    size: A4 portrait; /* A4 세로 방향 */
+    margin: 15mm; /* 상하좌우 여백 */
+  }
+
+  /* 배경색 등 인쇄 시 색상이 제대로 나오도록 설정합니다. */
+  body {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* .no-print 클래스가 붙은 요소는 인쇄 시 숨깁니다. */
+  .no-print {
+    display: none !important;
+  }
+
+  /* 리포트 컨테이너를 인쇄 환경에 맞게 최적화합니다. */
+  .report-a4 {
+    width: 100%;
+    min-height: auto;
+    box-shadow: none !important;
+    border: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+}
+
 /* --- THEME VARIABLES --- */
 /* shadcn/ui의 테마를 정의하는 CSS 변수들입니다. */
 /* tailwind.config.js의 hsl(var(--...)) 구문이 이 변수들을 참조합니다. */

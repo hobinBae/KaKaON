@@ -19,6 +19,7 @@ import FrontKiosk from "@/pages/FrontKiosk";
 import GeneralKiosk from "@/pages/GeneralKiosk";
 import Intro from "@/pages/Intro";
 import BusinessHours from "@/pages/BusinessHours";
+import Report from "@/pages/Report";
 
 
 const queryClient = new QueryClient();
@@ -68,6 +69,7 @@ const router = createBrowserRouter([
           { path: "/stores", element: <StoreManage /> },
           { path: "/settings", element: <Settings /> },
           { path: "/business-hours", element: <BusinessHours /> },
+          { path: "/report", element: <Report /> },
         ],
       },
     ],
