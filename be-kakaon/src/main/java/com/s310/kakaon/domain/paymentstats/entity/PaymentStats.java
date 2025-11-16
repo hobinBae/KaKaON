@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -22,7 +23,11 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "payment_stats")
+@Table(name = "payment_stats",
+        uniqueConstraints = {
+            @UniqueConstraint(columnNames = {"store_id", "start_date"})
+        }
+)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 @Getter
@@ -107,5 +112,22 @@ public class PaymentStats extends BaseEntity{
         if (delivery) {
             this.deliverySales -= amount;
         }
+    }
+
+    /**
+     * Redis에서 가져온 데이터로 통계 업데이트
+     */
+    public void updateFromRedis(Integer totalSales, Integer totalCancelSales, Long salesCnt, Long cancelCnt,
+                                Integer cardSales, Integer kakaoSales, Integer cashSales, Integer transferSales,
+                                Integer deliverySales) {
+        this.totalSales = totalSales;
+        this.totalCancelSales = totalCancelSales;
+        this.salesCnt = salesCnt;
+        this.cancelCnt = cancelCnt;
+        this.cardSales = cardSales;
+        this.kakaoSales = kakaoSales;
+        this.cashSales = cashSales;
+        this.transferSales = transferSales;
+        this.deliverySales = deliverySales;
     }
 }

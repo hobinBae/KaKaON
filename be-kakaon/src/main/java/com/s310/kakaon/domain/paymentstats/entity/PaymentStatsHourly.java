@@ -77,6 +77,15 @@ public class PaymentStatsHourly {
         }
     }
 
-
+    /**
+     * Redis에서 가져온 데이터로 시간대별 통계 업데이트
+     */
+    public void updateFromRedis(Integer hourlyTotalSales, Integer hourlyPaymentCount,
+                                Integer hourlyCancelCount, Double hourlyCancelRate) {
+        this.hourlyTotalSales = hourlyTotalSales;
+        this.hourlyPaymentCount = hourlyPaymentCount;
+        this.hourlyCancelCount = hourlyCancelCount;
+        this.hourlyCancelRate = hourlyCancelRate;
+    }
 
 }

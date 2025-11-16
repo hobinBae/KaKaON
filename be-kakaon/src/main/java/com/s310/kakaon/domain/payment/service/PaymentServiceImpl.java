@@ -23,8 +23,8 @@ import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
 import java.time.LocalDate;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -43,8 +43,6 @@ import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -140,6 +138,11 @@ public class PaymentServiceImpl implements PaymentService{
 
         validateStoreOwner(store, member);
 
+        // 날짜별 Stats 캐시
+        Map<LocalDate, PaymentStats> statsCache = new HashMap<>();
+        Map<String, PaymentStatsHourly> hourlyCache = new HashMap<>(); // 날짜_시간 형식
+
+
         try {
             String content = new String(file.getBytes(), StandardCharsets.UTF_8);
 
@@ -217,6 +220,55 @@ public class PaymentServiceImpl implements PaymentService{
                             .build();
 
                     paymentRepository.save(payment);
+
+                    // Stats 캐시에서 가져오기 (없으면 DB 조회 또는 생성)
+                    LocalDate paymentDate = approvedAt.toLocalDate();
+                    PaymentStats stats = statsCache.computeIfAbsent(paymentDate, d ->
+                            paymentStatsRepository.findByStoreIdAndStatsDate(storeId, d)
+                                    .orElseGet(() -> {
+                                        // 없으면 새로 생성
+                                        return PaymentStats.builder()
+                                                .store(store)
+                                                .statsDate(d)
+                                                .totalSales(0)
+                                                .totalCancelSales(0)
+                                                .salesCnt(0L)
+                                                .cancelCnt(0L)
+                                                .build();
+                                    })
+                            );
+
+                    // Hourly 캐시
+                    int hour = approvedAt.getHour();
+                    String hourlyKey = paymentDate + "_" + hour;
+                    PaymentStatsHourly hourly = hourlyCache.computeIfAbsent(hourlyKey, k -> {
+                        // stats.getId() null일 수 있으므로 먼저 저장
+                        if (stats.getId() == null) {
+                            paymentStatsRepository.save(stats);
+                        }
+                        PaymentStatsHourly newHourly = paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(stats.getId(), hour)
+                                .orElseGet(() ->{
+                                    return PaymentStatsHourly.builder()
+                                            .paymentStats(stats)
+                                            .hour(hour)
+                                            .hourlyTotalSales(0)
+                                            .hourlyPaymentCount(0)
+                                            .hourlyCancelCount(0)
+                                            .hourlyCancelRate(0.0)
+                                            .build();
+                                        });
+                        return paymentStatsHourlyRepository.save(newHourly);
+                    });
+
+                    // 메모리에서 업데이트
+                    stats.applyPayment(amount, paymentMethod, isDelivery);
+                    hourly.applyPaymentHourly(amount);
+
+                    if (status == PaymentStatus.CANCELED) {
+                        stats.applyCancel(amount, paymentMethod, isDelivery);
+                        hourly.applyCancelHourly(amount);
+                    }
+
                     successCount++;
 
                 } catch (Exception e) {
