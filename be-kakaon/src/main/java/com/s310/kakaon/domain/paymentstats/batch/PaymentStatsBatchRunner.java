@@ -26,7 +26,6 @@ public class PaymentStatsBatchRunner {
      * 영업종료 시 redis data PaymentStats에 update
      */
 //    @Scheduled(cron = "0 */1 * * * *", zone = "Asia/Seoul")
-//    @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
     @Scheduled(cron = "0 0 5 * * *", zone = "Asia/Seoul")
     @Transactional
     public void runDailyStatsBatch() {
