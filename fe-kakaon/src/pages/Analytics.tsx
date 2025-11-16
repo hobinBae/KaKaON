@@ -38,6 +38,7 @@ import SalesVsLabor from "@/components/analytics/SalesVsLabor";
 import StoreComparison from "@/components/analytics/StoreComparison";
 import CancellationRate from "@/components/analytics/CancellationRate";
 import PaymentMethod from "@/components/analytics/PaymentMethod";
+import { Link } from "react-router-dom";
 
 // 커스텀 달력 캡션 컴포넌트
 function CustomCaption({ displayMonth, onMonthChange }: { displayMonth: Date; onMonthChange: (date: Date) => void }) {
@@ -635,9 +636,14 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-[#333333] mb-1">매출분석</h1>
-        <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
+      <div className="flex justify-between items-center">
+        <div>
+          <h1 className="text-[#333333] mb-1">매출분석</h1>
+          <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
+        </div>
+        <Link to="/report">
+          <Button>매출 분석 리포트</Button>
+        </Link>
       </div>
 
       <Tabs defaultValue="sales-trend" className="w-full" onValueChange={setActiveTab} value={activeTab}>
