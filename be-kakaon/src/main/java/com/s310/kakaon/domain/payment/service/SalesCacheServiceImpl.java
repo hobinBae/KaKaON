@@ -144,6 +144,9 @@ public class SalesCacheServiceImpl implements SalesCacheService {
             );
         }
 
+        // 전체 취소율 계산
+        double totalCancelRate = calcCancelRate(paymentCountVal, cancelCountVal);
+
         // DTO 생성
         return SalesStatsResponseDto.builder()
                 .storeId(storeId)
@@ -151,6 +154,7 @@ public class SalesCacheServiceImpl implements SalesCacheService {
                 .totalSales(totalSalesVal)
                 .paymentCount(paymentCountVal)
                 .cancelCount(cancelCountVal)
+                .cancelRate(totalCancelRate)
                 .deliverySales(deliverySalesVal)
                 .hourlySales(hourlySales)
                 .build();
