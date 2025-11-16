@@ -108,6 +108,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
         AlertEvent alertEvent = AlertEvent.builder()
                 .groupId(groupId)
                 .storeId(event.getStoreId())
+                .alertUuid(UUID.randomUUID().toString().replace("-", "").substring(0, 20))
                 .storeName(event.getStoreName())
                 .alertType(getAlertType())
                 .description(description)

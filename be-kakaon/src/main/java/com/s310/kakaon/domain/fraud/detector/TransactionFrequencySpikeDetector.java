@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -109,6 +110,7 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
         AlertEvent alertEvent = AlertEvent.builder()
                 .groupId(groupId)
                 .storeId(event.getStoreId())
+                .alertUuid(UUID.randomUUID().toString().replace("-", "").substring(0, 20))
                 .storeName(event.getStoreName())
                 .alertType(getAlertType())   // TRANSACTION_FREQUENCY_SPIKE
                 .description(description)

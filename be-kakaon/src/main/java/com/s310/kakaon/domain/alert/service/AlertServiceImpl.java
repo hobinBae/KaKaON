@@ -45,7 +45,19 @@ public class AlertServiceImpl implements AlertService{
 
         Alert alert = alertMapper.fromAlertEvent(event, store);
 
-        if(event.getPaymentId() != null){
+        // 1️⃣ 윈도우 안의 관련 결제들 먼저 처리
+        List<Long> relatedIds = event.getRelatedPaymentIds();
+        if (relatedIds != null && !relatedIds.isEmpty()) {
+            for (Long pid : relatedIds) {
+                Payment payment = paymentRepository.findById(pid)
+                        .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
+                AlertPayment alertPayment = AlertPayment.builder()
+                        .payment(payment)
+                        .alert(alert)
+                        .build();
+                alert.addAlertPayments(alertPayment);
+            }
+        }else if(event.getPaymentId() != null){     // 기존 로직
             Payment payment = paymentRepository.findById(event.getPaymentId())
                     .orElseThrow(() -> new ApiException(ErrorCode.PAYMENT_NOT_FOUND));
 
