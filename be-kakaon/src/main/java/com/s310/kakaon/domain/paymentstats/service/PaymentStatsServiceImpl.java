@@ -59,35 +59,69 @@ public class PaymentStatsServiceImpl implements PaymentStatsService {
 
         Integer deliverySum = paymentRepository.getDeliverySales(store, date);
 
-        // 일별 통계 엔티티 생성
-        PaymentStats daily = PaymentStats.builder()
-                .store(store)
-                .statsDate(date)
-                .totalSales(redisStats.getTotalSales())
-                .totalCancelSales(totalCancelSales)
-                .cardSales(paymentMethodSales.getOrDefault(PaymentMethod.CARD, 0))
-                .kakaoSales(paymentMethodSales.getOrDefault(PaymentMethod.KAKAOPAY, 0))
-                .cashSales(paymentMethodSales.getOrDefault(PaymentMethod.CASH, 0))
-                .transferSales(paymentMethodSales.getOrDefault(PaymentMethod.TRANSFER, 0))
-                .deliverySales(deliverySum)
-                .build();
+        // 기존 데이터 확인 (중복 방지)
+        PaymentStats daily = statsRepository.findByStoreIdAndStatsDate(storeId, date)
+                .orElse(null);
 
-        statsRepository.save(daily);
+        if (daily != null) {
+            // 기존 데이터 업데이트
+            daily.updateFromRedis(
+                    redisStats.getTotalSales(),
+                    totalCancelSales,
+                    redisStats.getPaymentCount() != null ? redisStats.getPaymentCount().longValue() : 0L,
+                    redisStats.getCancelCount() != null ? redisStats.getCancelCount().longValue() : 0L,
+                    paymentMethodSales.getOrDefault(PaymentMethod.CARD, 0),
+                    paymentMethodSales.getOrDefault(PaymentMethod.KAKAOPAY, 0),
+                    paymentMethodSales.getOrDefault(PaymentMethod.CASH, 0),
+                    paymentMethodSales.getOrDefault(PaymentMethod.TRANSFER, 0),
+                    deliverySum
+            );
+        } else {
+            // 새로운 데이터 생성
+            daily = PaymentStats.builder()
+                    .store(store)
+                    .statsDate(date)
+                    .totalSales(redisStats.getTotalSales())
+                    .totalCancelSales(totalCancelSales)
+                    .salesCnt(redisStats.getPaymentCount() != null ? redisStats.getPaymentCount().longValue() : 0L)
+                    .cancelCnt(redisStats.getCancelCount() != null ? redisStats.getCancelCount().longValue() : 0L)
+                    .cardSales(paymentMethodSales.getOrDefault(PaymentMethod.CARD, 0))
+                    .kakaoSales(paymentMethodSales.getOrDefault(PaymentMethod.KAKAOPAY, 0))
+                    .cashSales(paymentMethodSales.getOrDefault(PaymentMethod.CASH, 0))
+                    .transferSales(paymentMethodSales.getOrDefault(PaymentMethod.TRANSFER, 0))
+                    .deliverySales(deliverySum)
+                    .build();
+            statsRepository.save(daily);
+        }
 
-        // 시간대별 통계 엔티티 리스트 생성
-        List<PaymentStatsHourly> hourlyStats = redisStats.getHourlySales().stream()
-                .map(h -> PaymentStatsHourly.builder()
-                        .paymentStats(daily)
-                        .hour(h.getHour())
-                        .hourlyTotalSales(h.getSales())
-                        .hourlyPaymentCount(h.getPaymentCount())
-                        .hourlyCancelCount(h.getCancelCount())
-                        .hourlyCancelRate(h.getCancelRate())
-                        .build()
-                )
-                .collect(Collectors.toList());
+        // 시간대별 통계 처리 (중복 방지)
+        final PaymentStats finalDaily = daily;
+        for (SalesStatsResponseDto.HourlySales hourlySale : redisStats.getHourlySales()) {
+            PaymentStatsHourly hourlyStats = statsHourlyRepository
+                    .findByPaymentStatsIdAndHour(finalDaily.getId(), hourlySale.getHour())
+                    .orElse(null);
 
-        statsHourlyRepository.saveAll(hourlyStats);
+            if (hourlyStats != null) {
+                // 기존 데이터 업데이트
+                hourlyStats.updateFromRedis(
+                        hourlySale.getSales(),
+                        hourlySale.getPaymentCount(),
+                        hourlySale.getCancelCount(),
+                        hourlySale.getCancelRate()
+                );
+            } else {
+                // 새로운 데이터 생성
+                hourlyStats = PaymentStatsHourly.builder()
+                        .paymentStats(finalDaily)
+                        .hour(hourlySale.getHour())
+                        .hourlyTotalSales(hourlySale.getSales())
+                        .hourlyPaymentCount(hourlySale.getPaymentCount())
+                        .hourlyCancelCount(hourlySale.getCancelCount())
+                        .hourlyCancelRate(hourlySale.getCancelRate())
+                        .build();
+                statsHourlyRepository.save(hourlyStats);
+            }
+        }
 
     }
 }

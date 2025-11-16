@@ -14,6 +14,7 @@ import com.s310.kakaon.domain.payment.repository.PaymentRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
+import com.s310.kakaon.domain.paymentstats.service.PaymentStatsService;
 import com.s310.kakaon.domain.store.dto.*;
 
 import com.s310.kakaon.domain.store.entity.BusinessHour;
@@ -61,6 +62,7 @@ public class StoreServiceImpl implements StoreService{
     private final StoreMapper storeMapper;
     private final PaymentStatsRepository paymentStatsRepository;
     private final SalesCacheService salesCacheService;
+    private final PaymentStatsService paymentStatsService;
 
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
 
@@ -119,6 +121,26 @@ public class StoreServiceImpl implements StoreService{
         //레디스에 영업 시작 시간을 저장
         //영업종료를 누르면 레디스에 시작 시간 삭제
         if (newStatus.equals(OperationStatus.CLOSED)) {
+
+            // 영업 시작 시간 Redis에서 가져오기
+            String startTimeStr = (String) stringRedisTemplate.opsForHash().get(redisKey, "startTime");
+            LocalDate targetDate;
+
+            if(startTimeStr != null){
+                // 영업 시작 시간을 기준으론 날짜 결정
+                LocalDateTime startTime = LocalDateTime.parse(startTimeStr);
+                targetDate = startTime.toLocalDate();
+            } else {
+                // startTime 없으면 오늘 날짜로 저장(영업 시작을 안 눌렀을 경우)
+                targetDate = LocalDate.now();
+            }
+            // 영업 종료 시 당일 데이터 PaymentStats에 저장
+            try {
+                paymentStatsService.saveDailyPaymentStats(storeId, targetDate);
+                log.info("[영업 종료] storeId={}, 당일({}) 통계 저장 완료", storeId, targetDate);
+            } catch(Exception e) {
+                log.error("[영업 종료] storeId={}, 통계 저장 실패 : {}", storeId, e.getMessage(), e);
+            }
 
             stringRedisTemplate.delete(redisKey);
             log.info("[영업 종료] Redis 키 삭제: {}", redisKey);

@@ -108,4 +108,21 @@ public class PaymentStats extends BaseEntity{
             this.deliverySales -= amount;
         }
     }
+
+    /**
+     * Redis에서 가져온 데이터로 통계 업데이트
+     */
+    public void updateFromRedis(Integer totalSales, Integer totalCancelSales, Long salesCnt, Long cancelCnt,
+                                Integer cardSales, Integer kakaoSales, Integer cashSales, Integer transferSales,
+                                Integer deliverySales) {
+        this.totalSales = totalSales;
+        this.totalCancelSales = totalCancelSales;
+        this.salesCnt = salesCnt;
+        this.cancelCnt = cancelCnt;
+        this.cardSales = cardSales;
+        this.kakaoSales = kakaoSales;
+        this.cashSales = cashSales;
+        this.transferSales = transferSales;
+        this.deliverySales = deliverySales;
+    }
 }
