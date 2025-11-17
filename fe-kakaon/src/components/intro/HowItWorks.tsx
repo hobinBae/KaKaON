@@ -9,7 +9,7 @@ const steps = [
   {
     step: 2,
     title: '결제 데이터 연동',
-    description: '사용 중인 PG사 또는 배달 앱 계정을 연동하여 매출 데이터를 자동으로 불러옵니다.',
+    description: '다른 서비스에서 사용했던 데이터도 손쉽게 업로드 가능합니다.',
   },
   {
     step: 3,

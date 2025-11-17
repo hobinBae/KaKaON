@@ -1,7 +1,10 @@
 import { Button } from '@/components/ui/button';
 import Section from './Section';
+import { useBoundStore } from '@/stores/storeStore';
+import { Link } from 'react-router-dom';
 
 export default function FinalCTA() {
+  const { member } = useBoundStore();
   const handleLogin = () => {
     const url = import.meta.env.VITE_OAUTH2_AUTHORIZE ;
     const width = 500;
@@ -18,9 +21,15 @@ export default function FinalCTA() {
           지금 바로 시작하여 <br className="sm:hidden" />
           매출 관리를 혁신하세요
         </h2>
-        <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
-          무료로 시작하기
-        </Button>
+        {member ? (
+          <Button asChild size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base">
+            <Link to="/analytics">매출분석 확인하기</Link>
+          </Button>
+        ) : (
+          <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
+            무료로 시작하기
+          </Button>
+        )}
       </div>
     </Section>
   );

@@ -51,7 +51,7 @@ export default function BusinessHours() {
     // Handle status changes (OPEN/CLOSE) only when the store has NOT changed
     if (!isStoreChanged) {
       if (isBusinessOpen && !prevIsBusinessOpen) {
-        setSessionStartTime(selectedStoreId, new Date());
+        setSessionStartTime(selectedStoreId, new Date(operationStatus.updatedAt));
       } else if (!isBusinessOpen && prevIsBusinessOpen && operationStatus?.updatedAt) {
         setSessionEndTime(selectedStoreId, new Date(operationStatus.updatedAt));
       }
