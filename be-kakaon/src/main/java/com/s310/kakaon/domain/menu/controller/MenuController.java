@@ -85,8 +85,18 @@ public class MenuController {
             summary = "메뉴 생성 V2 (이미지 첨부 버전)",
             description = """
                     새로운 메뉴를 등록합니다.
+                    요청 형식: multipart/form-data
+                    
                     - storeId를 반드시 Query Parameter로 전달해야 합니다.
-                    - Request Body에는 메뉴명, 가격, 이미지 URL, 설명 등이 포함됩니다.
+                    - Form-data Fields:
+                        - data: 메뉴 정보(JSON 문자열, MenuRequestDto)
+                            {
+                                "menu" : "아메리카노",
+                                "price":5000
+                            }
+                        - image: 메뉴 이미지 파일 (선택)
+                    이미지가 포함된 경우 S3에 업로드되며, 업로드된 이미지 URL이 imgUrl로 자동 설정됩니다.
+                    이미지가 없으면 imgUrl은 null로 저장됩니다.
                     """
     )
     @PostMapping(
@@ -148,9 +158,18 @@ public class MenuController {
             summary = "메뉴 수정 V2 (이미지 첨부 버전)",
             description = """
                     기존 메뉴의 정보를 수정합니다.
+                    요청 형식: multipart/form-data
                     - PathVariable: menuId
                     - QueryParam: storeId
-                    - Body: 수정할 메뉴의 이름, 가격, 설명, 이미지 URL 등
+                    - Form-data Fields:
+                        - data: 메뉴 정보(JSON 문자열, MenuRequestDto)
+                            {
+                                "menu" : "아메리카노",
+                                "price":5000
+                            }
+                        - image: 메뉴 이미지 파일 (선택)
+                    이미지가 포함된 경우 S3에 업로드되며, 업로드된 이미지 URL이 imgUrl로 자동 설정됩니다.
+                    이미지가 없으면 기존 이미지를 유지합니다.
                     """
     )
     public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> updateMenuV2(
