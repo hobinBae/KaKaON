@@ -23,6 +23,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -211,10 +212,17 @@ public class PaymentController {
                     ));
         }
 
-        paymentService.uploadPaymentsFromCsv(file, storeId, memberId);
+        try {
+            byte[] fileBytes = file.getBytes();
+            String originalFilename = file.getOriginalFilename();
+            paymentService.uploadPaymentsFromCsvAsync(fileBytes, originalFilename, storeId, memberId);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, "파일 읽기 오류", null, httpRequest.getRequestURI()));
+        }
 
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 CSV 업로드 성공", "CSV 파일 업로드가 완료되었습니다.", httpRequest.getRequestURI()));
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.of(HttpStatus.ACCEPTED, "결제 내역 CSV 업로드 시작", "CSV 파일 업로드가 백그라운드에서 처리됩니다. 처리 완료 시 로그를 확인하세요.", httpRequest.getRequestURI()));
     }
 
 }
