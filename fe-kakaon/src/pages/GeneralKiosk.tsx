@@ -434,7 +434,7 @@ const GeneralKiosk = () => {
               {!isAdminMode && <Button variant="ghost" className="mr-4 text-2xl h-16" onClick={() => { setOrderType(null); clearCart(); }}>처음으로</Button>}
               {isAdminMode && (
                 <>
-                  <Button onClick={() => setIsAdminMode(false)} variant="destructive" className="mr-2">관리자 모드 종료</Button>
+                  <Button onClick={() => setIsAdminMode(false)} variant="destructive" className="mr-2">설정 완료</Button>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="outline"><Plus className="mr-2 h-4 w-4" />상품 추가</Button>
