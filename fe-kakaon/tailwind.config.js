@@ -84,6 +84,11 @@ module.exports = {
           "from": { transform: "translateY(50px)", opacity: "0" },
           "to": { transform: "translateY(0)", opacity: "1" },
         },
+        "shake": {
+          "0%, 100%": { transform: "translateX(0)" },
+          "10%, 30%, 50%, 70%, 90%": { transform: "translateX(-2px) scale(1.1)" },
+          "20%, 40%, 60%, 80%": { transform: "translateX(2px) scale(1.1)" },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -91,6 +96,7 @@ module.exports = {
         "typing-width": "typing var(--typing-duration, 2s) steps(var(--typing-steps, 1)) var(--animation-delay, 0s) forwards",
         "blink-caret": "blink-caret .75s step-end infinite",
         "slide-bottom": "slide-bottom 0.4s ease forwards",
+        "shake": "shake 5s ease-in-out",
       },
     },
   },

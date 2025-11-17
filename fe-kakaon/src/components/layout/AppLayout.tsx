@@ -34,6 +34,7 @@ export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isAlertPopoverOpen, setIsAlertPopoverOpen] = useState(false);
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [shouldShake, setShouldShake] = useState(false);
   const [selectedAlertId, setSelectedAlertId] = useState<{ alertId: number; storeId: number } | null>(null);
   const isOpeningModal = useRef(false);
 
@@ -58,6 +59,17 @@ export function AppLayout() {
   const { alerts, unreadCount } = useAllAlerts();
   const { data: selectedAlertDetail } = useAlertDetail(selectedAlertId ? String(selectedAlertId.storeId) : null, selectedAlertId ? selectedAlertId.alertId : null);
   const { mutate: readAlert } = useReadAlert();
+
+  useEffect(() => {
+    if (unreadCount > 0) {
+      const interval = setInterval(() => {
+        setShouldShake(true);
+        setTimeout(() => setShouldShake(false), 5000); // 5초 후 애니메이션 클래스 제거
+      }, 30000); // 30초마다 반복
+
+      return () => clearInterval(interval);
+    }
+  }, [unreadCount]);
 
   useEffect(() => {
     // 현재 선택된 가맹점이 없고, 정렬된 가맹점 목록이 있을 때
@@ -229,10 +241,12 @@ export function AppLayout() {
           <div className="flex items-center gap-3">
             <Popover open={isAlertPopoverOpen} onOpenChange={setIsAlertPopoverOpen}>
               <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="relative rounded-lg">
+                <Button variant="ghost" size="icon" className={`relative rounded-lg ${shouldShake ? 'animate-shake' : ''}`}>
                   <Bell className="w-5 h-5 text-[#717182]" />
                   {unreadCount > 0 && (
-                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-[#FF4D4D] rounded-full border-2 border-white"></span>
+                    <span className="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-red-500 text-[8px] font-bold text-white">
+                      {unreadCount}
+                    </span>
                   )}
                 </Button>
               </PopoverTrigger>
