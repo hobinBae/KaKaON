@@ -128,6 +128,11 @@ export const useStoreById = (storeId: number) => {
 };
 
 /**
+ * @deprecated useStoreById를 사용하세요.
+ */
+export const useStoreDetail = useStoreById;
+
+/**
  * 새 가맹점을 등록하는 커스텀 훅
  */
 export const useCreateStore = () => {
