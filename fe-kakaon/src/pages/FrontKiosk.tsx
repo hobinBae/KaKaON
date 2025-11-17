@@ -61,6 +61,13 @@ const FrontKiosk = () => {
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
 
+  // 컴포넌트 언마운트 시 카트 초기화
+  useEffect(() => {
+    return () => {
+      clearCart();
+    };
+  }, [clearCart]);
+
   useEffect(() => {
     if (isPaymentComplete) {
       const timer = setInterval(() => {
@@ -289,7 +296,7 @@ const FrontKiosk = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <Button variant="ghost" onClick={() => setOrderType(null)} className="w-16 h-16">
+              <Button variant="ghost" onClick={() => { setOrderType(null); clearCart(); }} className="w-16 h-16">
                 <ArrowLeft className="size-12" />
               </Button>
             )}

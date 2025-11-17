@@ -61,6 +61,13 @@ const GeneralKiosk = () => {
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
 
+  // 컴포넌트 언마운트 시 카트 초기화
+  useEffect(() => {
+    return () => {
+      clearCart();
+    };
+  }, [clearCart]);
+
   useEffect(() => {
     if (isPaymentComplete) {
       const timer = setInterval(() => {
@@ -294,7 +301,7 @@ const GeneralKiosk = () => {
               <img src={logoImg} alt="KaKaON Kiosk" className="h-16" />
             )}
             <div className="flex items-center">
-              {!isAdminMode && <Button variant="ghost" className="mr-4 text-2xl h-16" onClick={() => setOrderType(null)}>처음으로</Button>}
+              {!isAdminMode && <Button variant="ghost" className="mr-4 text-2xl h-16" onClick={() => { setOrderType(null); clearCart(); }}>처음으로</Button>}
               {isAdminMode && (
                 <>
                   <Button onClick={() => setIsAdminMode(false)} variant="destructive" className="mr-2">관리자 모드 종료</Button>
