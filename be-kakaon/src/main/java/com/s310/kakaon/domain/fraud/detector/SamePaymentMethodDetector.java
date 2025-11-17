@@ -6,6 +6,7 @@ import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -23,8 +24,12 @@ public class SamePaymentMethodDetector implements FraudDetector {
     @Qualifier("paymentEventRedisTemplate")
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
-    private static final int TIME_WINDOW_MINUTES = 10;        // 10분 이내
-    private static final double DISTANCE_THRESHOLD_KM = 10.0; // 10km 이상
+    @Value("${fraud.same-payment.window-minutes}")
+    private int windowMinutes;
+
+    @Value("${fraud.same-payment.threshold-km}")
+    private double thresholdKm;
+
     private static final String REDIS_KEY_PREFIX = "fraud:same:";
 
     @Override
@@ -46,7 +51,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
 
             paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
             // 윈도우 + 버퍼
-            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 5));
+            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(windowMinutes + 5));
 
             connection.exec();
             return null;
@@ -60,7 +65,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
             return Collections.emptyList();
         }
 
-        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(TIME_WINDOW_MINUTES);
+        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(windowMinutes);
 
         List<PaymentEventDto> recentList = rawList.stream()
                 .filter(p -> p.getApprovedAt() != null &&
@@ -90,7 +95,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
             long minutesDiff = Math.abs(
                     ChronoUnit.MINUTES.between(event.getApprovedAt(), other.getApprovedAt())
             );
-            if (minutesDiff > TIME_WINDOW_MINUTES) {
+            if (minutesDiff > windowMinutes) {
                 continue;
             }
 
@@ -99,7 +104,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
                     other.getStoreLatitude(), other.getStoreLongitude()
             );
 
-            if (distanceKm >= DISTANCE_THRESHOLD_KM) {
+            if (distanceKm >= thresholdKm) {
                 suspiciousList.add(other);
             }
         }
@@ -135,7 +140,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
                         "- 다른 매장 결제 시각: %s\n" +
                         "- 관련 결제 ID: %s",
                 event.getPaymentUuid(),
-                TIME_WINDOW_MINUTES,
+                windowMinutes,
                 farthestDistance,
                 event.getStoreName(), event.getStoreId(),
                 farthest.getStoreName(), farthest.getStoreId(),

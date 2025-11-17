@@ -5,6 +5,7 @@ import com.s310.kakaon.domain.alert.entity.AlertType;
 import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -22,8 +23,12 @@ public class DuplicatePaymentDetector implements FraudDetector {
     @Qualifier("paymentEventRedisTemplate")
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
-    private static final int TIME_WINDOW_MINUTES = 5;
-    private static final int DUPLICATE_COUNT_THRESHOLD = 2;
+    @Value("${fraud.duplicate.window-minutes}")
+    private int windowMinutes;
+
+    @Value("${fraud.duplicate.threshold-count}")
+    private int thresholdCount;
+
     private static final String REDIS_KEY_PREFIX = "fraud:duplicate:";
 
     @Override
@@ -42,7 +47,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
 
             // 1) 현재 이벤트 추가
             paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
-            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 5));
+            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(windowMinutes + 5));
 
             connection.exec();
             return null;
@@ -60,7 +65,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
             return Collections.emptyList();
         }
 
-        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(TIME_WINDOW_MINUTES);
+        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(windowMinutes);
 
         // 3) 윈도우 안에 들어오는 데이터만 필터링 + 정렬
         List<PaymentEventDto> recentList = rawList.stream()
@@ -69,7 +74,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
                 .sorted(Comparator.comparing(PaymentEventDto::getApprovedAt))
                 .toList();
 
-        if (recentList.size() < DUPLICATE_COUNT_THRESHOLD) {
+        if (recentList.size() < thresholdCount) {
             return Collections.emptyList();
         }
 
@@ -93,7 +98,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
                         "- 관련 결제 승인번호: %s",
                 event.getAmount(),
                 event.getPaymentMethod(),
-                TIME_WINDOW_MINUTES,
+                windowMinutes,
                 recentList.size(),
                 event.getStoreName(),
                 event.getStoreId(),

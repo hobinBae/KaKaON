@@ -7,6 +7,7 @@ import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -26,9 +27,12 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
     @Qualifier("paymentEventRedisTemplate")
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
-    // 🔧 설정 값
-    private static final int TIME_WINDOW_MINUTES = 1;      // 1분 이내
-    private static final int THRESHOLD_COUNT = 10;         // 10건 이상
+    @Value("${fraud.frequency.window-minutes}")
+    private int windowMinutes;
+
+    @Value("${fraud.frequency.threshold-count}")
+    private double thresholdCount;
+
     private static final String REDIS_KEY_PREFIX = "fraud:freq:";
 
     @Override
@@ -52,7 +56,7 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
 
             paymentEventRedisTemplate.opsForList().rightPush(redisKey, event);
             // 1분 윈도우 + 버퍼 2분
-            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(TIME_WINDOW_MINUTES + 2));
+            paymentEventRedisTemplate.expire(redisKey, Duration.ofMinutes(windowMinutes + 2));
 
             connection.exec();
             return null;
@@ -66,7 +70,7 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
             return Collections.emptyList();
         }
 
-        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(TIME_WINDOW_MINUTES);
+        LocalDateTime windowStart = event.getApprovedAt().minusMinutes(windowMinutes);
 
         // approvedAt 기준으로 윈도우 내 데이터만 필터링 + 정렬
         List<PaymentEventDto> recentList = rawList.stream()
@@ -76,7 +80,7 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
                 .toList();
 
         // 아직 10건이 안 됐다면 이상거래 아님
-        if (recentList.size() < THRESHOLD_COUNT) {
+        if (recentList.size() < thresholdCount) {
             return Collections.emptyList();
         }
 
@@ -95,7 +99,7 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
                         "- 마지막 결제 시각: %s\n" +
                         "- 총 결제 건수: %d건\n" +
                         "- 관련 결제 ID: %s",
-                TIME_WINDOW_MINUTES,
+                windowMinutes,
                 recentList.size(),
                 event.getStoreName(), event.getStoreId(),
                 first.getApprovedAt(),
