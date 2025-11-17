@@ -48,7 +48,7 @@ const GeneralKiosk = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [newProductName, setNewProductName] = useState('');
   const [newProductPrice, setNewProductPrice] = useState('');
-  const [newProductImage, setNewProductImage] = useState<string | null>(null);
+  const [newProductImage, setNewProductImage] = useState<File | null>(null);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null);
   const [isPaymentComplete, setIsPaymentComplete] = useState(false);
@@ -181,11 +181,10 @@ const GeneralKiosk = () => {
     setIsAdminMode(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, callback: (file: File) => void) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      const imageUrl = URL.createObjectURL(file);
-      callback(imageUrl);
+      callback(file);
     }
   };
 
@@ -196,7 +195,7 @@ const GeneralKiosk = () => {
         menuData: {
           menu: newProductName,
           price: parseInt(newProductPrice.replace(/,/g, ''), 10),
-          imgUrl: newProductImage ?? '',
+          image: newProductImage,
         },
       }, {
         onSuccess: () => {
@@ -216,7 +215,7 @@ const GeneralKiosk = () => {
         menuData: {
           menu: editingProduct.name,
           price: editingProduct.price,
-          imgUrl: editingProduct.imageUrl,
+          image: editingProduct.image,
         },
       }, {
         onSuccess: () => {
@@ -255,13 +254,6 @@ const GeneralKiosk = () => {
       />
       {!orderType ? (
         <div className="relative flex flex-col items-center justify-center w-full h-full bg-gray-50 p-8">
-          <Button
-            onClick={() => navigate(-1)}
-            variant="ghost"
-            className="absolute top-8 left-8 w-16 h-16"
-          >
-            <ArrowLeft className="size-12" />
-          </Button>
           <div className="text-center mb-12">
             <img src={logoImg} alt="KaKaON Logo" className="h-24 mx-auto mb-6" />
             <p className="text-6xl font-bold text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</p>
@@ -326,7 +318,7 @@ const GeneralKiosk = () => {
                         <Input id="price" type="number" value={newProductPrice} onChange={(e) => setNewProductPrice(e.target.value)} />
                         <Label htmlFor="image">이미지</Label>
                         <Input id="image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, setNewProductImage)} />
-                        {newProductImage && <img src={newProductImage} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
+                        {newProductImage && <img src={URL.createObjectURL(newProductImage)} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
                       </div>
                       <DialogFooter>
                         <DialogClose asChild><Button onClick={handleAddProduct}>추가하기</Button></DialogClose>
@@ -474,7 +466,7 @@ const GeneralKiosk = () => {
               <Label htmlFor="edit-price">가격</Label>
               <Input id="edit-price" type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} />
               <Label htmlFor="edit-image">이미지</Label>
-              <Input id="edit-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, (url) => setEditingProduct({...editingProduct, imageUrl: url}))} />
+              <Input id="edit-image" type="file" accept="image/*" onChange={(e) => handleImageUpload(e, (file) => setEditingProduct({...editingProduct, image: file}))} />
               {editingProduct.imageUrl && <img src={editingProduct.imageUrl} alt="preview" className="w-full h-32 object-cover rounded-md mt-2" />}
             </div>
             <DialogFooter>

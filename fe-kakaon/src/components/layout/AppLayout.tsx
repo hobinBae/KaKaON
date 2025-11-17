@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X, Star } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { ko } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import logoImg from "@/assets/logo.png";
@@ -25,10 +25,51 @@ import { useBoundStore } from "@/stores/storeStore";
 import { useMyStores, useFavoriteStore } from "@/lib/hooks/useStores";
 import { useLogout } from "@/auth/hooks/useAuth";
 import { useAllAlerts, useReadAlert, useAlertDetail } from "@/lib/hooks/useAlerts";
+import { useOrderDetail } from "@/lib/hooks/useOrders";
 import { getAlertTypeKorean } from "@/lib/utils";
 import { Alert } from "@/types/api";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+
+function TransactionDetail({ orderId }: { orderId: number }) {
+  const { data: orderDetail, isLoading } = useOrderDetail(orderId);
+
+  return (
+    <Card className="p-4 bg-gray-50 rounded-lg">
+      <h3 className="text-sm font-semibold mb-2">주문상세내역</h3>
+      {isLoading ? (
+        <div>로딩 중...</div>
+      ) : orderDetail ? (
+        <>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>상품명</TableHead>
+                <TableHead className="text-right">수량</TableHead>
+                <TableHead className="text-right">가격</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {orderDetail.items.map((item, index) => (
+                <TableRow key={index}>
+                  <TableCell>{item.name}</TableCell>
+                  <TableCell className="text-right">{item.quantity}</TableCell>
+                  <TableCell className="text-right">{(item.price * item.quantity).toLocaleString()}원</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="text-right font-bold mt-2">
+            합계: {orderDetail.total.toLocaleString()}원
+          </div>
+        </>
+      ) : (
+        <div>주문 상세 내역을 불러올 수 없습니다.</div>
+      )}
+    </Card>
+  );
+}
 
 export function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -36,6 +77,8 @@ export function AppLayout() {
   const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
   const [shouldShake, setShouldShake] = useState(false);
   const [selectedAlertId, setSelectedAlertId] = useState<{ alertId: number; storeId: number } | null>(null);
+  const [selectedOrderId, setSelectedOrderId] = useState<number | null>(null);
+  const { data: selectedOrderDetail } = useOrderDetail(selectedOrderId);
   const isOpeningModal = useRef(false);
 
   const location = useLocation();
@@ -72,9 +115,10 @@ export function AppLayout() {
   }, [unreadCount]);
 
   useEffect(() => {
-    // 현재 선택된 가맹점이 없고, 정렬된 가맹점 목록이 있을 때
+    // Zustand-persist로 selectedStoreId가 세션 스토리지에서 복원된 후,
+    // 만약 선택된 가맹점이 없다면 (예: 최초 로그인 시) 대표 가맹점을 기본으로 선택합니다.
+    // 새로고침 시에는 세션 스토리지의 값이 유지되므로 이 로직이 실행되지 않습니다.
     if (!selectedStoreId && sortedStores && sortedStores.length > 0) {
-      // 목록의 첫 번째 가맹점을 기본으로 선택
       setSelectedStoreId(String(sortedStores[0].storeId));
     }
   }, [sortedStores, selectedStoreId, setSelectedStoreId]);
@@ -225,7 +269,12 @@ export function AppLayout() {
                   {sortedStores && sortedStores.length > 0 ? (
                     sortedStores.map((store) => (
                       <SelectItem key={store.storeId} value={String(store.storeId)}>
-                        {store.name}
+                        <div className="flex items-center">
+                          {store.storeId === favoriteStore?.storeId && (
+                            <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
+                          )}
+                          {store.name}
+                        </div>
                       </SelectItem>
                     ))
                   ) : (
@@ -364,7 +413,7 @@ export function AppLayout() {
                   <h4 className="text-sm font-semibold mb-2">관련 거래 내역</h4>
                   <div className="space-y-2">
                     {selectedAlertDetail.payments.map(p => (
-                      <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm">
+                      <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedOrderId(p.orderId)}>
                         <div className="flex justify-between">
                           <span className="font-medium">승인번호: {p.authorizationNo}</span>
                           <span>{p.amount.toLocaleString()}원</span>
@@ -378,6 +427,58 @@ export function AppLayout() {
 
               <div className="flex gap-3 pt-4 border-t">
                 <Button variant="outline" className="flex-1 rounded-lg" onClick={() => handleModalOpenChange(false)}>닫기</Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!selectedOrderId} onOpenChange={() => setSelectedOrderId(null)}>
+        <DialogContent className="max-w-2xl rounded-xl">
+          <DialogHeader>
+            <DialogTitle>결제 상세정보</DialogTitle>
+          </DialogHeader>
+          {selectedOrderDetail && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제시간</div>
+                  <div className="text-[#333333]">{format(new Date(selectedOrderDetail.date), 'yyyy.MM.dd (eee) HH:mm', { locale: ko })}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">주문 구분</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.orderType}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제수단</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.paymentMethod}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제 상태</div>
+                  <Badge variant={selectedOrderDetail.status === 'cancelled' ? 'destructive' : 'secondary'} className="rounded">
+                    {selectedOrderDetail.status === 'completed' ? '완료' : '취소'}
+                  </Badge>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">승인번호</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.id}</div>
+                </div>
+                <div>
+                  <div className="text-sm text-[#717182] mb-1">결제금액</div>
+                  <div className="text-[#333333]">{selectedOrderDetail.total.toLocaleString()}원</div>
+                </div>
+              </div>
+
+              <TransactionDetail orderId={selectedOrderDetail.orderId} />
+
+              {selectedOrderDetail.status === 'cancelled' && (
+                <Card className="p-4 bg-[#FF4D4D]/5 border-[#FF4D4D]/20 rounded-lg">
+                  <div className="text-sm text-[#FF4D4D]">⚠️ 이 거래는 취소되었습니다. 관련 이상거래 알림을 확인하세요.</div>
+                </Card>
+              )}
+
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedOrderId(null)}>닫기</Button>
               </div>
             </div>
           )}

@@ -134,7 +134,6 @@ const Pos = () => {
         menuData: {
           menu: newProductName,
           price: price,
-          imgUrl: '',
         },
       }, {
         onSuccess: () => {
