@@ -353,7 +353,7 @@ export default function Alerts() {
     }
   };
 
-  const segmentWrap = "inline-flex items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
+  const segmentWrap = "flex flex-wrap items-center gap-1 rounded-lg bg-[#F5F5F7] px-1 py-1";
   const segmentItem =
     "rounded-lg px-4 h-8 text-sm data-[state=on]:bg-white data-[state=on]:shadow-sm " +
     "data-[state=on]:text-[#111] data-[state=off]:text-[#50505f] hover:bg-white transition";
@@ -372,121 +372,159 @@ export default function Alerts() {
 
       <Card className="p-6 rounded-2xl border border-gray-200 shadow-sm bg-white">
         <div className="space-y-4">
-        <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3">
-          <div className="text-sm font-semibold text-[#333]">조회기간</div>
+          <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3">
+            <div className="text-sm font-semibold text-[#333]">조회기간</div>
 
-          <div className="flex items-center gap-2 flex-wrap">
-            <div className="flex grow min-w-0">
-              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} w-full`}>
-                <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-                <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
-                <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
-                <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
-              </ToggleGroup>
-            </div>
-
-            <div className="relative flex items-center gap-2 w-full tablet:w-auto">
-              <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
-                <Input
-                  type="text"
-                  placeholder="YYYY.MM.DD"
-                  value={startInput}
-                  onChange={(e) => handleDateInputChange('start', e.target.value)}
-                  onBlur={() => handleDateInputBlur('start')}
-                  className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
-                />
-                <span className="text-sm text-gray-500 text-center">~</span>
-                <Input
-                  type="text"
-                  placeholder="YYYY.MM.DD"
-                  value={endInput}
-                  onChange={(e) => handleDateInputChange('end', e.target.value)}
-                  onBlur={() => handleDateInputBlur('end')}
-                  className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
-                />
+            <div className="flex items-center gap-2 flex-wrap">
+              <div className="flex grow min-w-0">
+                <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} w-full`}>
+                  <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
+                  <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
+                  <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+                  <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                </ToggleGroup>
               </div>
-              <Button
-                variant={"outline"}
-                size={"icon"}
-                className="h-8 w-8 rounded-lg border border-gray-300 bg-white"
-                onClick={() => {
-                  if (!showCalendar && dateRange?.from) {
-                    setCalendarMonth(dateRange.from);
-                  }
-                  setShowCalendar(!showCalendar);
-                }}
-              >
-                <CalendarIcon className="w-4 h-4" />
-              </Button>
-              {showCalendar && (
-                <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
-                  <Calendar
-                    initialFocus
-                    mode="range"
-                    month={calendarMonth}
-                    onMonthChange={setCalendarMonth}
-                    selected={dateRange}
-                    onDayClick={handleDateSelect}
-                    numberOfMonths={1}
-                    fixedWeeks={false}
-                    components={{
-                      Caption: ({ displayMonth }) => (
-                        <CustomCaption displayMonth={displayMonth} onMonthChange={setCalendarMonth} />
-                      ),
-                    }}
-                    locale={ko}
-                    disabled={(date) => {
-                      if (date > new Date()) return true;
-                      if (dateRange?.from && !dateRange?.to) {
-                        const maxDate = addDays(dateRange.from, 365);
-                        if (date > maxDate) return true;
-                      }
-                      return false;
-                    }}
-                    formatters={{
-                      formatWeekdayName: (day) =>
-                        format(day, "eee", { locale: ko }),
-                    }}
-                    classNames={{
-                      table: "w-full border-collapse space-y-1",
-                      head_row: "flex",
-                      head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
-                      row: "flex w-full mt-2",
-                      cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
-                      day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
-                      day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
-                      day_range_start: "rounded-l-full",
-                      day_range_end: "rounded-r-full",
-                      day_today: "bg-accent/50 text-accent-foreground ring-2 ring-primary ring-inset",
-                      day_outside: "day-outside text-muted-foreground opacity-50",
-                      day_disabled: "text-muted-foreground opacity-50",
-                      day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
-                      day_hidden: "invisible",
-                    }}
+
+              <div className="relative flex items-center gap-2 w-full tablet:w-auto">
+                <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
+                  <Input
+                    type="text"
+                    placeholder="YYYY.MM.DD"
+                    value={startInput}
+                    onChange={(e) => handleDateInputChange('start', e.target.value)}
+                    onBlur={() => handleDateInputBlur('start')}
+                    className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
+                  />
+                  <span className="text-sm text-gray-500 text-center">~</span>
+                  <Input
+                    type="text"
+                    placeholder="YYYY.MM.DD"
+                    value={endInput}
+                    onChange={(e) => handleDateInputChange('end', e.target.value)}
+                    onBlur={() => handleDateInputBlur('end')}
+                    className="h-8 w-full tablet:w-32 text-sm rounded-lg border border-gray-300 bg-white px-3"
                   />
                 </div>
-              )}
+                <Button
+                  variant={"outline"}
+                  size={"icon"}
+                  className="h-8 w-8 rounded-lg border border-gray-300 bg-white"
+                  onClick={() => {
+                    if (!showCalendar && dateRange?.from) {
+                      setCalendarMonth(dateRange.from);
+                    }
+                    setShowCalendar(!showCalendar);
+                  }}
+                >
+                  <CalendarIcon className="w-4 h-4" />
+                </Button>
+                {showCalendar && (
+                  <div className="absolute top-full right-0 mt-2 z-50 bg-white border rounded-md shadow-lg p-3">
+                    <Calendar
+                      initialFocus
+                      mode="range"
+                      month={calendarMonth}
+                      onMonthChange={setCalendarMonth}
+                      selected={dateRange}
+                      onDayClick={handleDateSelect}
+                      numberOfMonths={1}
+                      fixedWeeks={false}
+                      components={{
+                        Caption: ({ displayMonth }) => (
+                          <CustomCaption displayMonth={displayMonth} onMonthChange={setCalendarMonth} />
+                        ),
+                      }}
+                      locale={ko}
+                      disabled={(date) => {
+                        if (date > new Date()) return true;
+                        if (dateRange?.from && !dateRange?.to) {
+                          const maxDate = addDays(dateRange.from, 365);
+                          if (date > maxDate) return true;
+                        }
+                        return false;
+                      }}
+                      formatters={{
+                        formatWeekdayName: (day) =>
+                          format(day, "eee", { locale: ko }),
+                      }}
+                      classNames={{
+                        table: "w-full border-collapse space-y-1",
+                        head_row: "flex",
+                        head_cell: "text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]",
+                        row: "flex w-full mt-2",
+                        cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                        day: "h-9 w-9 p-0 font-normal aria-selected:opacity-100",
+                        day_selected: "bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                        day_range_start: "rounded-l-full",
+                        day_range_end: "rounded-r-full",
+                        day_today: "bg-accent/50 text-accent-foreground ring-2 ring-primary ring-inset",
+                        day_outside: "day-outside text-muted-foreground opacity-50",
+                        day_disabled: "text-muted-foreground opacity-50",
+                        day_range_middle: "aria-selected:bg-accent/30 aria-selected:text-accent-foreground",
+                        day_hidden: "invisible",
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Desktop View */}
-        <div className="hidden tablet:block space-y-4">
-          <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3">
-            <div className="text-sm font-semibold text-[#333]">이상거래</div>
-            <div className="flex items-center justify-between gap-4">
-              <ToggleGroup type="single" value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => value && setTypeFilter(value)} className={`${segmentWrap} flex-1`}>
-                <ToggleGroupItem value="all" className={segmentItem}>전체 유형</ToggleGroupItem>
-                <ToggleGroupItem value="SAME_PAYMENT_METHOD" className={segmentItem}>동일 결제수단</ToggleGroupItem>
-                <ToggleGroupItem value="OUT_OF_BUSINESS_HOUR" className={segmentItem}>영업시간 외 거래</ToggleGroupItem>
-                <ToggleGroupItem value="REPEATED_PAYMENT" className={segmentItem}>반복결제 </ToggleGroupItem>
-                <ToggleGroupItem value="HIGH_AMOUNT_SPIKE" className={segmentItem}>고액결제 급증</ToggleGroupItem>
-                <ToggleGroupItem value="TRANSACTION_FREQUENCY_SPIKE" className={segmentItem}>거래빈도 급증</ToggleGroupItem>
-                <ToggleGroupItem value="CANCEL_RATE_SPIKE" className={segmentItem}>취소율 급증</ToggleGroupItem>
-              </ToggleGroup>
-              <div className="flex items-center gap-4">
-                <div className="text-sm font-semibold text-[#333] shrink-0">상태</div>
-                <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap}`}>
+          {/* Desktop View */}
+          <div className="hidden tablet:block">
+            <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
+              {/* 이상거래 */}
+              <div className="flex items-start gap-3 flex-1 min-w-[300px]">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pt-2 pr-5">이상거래</div>
+                <div className="w-full">
+                  <div className="hidden wide:block">
+                    <ToggleGroup
+                      type="single"
+                      value={typeFilter}
+                      onValueChange={(value: ApiAlertType | 'all') =>
+                        value && setTypeFilter(value)
+                      }
+                      className={`${segmentWrap} w-full`}
+                    >
+                      <ToggleGroupItem value="all" className={segmentItem}>전체 유형</ToggleGroupItem>
+                      <ToggleGroupItem value="SAME_PAYMENT_METHOD" className={segmentItem}>동일 결제수단</ToggleGroupItem>
+                      <ToggleGroupItem value="OUT_OF_BUSINESS_HOUR" className={segmentItem}>영업시간 외 거래</ToggleGroupItem>
+                      <ToggleGroupItem value="REPEATED_PAYMENT" className={segmentItem}>반복결제</ToggleGroupItem>
+                      <ToggleGroupItem value="HIGH_AMOUNT_SPIKE" className={segmentItem}>고액결제 급증</ToggleGroupItem>
+                      <ToggleGroupItem value="TRANSACTION_FREQUENCY_SPIKE" className={segmentItem}>거래빈도 급증</ToggleGroupItem>
+                      <ToggleGroupItem value="CANCEL_RATE_SPIKE" className={segmentItem}>취소율 급증</ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                  <div className="wide:hidden">
+                    <Select value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => setTypeFilter(value)}>
+                      <SelectTrigger className="w-full h-9 text-sm">
+                        <SelectValue placeholder="이상거래 유형 선택" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">전체 유형</SelectItem>
+                        <SelectItem value="SAME_PAYMENT_METHOD">동일 결제수단</SelectItem>
+                        <SelectItem value="OUT_OF_BUSINESS_HOUR">영업시간 외 거래</SelectItem>
+                        <SelectItem value="REPEATED_PAYMENT">반복결제</SelectItem>
+                        <SelectItem value="HIGH_AMOUNT_SPIKE">고액결제 급증</SelectItem>
+                        <SelectItem value="TRANSACTION_FREQUENCY_SPIKE">거래빈도 급증</SelectItem>
+                        <SelectItem value="CANCEL_RATE_SPIKE">취소율 급증</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              {/* 상태 */}
+              <div className="flex items-start gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pt-2 pr-5">상태</div>
+                <ToggleGroup
+                  type="single"
+                  value={String(statusFilter)}
+                  onValueChange={(value) =>
+                    value && setStatusFilter(value === 'all' ? 'all' : value === 'true')
+                  }
+                  className={`${segmentWrap}`}
+                >
                   <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
                   <ToggleGroupItem value="false" className={segmentItem}>미확인</ToggleGroupItem>
                   <ToggleGroupItem value="true" className={segmentItem}>확인됨</ToggleGroupItem>
@@ -494,58 +532,58 @@ export default function Alerts() {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Mobile View */}
-        <div className="tablet:hidden space-y-4">
-          <div>
-            <div className="text-sm font-semibold text-[#333] mb-2">이상거래 유형</div>
-            <Select value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => setTypeFilter(value)}>
-              <SelectTrigger className="w-full h-9 text-sm">
-                <SelectValue placeholder="이상거래 유형 선택" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">전체 유형</SelectItem>
-                <SelectItem value="SAME_PAYMENT_METHOD">동일 결제수단</SelectItem>
-                <SelectItem value="OUT_OF_BUSINESS_HOUR">영업시간 외 거래</SelectItem>
-                <SelectItem value="REPEATED_PAYMENT">반복결제</SelectItem>
-                <SelectItem value="HIGH_AMOUNT_SPIKE">고액결제 급증</SelectItem>
-                <SelectItem value="TRANSACTION_FREQUENCY_SPIKE">거래빈도 급증</SelectItem>
-                <SelectItem value="CANCEL_RATE_SPIKE">취소율 급증</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <div className="text-sm font-semibold text-[#333] mb-2">상태</div>
-            <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap} w-full`}>
-              <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
-              <ToggleGroupItem value="false" className={`${segmentItem} flex-1`}>미확인</ToggleGroupItem>
-              <ToggleGroupItem value="true" className={`${segmentItem} flex-1`}>확인됨</ToggleGroupItem>
-            </ToggleGroup>
-          </div>
-        </div>
 
-        <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
-          <div className="text-sm text-[#333] flex-1">
-            {dateRange?.from && dateRange?.to && (
-              <>
-                {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
-                <span className="text-[#007AFF] ml-1">
-                  ({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)
-                </span>
-              </>
-            )}
+          {/* Mobile View */}
+          <div className="tablet:hidden space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-[#333] mb-2">이상거래</div>
+              <Select value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => setTypeFilter(value)}>
+                <SelectTrigger className="w-full h-9 text-sm">
+                  <SelectValue placeholder="이상거래 유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">전체 유형</SelectItem>
+                  <SelectItem value="SAME_PAYMENT_METHOD">동일 결제수단</SelectItem>
+                  <SelectItem value="OUT_OF_BUSINESS_HOUR">영업시간 외 거래</SelectItem>
+                  <SelectItem value="REPEATED_PAYMENT">반복결제</SelectItem>
+                  <SelectItem value="HIGH_AMOUNT_SPIKE">고액결제 급증</SelectItem>
+                  <SelectItem value="TRANSACTION_FREQUENCY_SPIKE">거래빈도 급증</SelectItem>
+                  <SelectItem value="CANCEL_RATE_SPIKE">취소율 급증</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <div className="text-sm font-semibold text-[#333] mb-2">상태</div>
+              <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap} w-full`}>
+                <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
+                <ToggleGroupItem value="false" className={`${segmentItem} flex-1`}>미확인</ToggleGroupItem>
+                <ToggleGroupItem value="true" className={`${segmentItem} flex-1`}>확인됨</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handleResetFilters} variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm tablet:inline-flex hidden">
-              <RotateCw className="w-4 h-4 mr-1" />
-              초기화
-            </Button>
-            <Button onClick={handleResetFilters} variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 rounded-lg tablet:hidden">
-              <RotateCw className="w-4 h-4" />
-            </Button>
+
+          <div className="flex justify-between items-center pt-4 border-t border-gray-200 mt-4 flex-wrap gap-3">
+            <div className="text-sm text-[#333] flex-1">
+              {dateRange?.from && dateRange?.to && (
+                <>
+                  {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
+                  <span className="text-[#007AFF] ml-1">
+                    ({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)
+                  </span>
+                </>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <Button onClick={handleResetFilters} variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm tablet:inline-flex hidden">
+                <RotateCw className="w-4 h-4 mr-1" />
+                초기화
+              </Button>
+              <Button onClick={handleResetFilters} variant="ghost" size="icon" className="text-gray-500 hover:bg-gray-100 rounded-lg tablet:hidden">
+                <RotateCw className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
-        </div>
         </div>
       </Card>
 
@@ -568,9 +606,8 @@ export default function Alerts() {
             {!isLoading && !isError && alertsData?.content.map((alert) => (
               <TableRow
                 key={alert.id}
-                className={`hover:bg-[#F5F5F5] cursor-pointer ${
-                  !alert.checked ? 'bg-[#FEE500]/5' : ''
-                }`}
+                className={`hover:bg-[#F5F5F5] cursor-pointer ${!alert.checked ? 'bg-[#FEE500]/5' : ''
+                  }`}
                 onClick={() => handleRowClick(alert)}
               >
                 <TableCell className="text-[#333333] pl-6 hidden tablet:table-cell">{alert.alertUuid}</TableCell>
@@ -651,13 +688,13 @@ export default function Alerts() {
                   <h4 className="text-sm font-semibold mb-2">관련 거래 내역</h4>
                   <div className="space-y-2">
                     {selectedAlertDetail.payments.map((p: PaymentSimpleInfo) => (
-                       <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedOrderId(p.orderId)}>
-                       <div className="flex justify-between">
-                         <span className="font-medium">승인번호: {p.authorizationNo}</span>
-                         <span>{p.amount.toLocaleString()}원</span>
-                       </div>
-                       <div className="text-gray-600">{p.paymentMethod}</div>
-                     </div>
+                      <div key={p.paymentId} className="p-3 rounded-lg bg-gray-50 text-sm cursor-pointer hover:bg-gray-100" onClick={() => setSelectedOrderId(p.orderId)}>
+                        <div className="flex justify-between">
+                          <span className="font-medium">승인번호: {p.authorizationNo}</span>
+                          <span>{p.amount.toLocaleString()}원</span>
+                        </div>
+                        <div className="text-gray-600">{p.paymentMethod}</div>
+                      </div>
                     ))}
                   </div>
                 </div>
