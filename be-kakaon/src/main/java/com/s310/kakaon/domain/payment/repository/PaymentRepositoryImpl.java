@@ -147,8 +147,8 @@ public class PaymentRepositoryImpl implements PaymentRepositoryCustom {
         if(searchDto.getEndDate() != null) {
             builder.and(payment.approvedAt.loe(searchDto.getEndDate().atTime(23, 59, 59)));
         }
-        if(searchDto.getPaymentMethod() != null) {
-            builder.and(payment.paymentMethod.eq(searchDto.getPaymentMethod()));
+        if(searchDto.getPaymentMethods() != null && !searchDto.getPaymentMethods().isEmpty()) {
+            builder.and(payment.paymentMethod.in(searchDto.getPaymentMethods()));
         }
         if(searchDto.getStatus() != null) {
             builder.and(payment.status.eq(searchDto.getStatus()));
