@@ -44,9 +44,16 @@ public class SecurityConfig {
                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/swagger", "/swagger-ui.html", "/swagger-ui/**", "/api-docs", "/api-docs/**", "/v3/api-docs/**")
-                        .permitAll()
-                        .requestMatchers("/oauth2/**", "/login/oauth2/**", "/api/v1/auth/refresh", "/auth/callback").permitAll()
+                        // 인증 없이 접근을 허용할 경로들을 먼저 정의
+                        .requestMatchers(
+                                "/swagger", "/swagger-ui.html", "/swagger-ui/**",
+                                "/api-docs", "/api-docs/**", "/v3/api-docs/**",
+                                "/oauth2/**", "/login/oauth2/**",
+                                "/api/v1/auth/refresh", "/auth/callback"
+                        ).permitAll()
+                        // 그 외 /api/v1/ 로 시작하는 모든 경로는 인증을 요구
+                        .requestMatchers("/api/v1/**").authenticated()
+                        // 나머지 모든 요청에 대해서도 인증을 요구 (선택적이지만 안전함)
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
