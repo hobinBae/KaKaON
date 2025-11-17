@@ -13,9 +13,6 @@ export default function CancellationRate({ data, activePeriod, totalCancellation
     <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-[#333333] text-center tablet:text-left">취소율 추이</h3>
-        <div className="text-right">
-          <p className="text-sm text-gray-500">총 취소 건수: {totalCancellations}건</p>
-        </div>
       </div>
       {isLoading ? (
         <div className="h-[300px] flex items-center justify-center">로딩중...</div>

@@ -1,5 +1,8 @@
 package com.s310.kakaon.domain.menu.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.s310.kakaon.domain.file.service.FileStorageService;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.menu.dto.PageResponseDto;
 import com.s310.kakaon.domain.menu.service.MenuService;
@@ -16,10 +19,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 
 @Tag(name = "Menu", description = "가맹점 메뉴 등록 / 수정 / 삭제 / 조회 API")
@@ -30,6 +35,8 @@ public class MenuController {
 
     private final MemberService memberService;
     private final MenuService menuService;
+    private final FileStorageService fileStorageService;
+    private final ObjectMapper objectMapper;
 
     /** 메뉴 리스트 조회 */
     @Operation(
@@ -73,6 +80,53 @@ public class MenuController {
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.CREATED, "메뉴 생성이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
     }
 
+    /** 메뉴 생성 */
+    @Operation(
+            summary = "메뉴 생성 V2 (이미지 첨부 버전)",
+            description = """
+                    새로운 메뉴를 등록합니다.
+                    요청 형식: multipart/form-data
+                    
+                    - storeId를 반드시 Query Parameter로 전달해야 합니다.
+                    - Form-data Fields:
+                        - data: 메뉴 정보(JSON 문자열, MenuRequestDto)
+                            {
+                                "menu" : "아메리카노",
+                                "price":5000
+                            }
+                        - image: 메뉴 이미지 파일 (선택)
+                    이미지가 포함된 경우 S3에 업로드되며, 업로드된 이미지 URL이 imgUrl로 자동 설정됩니다.
+                    이미지가 없으면 imgUrl은 null로 저장됩니다.
+                    """
+    )
+    @PostMapping(
+            value = "/v2",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> createMenuV2(
+            @AuthenticationPrincipal String kakaoId,
+            @RequestParam(name = "storeId") Long storeId,
+            @RequestParam("data") String data,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            HttpServletRequest httpRequest) throws JsonProcessingException {
+
+        // 1) JSON 문자열을 DTO로 변환
+        MenuRequestDto req = objectMapper.readValue(data, MenuRequestDto.class);
+
+        // 2) 이미지가 있을 경우 S3 업로드
+        if (image != null && !image.isEmpty()) {
+            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
+            req.setImgUrl(imgUrl);
+        }
+
+        // 3) 회원 정보 가져오기
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        // 4) 실제 메뉴 생성
+        MenuSummaryResponseDto responseDto = menuService.create(storeId, req, memberId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.CREATED, "메뉴 생성이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
+    }
+
     /** 메뉴 수정 */
     @PatchMapping("/{menuId}")
     @Operation(
@@ -91,6 +145,53 @@ public class MenuController {
             @Validated(MenuValidationGroups.Update.class) @Valid @RequestBody MenuRequestDto req,
             HttpServletRequest httpRequest) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        MenuSummaryResponseDto responseDto = menuService.update(memberId, req, storeId, menuId);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 수정이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
+    }
+
+    /** 메뉴 수정 */
+    @PatchMapping(
+            value = "/v2/{menuId}",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    @Operation(
+            summary = "메뉴 수정 V2 (이미지 첨부 버전)",
+            description = """
+                    기존 메뉴의 정보를 수정합니다.
+                    요청 형식: multipart/form-data
+                    - PathVariable: menuId
+                    - QueryParam: storeId
+                    - Form-data Fields:
+                        - data: 메뉴 정보(JSON 문자열, MenuRequestDto)
+                            {
+                                "menu" : "아메리카노",
+                                "price":5000
+                            }
+                        - image: 메뉴 이미지 파일 (선택)
+                    이미지가 포함된 경우 S3에 업로드되며, 업로드된 이미지 URL이 imgUrl로 자동 설정됩니다.
+                    이미지가 없으면 기존 이미지를 유지합니다.
+                    """
+    )
+    public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> updateMenuV2(
+            @AuthenticationPrincipal String kakaoId,
+            @PathVariable(name = "menuId") Long menuId,
+            @RequestParam(name = "storeId") Long storeId,
+            @RequestParam("data") String data,
+            @RequestPart(value = "image", required = false) MultipartFile image,
+            HttpServletRequest httpRequest) throws JsonProcessingException {
+        // 1) JSON 문자열을 DTO로 변환
+        MenuRequestDto req = objectMapper.readValue(data, MenuRequestDto.class);
+
+        // 2) 이미지가 있을 경우 S3 업로드 후 imgUrl 설정
+        if (image != null && !image.isEmpty()) {
+            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
+            req.setImgUrl(imgUrl);
+        }
+
+        // 3) 회원 정보 가져오기
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        // 4) 실제 메뉴 수정
         MenuSummaryResponseDto responseDto = menuService.update(memberId, req, storeId, menuId);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 수정이 성공적으로 완료 되었습니다.", responseDto, httpRequest.getRequestURI()));
     }

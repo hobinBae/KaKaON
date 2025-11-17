@@ -304,3 +304,33 @@ export interface PaymentMethodRatioResponse {
   deliveryTotal: number;
   totalAmount: number;
 }
+
+// ================== Order ==================
+export interface OrderDetailItem {
+  orderItemId: number;
+  menuId: number;
+  menuName: string;
+  price: number;
+  imgUrl: string;
+  quantity: number;
+  totalPrice: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+}
+
+export interface OrderDetail {
+  orderId: number;
+  storeId: number;
+  storeName: string;
+  status: string;
+  orderType: string;
+  paymentMethod: string;
+  totalAmount: number;
+  paidAmount: number;
+  refundedAmount: number;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  items: OrderDetailItem[];
+}

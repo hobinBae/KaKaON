@@ -10,15 +10,15 @@ export function cn(...inputs: ClassValue[]) {
 export const getAlertTypeKorean = (type: ApiAlertType) => {
   switch (type) {
     case 'SAME_PAYMENT_METHOD':
-      return '동일 결제수단 반복';
+      return '동일 결제수단';
     case 'OUT_OF_BUSINESS_HOUR':
       return '영업시간 외 거래';
     case 'REPEATED_PAYMENT':
-      return '단시간 반복 결제';
+      return '반복결제';
     case 'HIGH_AMOUNT_SPIKE':
-      return '고액 결제 급증';
+      return '고액결제 급증';
     case 'TRANSACTION_FREQUENCY_SPIKE':
-      return '거래 빈도 급증';
+      return '거래빈도 급증';
     case 'CANCEL_RATE_SPIKE':
       return '취소율 급증';
     default:

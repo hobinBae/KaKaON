@@ -2,9 +2,7 @@ package com.s310.kakaon.domain.payment.controller;
 
 
 import com.s310.kakaon.domain.member.service.MemberService;
-import com.s310.kakaon.domain.payment.dto.PaymentCreateRequestDto;
-import com.s310.kakaon.domain.payment.dto.PaymentResponseDto;
-import com.s310.kakaon.domain.payment.dto.PaymentSearchRequestDto;
+import com.s310.kakaon.domain.payment.dto.*;
 import com.s310.kakaon.domain.payment.service.PaymentService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.global.dto.PageResponse;
@@ -16,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -24,6 +23,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDate;
 import java.util.List;
 
 import java.time.LocalDateTime;
@@ -67,10 +68,10 @@ public class PaymentController {
     @Operation(
             summary = "가맹점 결제 내역 조회",
             description = """
-                    가맹점 ID(storeId)와 검색 조건을 기반으로 결제 내역을 조회합니다.  
+                    가맹점 ID(storeId)와 검색 조건을 기반으로 결제 내역을 조회합니다.
                     🔍 검색 필터 예시:
                     - 기간: 오늘, 이번주, 이번달, 올해 또는 특정 기간(startDate, endDate)
-                    - 결제 수단: 카드, 계좌이체, 카카오페이, 현금 등
+                    - 결제 수단: 카드, 계좌이체, 카카오페이, 현금 등 (여러 개 선택 가능)
                     - 결제 상태: 완료, 취소
                     - 주문 구분: 배달 주문 / 매장 주문
                     - 승인번호: authorizationNo
@@ -80,11 +81,26 @@ public class PaymentController {
     public ResponseEntity<ApiResponse<PageResponse<PaymentResponseDto>>> getPaymentsByStore(
             @AuthenticationPrincipal String kakaoId,
             @PathVariable Long storeId,
-            @ParameterObject @ModelAttribute PaymentSearchRequestDto request,
-            @Parameter(hidden=true)Pageable pageable,
+            @RequestParam(required = false) List<PaymentMethod> paymentMethod,
+            @RequestParam(required = false) PaymentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate,
+            @RequestParam(required = false) Boolean isDelivery,
+            @RequestParam(required = false) String authorizationNo,
+            @Parameter(hidden=true) Pageable pageable,
             HttpServletRequest httpRequest
     ) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+
+        // RequestParam을 DTO로 변환
+        PaymentSearchRequestDto request = PaymentSearchRequestDto.builder()
+                .paymentMethods(paymentMethod)
+                .status(status)
+                .startDate(startDate)
+                .endDate(endDate)
+                .isDelivery(isDelivery)
+                .authorizationNo(authorizationNo)
+                .build();
 
         PageResponse<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request, pageable);
 
@@ -187,10 +203,26 @@ public class PaymentController {
                     .body(ApiResponse.of(HttpStatus.BAD_REQUEST, "CSV 파일만 업로드 가능합니다.", null, httpRequest.getRequestURI()));
         }
 
-        paymentService.uploadPaymentsFromCsv(file, storeId, memberId);
+        long maxSize = 50 * 1024 * 1024; // 50MB in bytes
+        if (file.getSize() > maxSize) {
+            return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
+                    .body(ApiResponse.of(
+                            HttpStatus.PAYLOAD_TOO_LARGE,
+                            "파일 크기가 너무 큽니다. 최대 50MB까지 업로드 가능합니다.", null, httpRequest.getRequestURI()
+                    ));
+        }
 
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(ApiResponse.of(HttpStatus.OK, "결제 내역 CSV 업로드 성공", "CSV 파일 업로드가 완료되었습니다.", httpRequest.getRequestURI()));
+        try {
+            byte[] fileBytes = file.getBytes();
+            String originalFilename = file.getOriginalFilename();
+            paymentService.uploadPaymentsFromCsvAsync(fileBytes, originalFilename, storeId, memberId);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.of(HttpStatus.INTERNAL_SERVER_ERROR, "파일 읽기 오류", null, httpRequest.getRequestURI()));
+        }
+
+        return ResponseEntity.status(HttpStatus.ACCEPTED)
+                .body(ApiResponse.of(HttpStatus.ACCEPTED, "결제 내역 CSV 업로드 시작", "CSV 파일 업로드가 백그라운드에서 처리됩니다. 처리 완료 시 로그를 확인하세요.", httpRequest.getRequestURI()));
     }
 
 }

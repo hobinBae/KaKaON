@@ -14,7 +14,9 @@ public interface PaymentService {
 
     PaymentResponseDto registerPayment(Long memberId,Long storeId, Long orderId, PaymentCreateRequestDto request);
 
-    void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId);
+    void uploadPaymentsFromCsv(byte[] fileBytes, Long storeId, Long memberId);
+
+    void uploadPaymentsFromCsvAsync(byte[] fileBytes, String fileName, Long storeId, Long memberId);
 
     PaymentResponseDto deletePayment(Long memberId, Long id);
 

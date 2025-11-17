@@ -20,9 +20,9 @@ interface CardSelectionModalProps {
 
 export default function CardSelectionModal({ isOpen, onClose, onCardSelect }: CardSelectionModalProps) {
   const [cards] = useState<Card[]>([
-    { id: 1, cardNumber: '0000000000000000', gradient: 'from-gray-800 to-gray-600' },
-    { id: 2, cardNumber: '1111111111111111', gradient: 'from-blue-700 to-blue-200' },
-    { id: 3, cardNumber: '2222222222222222', gradient: 'from-orange-700 to-yellow-300' },
+    { id: 1, cardNumber: '0215042003121213', gradient: 'from-gray-800 to-gray-600' },
+    { id: 2, cardNumber: '1213062305250822', gradient: 'from-blue-700 to-blue-200' },
+    { id: 3, cardNumber: '0922092303121213', gradient: 'from-orange-700 to-yellow-300' },
   ]);
 
   return (

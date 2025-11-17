@@ -6,11 +6,12 @@ import { Menu } from "@/types/api";
 const getMenusByStore = async (storeId: number): Promise<Menu[]> => {
   const response = await apiClient.get(`/menus?storeId=${storeId}`);
   // PageResponse 객체에서 실제 메뉴 목록인 content 배열을 반환하도록 수정했음
-  // 백엔드에서는 'menu' 필드로 이름을 반환하므로 'name'으로, 'menuId'는 'id'로 매핑해줌
+  // 백엔드에서는 'menu' 필드로 이름을 반환하므로 'name'으로, 'menuId'는 'id'로, 'imgUrl'은 'imageUrl'로 매핑해줌
   return response.data.data.content.map((item: any) => ({
     ...item,
     id: item.menuId,
     name: item.menu,
+    imageUrl: item.imgUrl,
   }));
 };
 
@@ -26,12 +27,27 @@ export const useMenus = (storeId: number | null) => {
 interface MenuRequest {
   menu: string;
   price: number;
-  imgUrl: string;
+  image?: File | null;
 }
 
 // 메뉴 생성을 위한 API 호출 함수
 const createMenu = async ({ storeId, menuData }: { storeId: number; menuData: MenuRequest }) => {
-  const response = await apiClient.post(`/menus?storeId=${storeId}`, menuData);
+  const formData = new FormData();
+  const menuInfo = {
+    menu: menuData.menu,
+    price: menuData.price,
+  };
+  formData.append("data", JSON.stringify(menuInfo));
+
+  if (menuData.image) {
+    formData.append("image", menuData.image);
+  }
+
+  const response = await apiClient.post(`/menus/v2?storeId=${storeId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 
@@ -49,7 +65,22 @@ export const useCreateMenu = () => {
 
 // 메뉴 수정을 위한 API 호출 함수
 const updateMenu = async ({ storeId, menuId, menuData }: { storeId: number; menuId: number; menuData: Partial<MenuRequest> }) => {
-  const response = await apiClient.patch(`/menus/${menuId}?storeId=${storeId}`, menuData);
+  const formData = new FormData();
+  const menuInfo = {
+    menu: menuData.menu,
+    price: menuData.price,
+  };
+  formData.append("data", JSON.stringify(menuInfo));
+
+  if (menuData.image) {
+    formData.append("image", menuData.image);
+  }
+
+  const response = await apiClient.patch(`/menus/v2/${menuId}?storeId=${storeId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
   return response.data;
 };
 

@@ -22,7 +22,7 @@ interface Card {
 
 export default function CardPage() {
   const [cards] = useState<Card[]>([
-    { id: 1, cardNumber: '0000000000000000', gradient: 'from-gray-800 to-gray-600' },
+    { id: 1, cardNumber: '0312031203120312', gradient: 'from-gray-800 to-gray-600' },
     { id: 2, cardNumber: '1111111111111111', gradient: 'from-blue-700 to-blue-200' },
     { id: 3, cardNumber: '2222222222222222', gradient: 'from-orange-700 to-yellow-300' },
   ]);
