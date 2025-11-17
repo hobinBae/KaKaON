@@ -45,6 +45,8 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
+import static com.s310.kakaon.global.util.Util.validateStoreOwner;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -586,17 +588,12 @@ public class PaymentServiceImpl implements PaymentService{
         return field;
     }
 
-    private void validateStoreOwner(Store store, Member member) {
-        if (!store.getMember().getId().equals(member.getId())) {
-            throw new ApiException(ErrorCode.FORBIDDEN_ACCESS);
-        }
-    }
-
     public boolean detectAfterHoursTransaction(Store store, Payment payment) {
         String redisKey = REDIS_KEY_PREFIX + store.getId();
 
+        boolean open = stringRedisTemplate.hasKey(redisKey);
 
-        if (!stringRedisTemplate.hasKey(redisKey)) {
+        if (!open) {
             AlertEvent event = AlertEvent.builder()
                     .alertUuid(UUID.randomUUID().toString().substring(0, 20))
                     .storeId(store.getId())
@@ -616,7 +613,7 @@ public class PaymentServiceImpl implements PaymentService{
 
     public void detectHighValueTransaction(Store store, Payment payment) {
 
-        String redisKey = "store:operation:startTime:" + store.getId();
+        String redisKey = REDIS_KEY_PREFIX + store.getId();
         Object avgObj = stringRedisTemplate.opsForHash().get(redisKey, "avgPaymentAmountPrevMonth");
 
 
