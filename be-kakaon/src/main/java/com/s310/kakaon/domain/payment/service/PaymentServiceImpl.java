@@ -22,6 +22,7 @@ import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
+import java.io.*;
 import java.time.LocalDate;
 import java.util.*;
 
@@ -36,10 +37,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -142,19 +139,16 @@ public class PaymentServiceImpl implements PaymentService{
 
 
 
-        try {
-            String content = new String(file.getBytes(), StandardCharsets.UTF_8);
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
 
-            // BOM 제거 (있는 경우)
-            if (content.startsWith("\uFEFF")) {
-                content = content.substring(1);
-            }
-
-            String[] lines = content.split("\n");
-
-            if (lines.length < 2) {
+            // Header 라인 읽고 스킵
+            String header = br.readLine();
+            if(header == null) {
                 throw new ApiException(ErrorCode.INVALID_CSV_FORMAT);
             }
+
+            String line;
+            int lineIndex = 1; // 실제 CSV 라인 번호 추적
 
             // 첫 번째 라인은 헤더이므로 건너뛰기
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -172,8 +166,10 @@ public class PaymentServiceImpl implements PaymentService{
             List<Payment> paymentBatch = new ArrayList<>();
             final int BATCH_SIZE = 1000;
 
-            for (int i = 1; i < lines.length; i++) {
-                String line = lines[i].trim();
+            while ((line = br.readLine()) != null) {
+                lineIndex++;
+                line = line.trim();
+
                 if (line.isEmpty()) {
                     continue;
                 }
@@ -182,7 +178,7 @@ public class PaymentServiceImpl implements PaymentService{
                     String[] fields = parseCsvLine(line);
 
                     if (fields.length < 8) {
-                        log.warn("라인 {} 스킵: 필드 수 부족 ({}개)", i + 1, fields.length);
+                        log.warn("라인 {} 스킵: 필드 수 부족 ({}개)", lineIndex, fields.length);
                         failCount++;
                         continue;
                     }
@@ -203,14 +199,14 @@ public class PaymentServiceImpl implements PaymentService{
 
                     // 매장명 검증
                     if (!storeName.equals(store.getName())) {
-                        log.warn("라인 {} 스킵: 매장명 불일치 (CSV: {}, 실제: {})", i + 1, storeName, store.getName());
+                        log.warn("라인 {} 스킵: 매장명 불일치 (CSV: {}, 실제: {})", lineIndex, storeName, store.getName());
                         failCount++;
                         continue;
                     }
 
                     // 승인번호 중복 체크
                     if (existingAuthNos.contains(authorizationNo)) {
-                        log.warn("라인 {} 스킵: 승인번호 {} 중복", i + 1, authorizationNo);
+                        log.warn("라인 {} 스킵: 승인번호 {} 중복", lineIndex, authorizationNo);
                         failCount++;
                         continue;
                     }
@@ -239,11 +235,11 @@ public class PaymentServiceImpl implements PaymentService{
                     // 1000건마다 배치 처리
                     if (paymentBatch.size() >= BATCH_SIZE) {
                         processBatch(paymentBatch);
-                        log.info("배치 저장 완료: {}건 (진행: {}/{})", BATCH_SIZE, i, lines.length);
+                        log.info("배치 저장 완료: {}건 (index : {})", BATCH_SIZE, lineIndex);
                     }
 
                 } catch (Exception e) {
-                    log.error("라인 {} 처리 중 오류: {}", i + 1, e.getMessage(), e);
+                    log.error("라인 {} 처리 중 오류: {}", lineIndex, e.getMessage(), e);
                     failCount++;
                 }
             }
@@ -253,6 +249,7 @@ public class PaymentServiceImpl implements PaymentService{
                 log.info("마지막 배치 저장 완료: {}건", paymentBatch.size());
             }
             saveStatsInBatch(statsCache, hourlyCache);
+
             log.info("CSV 업로드 완료: 성공 {}건, 실패 {}건", successCount, failCount);
 
             if (successCount == 0 && failCount > 0) {
