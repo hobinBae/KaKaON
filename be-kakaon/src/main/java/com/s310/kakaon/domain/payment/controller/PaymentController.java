@@ -101,9 +101,6 @@ public class PaymentController {
                 .authorizationNo(authorizationNo)
                 .build();
 
-        log.info("결제 검색 조건 - paymentMethods: {}, status: {}, startDate: {}, endDate: {}",
-                request.getPaymentMethods(), request.getStatus(), request.getStartDate(), request.getEndDate());
-
         PageResponse<PaymentResponseDto> response = paymentService.getPaymentsByStore(memberId, storeId, request, pageable);
 
         return ResponseEntity.status(HttpStatus.OK)
