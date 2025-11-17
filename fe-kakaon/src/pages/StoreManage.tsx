@@ -329,15 +329,6 @@ export default function StoreManage() {
       e.preventDefault();
     }
   };
-  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
-  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
-  const [newStorePhone, setNewStorePhone] = useState("");
-  const [newStoreCity, setNewStoreCity] = useState("");
-  const [newStoreState, setNewStoreState] = useState("");
-  const [newStorePostalCode, setNewStorePostalCode] = useState("");
-  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
-  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
-  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState>(defaultBusinessHours);
 
   // 가맹점 정보 수정을 위한 상태
   const [editingStoreName, setEditingStoreName] = useState("");
