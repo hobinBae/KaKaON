@@ -685,7 +685,7 @@ export default function Analytics() {
                   <>
                     {activeTab === "payment-method" && <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>}
                     {activeTab === "hourly-sales" && <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>}
-                    <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
+                    <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
                     <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
                     <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
                   </>

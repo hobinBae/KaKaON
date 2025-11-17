@@ -86,6 +86,15 @@ const dayOfWeekToKorean: Record<string, string> = {
   'SUNDAY': '일',
 };
 
+// 업종 변환 헬퍼 함수
+const businessTypeToKorean: Record<string, string> = {
+  'RESTAURANT': '음식업',
+  'RETAIL': '소매업',
+  'LIFE_SERVICE': '생활서비스업',
+  'ENTERTAINMENT_SPORTS': '오락/스포츠업',
+  'LODGING': '숙박업',
+};
+
 const koreanToDayOfWeek: Record<string, BusinessHour['dayOfWeek']> = {
   '월': 'MONDAY',
   '화': 'TUESDAY',
@@ -875,18 +884,7 @@ export default function StoreManage() {
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                                  <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="RESTAURANT">음식업</SelectItem>
-                                      <SelectItem value="RETAIL">소매업</SelectItem>
-                                      <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
-                                      <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
-                                      <SelectItem value="LODGING">숙박업</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <Input value={businessTypeToKorean[selectedStore.businessType]} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
@@ -922,7 +920,7 @@ export default function StoreManage() {
                                   </div>
                                   <div className="border rounded-lg p-3 space-y-2 bg-white">
                                     {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
-                                      <div key={day} className="flex justify-between text-sm">
+                                      <div key={day} className="flex items-center text-sm gap-[30px]">
                                         <span className="font-semibold">{day}</span>
                                         {hours.isClosed ? (
                                           <span className="text-gray-500">휴무일</span>
@@ -1242,101 +1240,97 @@ export default function StoreManage() {
                             </div>
 
                             <TabsContent value="basic" className="mt-4 md:mt-6">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">상호명</label>
-                                  <Input value={editingStoreName} onChange={(e) => setEditingStoreName(e.target.value)} className="rounded-lg" />
-                                </div>
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
-                                  <Input value={formatBusinessNumber(selectedStore.businessNumber)} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                </div>
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
-                                  <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                </div>
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">업종</label>
-                                  <Select value={editingStoreType} onValueChange={(v) => setEditingStoreType(v as BusinessType)}>
-                                    <SelectTrigger className="w-full">
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="RESTAURANT">음식업</SelectItem>
-                                      <SelectItem value="RETAIL">소매업</SelectItem>
-                                      <SelectItem value="LIFE_SERVICE">생활서비스업</SelectItem>
-                                      <SelectItem value="ENTERTAINMENT_SPORTS">오락/스포츠업</SelectItem>
-                                      <SelectItem value="LODGING">숙박업</SelectItem>
-                                    </SelectContent>
-                                  </Select>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
-                                </div>
-                                <div>
-                                  <label className="text-sm text-[#717182] mb-2 block">주소</label>
-                                  <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
-                                </div>
-                                <div className="md:col-span-2">
-                                  <div className="flex items-center justify-between mb-2">
-                                    <label className="text-sm text-[#717182]">영업시간</label>
-                                    <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
-                                      <DialogTrigger asChild>
-                                        <Button variant="outline" size="sm">수정</Button>
-                                      </DialogTrigger>
-                                      <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
-                                        <DialogHeader>
-                                          <DialogTitle>영업시간 상세 설정</DialogTitle>
-                                          <DialogDescription>
-                                            요일별 영업시간과 휴무일을 설정하세요.
-                                          </DialogDescription>
-                                        </DialogHeader>
-                                        <BusinessHoursForm
-                                          initialState={convertBusinessHours(selectedStore.businessHours)}
-                                          onStateChange={setEditingBusinessHours}
-                                        />
-                                        <DialogFooter>
-                                          <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
-                                        </DialogFooter>
-                                      </DialogContent>
-                                    </Dialog>
+                              <div className="flex flex-col md:flex-row gap-4 md:gap-6">
+                                {/* 왼쪽: 기본 정보 */}
+                                <div className="flex-1 space-y-4">
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                                    <Input value={editingStoreName} onChange={(e) => setEditingStoreName(e.target.value)} className="rounded-lg" />
                                   </div>
-                                  <div className="border rounded-lg p-3 md:p-4 space-y-2 bg-white">
-                                    {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
-                                      <div key={day} className="flex justify-between items-center text-sm">
-                                        <span className="font-semibold">{day}</span>
-                                        {hours.isClosed ? (
-                                          <span className="text-gray-500">휴무일</span>
-                                        ) : (
-                                          <div>
-                                            {hours.timeSlots.map((slot, index) => (
-                                              <span key={index}>{slot.start} - {slot.end}</span>
-                                            ))}
-                                          </div>
-                                        )}
-                                      </div>
-                                    ))}
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">대표자명</label>
+                                    <Input value={selectedStore.ownerName} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                                    <Input value={businessTypeToKorean[selectedStore.businessType]} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">주소</label>
+                                    <Input value={selectedStore.address} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
                                   </div>
                                 </div>
 
-                                <div className="flex justify-end md:col-span-2">
-                                  <Button onClick={handleUpdateStore} className="w-full md:w-auto">수정 완료</Button>
-                                </div>
-
-                                {/* Danger Zone */}
-                                <Card className="p-4 md:p-6 border-[#FF4D4D] border md:col-span-2">
-                                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-                                    <div>
-                                      <h3 className="text-[#FF4D4D] mb-1 text-sm md:text-base">가맹점 삭제</h3>
-                                      <p className="text-xs md:text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                                {/* 오른쪽: 사업자등록번호 & 영업시간 */}
+                                <div className="flex-1 space-y-4">
+                                  <div>
+                                    <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                                    <Input value={formatBusinessNumber(selectedStore.businessNumber)} className="rounded-lg bg-[#F5F5F5] border-[rgba(0,0,0,0.1)]" readOnly />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center justify-between mb-2">
+                                      <label className="text-sm text-[#717182]">영업시간</label>
+                                      <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+                                        <DialogTrigger asChild>
+                                          <Button variant="outline" size="sm">수정</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[85vh] overflow-y-auto">
+                                          <DialogHeader>
+                                            <DialogTitle>영업시간 상세 설정</DialogTitle>
+                                            <DialogDescription>
+                                              요일별 영업시간과 휴무일을 설정하세요.
+                                            </DialogDescription>
+                                          </DialogHeader>
+                                          <BusinessHoursForm
+                                            initialState={convertBusinessHours(selectedStore.businessHours)}
+                                            onStateChange={setEditingBusinessHours}
+                                          />
+                                          <DialogFooter>
+                                            <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
+                                          </DialogFooter>
+                                        </DialogContent>
+                                      </Dialog>
                                     </div>
-                                    <Button variant="destructive" className="rounded-lg w-full md:w-auto" onClick={() => handleDeleteStore(selectedStore.storeId)}>
-                                      가맹점 삭제
-                                    </Button>
+                                    <div className="border rounded-lg p-3 md:p-4 space-y-2 bg-white">
+                                      {editingBusinessHours && Object.entries(editingBusinessHours).map(([day, hours]) => (
+                                        <div key={day} className="flex items-center text-sm gap-[30px]">
+                                          <span className="font-semibold">{day}</span>
+                                          {hours.isClosed ? (
+                                            <span className="text-gray-500">휴무일</span>
+                                          ) : (
+                                            <div>
+                                              {hours.timeSlots.map((slot, index) => (
+                                                <span key={index}>{slot.start} - {slot.end}</span>
+                                              ))}
+                                            </div>
+                                          )}
+                                        </div>
+                                      ))}
+                                    </div>
                                   </div>
-                                </Card>
+                                </div>
                               </div>
+
+                              <div className="flex justify-end mt-4 md:mt-6">
+                                <Button onClick={handleUpdateStore} className="w-full md:w-auto">수정 완료</Button>
+                              </div>
+
+                              {/* Danger Zone */}
+                              <Card className="p-4 md:p-6 border-[#FF4D4D] border mt-4 md:mt-6">
+                                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                                  <div>
+                                    <h3 className="text-[#FF4D4D] mb-1 text-sm md:text-base">가맹점 삭제</h3>
+                                    <p className="text-xs md:text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
+                                  </div>
+                                  <Button variant="destructive" className="rounded-lg w-full md:w-auto" onClick={() => handleDeleteStore(selectedStore.storeId)}>
+                                    가맹점 삭제
+                                  </Button>
+                                </div>
+                              </Card>
                             </TabsContent>
 
                             <TabsContent value="alerts" className="mt-6">

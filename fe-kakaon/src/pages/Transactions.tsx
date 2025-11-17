@@ -522,7 +522,7 @@ export default function Transactions() {
               <div className="flex items-center gap-2 flex-wrap">
                 <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
                   <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-                  <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
+                  <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
                   <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
                   <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
                 </ToggleGroup>
@@ -622,7 +622,7 @@ export default function Transactions() {
                   </label>
                   {paymentMethodOptions.map((method) => (
                     <label key={method} htmlFor={`${method}-desktop`} className="flex items-center gap-2 rounded-lg bg-white px-4 h-8 text-sm text-[#50505f] hover:shadow-sm cursor-pointer">
-                      <Checkbox id={`${method}-desktop`} checked={selectedMethods.includes('all') || selectedMethods.includes(method)} onCheckedChange={(checked) => { let newMethods = selectedMethods.filter((m) => m !== 'all'); if (checked) { newMethods.push(method); } else { newMethods = newMethods.filter((m) => m !== method); } if (newMethods.length === paymentMethodOptions.length) { setSelectedMethods(['all']); } else { setSelectedMethods(newMethods); } }} />
+                      <Checkbox id={`${method}-desktop`} checked={selectedMethods.includes('all') || selectedMethods.includes(method)} onCheckedChange={(checked) => { if (selectedMethods.includes('all')) { if (!checked) { const newMethods = paymentMethodOptions.filter(m => m !== method); setSelectedMethods(newMethods.length === 0 ? ['all'] : newMethods); } } else { let newMethods = selectedMethods.filter((m) => m !== 'all'); if (checked) { newMethods.push(method); } else { newMethods = newMethods.filter((m) => m !== method); } if (newMethods.length === 0) { setSelectedMethods(['all']); } else if (newMethods.length === paymentMethodOptions.length) { setSelectedMethods(['all']); } else { setSelectedMethods(newMethods); } } }} />
                       <span>{method}</span>
                     </label>
                   ))}
@@ -669,7 +669,7 @@ export default function Transactions() {
               <div className="text-sm font-semibold text-[#333] mb-2">조회기간</div>
               <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} w-full`}>
                 <ToggleGroupItem value="today" className={`${segmentItem} flex-1`}>오늘</ToggleGroupItem>
-                <ToggleGroupItem value="this-week" className={`${segmentItem} flex-1`}>이번주</ToggleGroupItem>
+                <ToggleGroupItem value="this-week" className={`${segmentItem} flex-1`}>최근 7일</ToggleGroupItem>
                 <ToggleGroupItem value="this-month" className={`${segmentItem} flex-1`}>이번달</ToggleGroupItem>
                 <ToggleGroupItem value="this-year" className={`${segmentItem} flex-1`}>올해</ToggleGroupItem>
               </ToggleGroup>
@@ -765,7 +765,7 @@ export default function Transactions() {
                 </label>
                 {paymentMethodOptions.map((method) => (
                   <label key={method} htmlFor={`${method}-mobile`} className="flex items-center gap-2 rounded-lg bg-[#F5F5F7] px-4 h-10 text-sm text-[#50505f] cursor-pointer">
-                    <Checkbox id={`${method}-mobile`} checked={selectedMethods.includes('all') || selectedMethods.includes(method)} onCheckedChange={(checked) => { let newMethods = selectedMethods.filter((m) => m !== 'all'); if (checked) { newMethods.push(method); } else { newMethods = newMethods.filter((m) => m !== method); } if (newMethods.length === paymentMethodOptions.length) { setSelectedMethods(['all']); } else if (newMethods.length === 0) { setSelectedMethods(['all']); } else { setSelectedMethods(newMethods); } }} />
+                    <Checkbox id={`${method}-mobile`} checked={selectedMethods.includes('all') || selectedMethods.includes(method)} onCheckedChange={(checked) => { if (selectedMethods.includes('all')) { if (!checked) { const newMethods = paymentMethodOptions.filter(m => m !== method); setSelectedMethods(newMethods.length === 0 ? ['all'] : newMethods); } } else { let newMethods = selectedMethods.filter((m) => m !== 'all'); if (checked) { newMethods.push(method); } else { newMethods = newMethods.filter((m) => m !== method); } if (newMethods.length === 0) { setSelectedMethods(['all']); } else if (newMethods.length === paymentMethodOptions.length) { setSelectedMethods(['all']); } else { setSelectedMethods(newMethods); } } }} />
                     <span>{method}</span>
                   </label>
                 ))}
