@@ -2,24 +2,8 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, ArrowLeft, Trash2, Edit, Minus, Plus, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Settings, ArrowLeft, Trash2, Edit, Minus, Plus, ChevronUp, ChevronDown } from "lucide-react";
 import logoImg from '@/assets/logo.png';
-import {
-  DndContext,
-  closestCenter,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  rectSortingStrategy,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
 import {
   Dialog,
   DialogContent,
@@ -39,79 +23,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import AdminPinModal from '@/components/AdminPinModal';
 import CardSelectionModal from '@/components/CardSelectionModal';
-
-function SortableMenuItem({ product, isAdminMode, onAddToCart, onDelete, onEdit }: any) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: product.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  return (
-    <div ref={setNodeRef} style={style}>
-      <Card
-        onClick={() => !isAdminMode && onAddToCart(product)}
-        className="cursor-pointer relative"
-      >
-        {isAdminMode && (
-          <>
-            <div
-              className="absolute top-2 left-2 z-20 cursor-grab active:cursor-grabbing bg-white rounded-full p-2 hover:bg-gray-100"
-              {...attributes}
-              {...listeners}
-            >
-              <GripVertical className="h-4 w-4" />
-            </div>
-            <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-              <Button
-                variant="destructive"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDelete(product.id);
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="secondary"
-                size="icon"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEdit(product);
-                }}
-              >
-                <Edit className="h-4 w-4" />
-              </Button>
-            </div>
-          </>
-        )}
-        <CardContent className="p-4 text-center">
-          {product.imageUrl ? (
-            <img
-              src={product.imageUrl}
-              alt={product.name}
-              className="w-full h-28 object-cover mb-4 rounded-lg"
-            />
-          ) : (
-            <div className="bg-gray-200 h-28 mb-4 rounded-lg"></div>
-          )}
-          <p className="text-3xl font-semibold">{product.name}</p>
-          <p className="text-2xl">{product.price.toLocaleString()}원</p>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
 
 const FrontKiosk = () => {
   const navigate = useNavigate();
@@ -144,15 +55,6 @@ const FrontKiosk = () => {
   const [countdown, setCountdown] = useState(3);
   const [isCardModalOpen, setIsCardModalOpen] = useState(false);
   const [selectedCardNumber, setSelectedCardNumber] = useState<string | null>(null);
-  const [menuItems, setMenuItems] = useState<any[]>([]);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 5,
-      },
-    })
-  );
 
   useEffect(() => {
     if (!selectedStoreId && stores && stores.length > 0) {
@@ -166,28 +68,6 @@ const FrontKiosk = () => {
       clearCart();
     };
   }, [clearCart]);
-
-  // products가 로드되면 menuItems 업데이트
-  useEffect(() => {
-    if (products) {
-      setMenuItems(products);
-    }
-  }, [products]);
-
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-
-    if (over && active.id !== over.id) {
-      setMenuItems((items) => {
-        const oldIndex = items.findIndex((item) => item.id === active.id);
-        const newIndex = items.findIndex((item) => item.id === over.id);
-
-        console.log('드래그 완료:', { oldIndex, newIndex, from: active.id, to: over.id });
-
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
-  };
 
   useEffect(() => {
     if (isPaymentComplete) {
@@ -475,23 +355,54 @@ const FrontKiosk = () => {
           <main className="flex-1 overflow-y-auto">
             {isLoadingProducts ? (
               <p className="p-6">메뉴를 불러오는 중입니다...</p>
-            ) : menuItems.length > 0 ? (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-                <SortableContext items={menuItems.map(item => item.id)} strategy={rectSortingStrategy}>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
-                    {menuItems.map((product) => (
-                      <SortableMenuItem
-                        key={product.id}
-                        product={product}
-                        isAdminMode={isAdminMode}
-                        onAddToCart={addToCart}
-                        onDelete={handleDeleteProduct}
-                        onEdit={setEditingProduct}
-                      />
-                    ))}
-                  </div>
-                </SortableContext>
-              </DndContext>
+            ) : products && products.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
+                {products.map((product) => (
+                  <Card
+                    key={product.id}
+                    onClick={() => !isAdminMode && addToCart(product)}
+                    className="cursor-pointer relative"
+                  >
+                    {isAdminMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProduct(product.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProduct(product);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                    <CardContent className="p-4 text-center">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-28 object-cover mb-4 rounded-lg"
+                        />
+                      ) : (
+                        <div className="bg-gray-200 h-28 mb-4 rounded-lg"></div>
+                      )}
+                      <p className="text-3xl font-semibold">{product.name}</p>
+                      <p className="text-2xl">{product.price.toLocaleString()}원</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             ) : (
               <p className="p-6">등록된 메뉴가 없습니다.</p>
             )}
