@@ -220,6 +220,7 @@ export default function StoreManage() {
   }, [selectedStore]);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
+  const [isPostcodeDialogOpen, setIsPostcodeDialogOpen] = useState(false);
   
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
@@ -347,33 +348,56 @@ export default function StoreManage() {
       toast.error("주소 검색 서비스 로딩에 실패했습니다. 페이지를 새로고침 해주세요.");
       return;
     }
-
-    const geocoder = new window.kakao.maps.services.Geocoder();
-
-    new window.daum.Postcode({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      oncomplete: function(data: any) {
-        const roadAddr = data.roadAddress; // 도로명 주소 변수
-        
-        setNewStorePostalCode(data.zonecode);
-        setNewStoreBaseAddress(roadAddr);
-        setNewStoreCity(data.sido);
-        setNewStoreState(data.sigungu);
-
-        // 주소로 좌표를 검색했음
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        geocoder.addressSearch(data.address, function(result: any, status: any) {
-             if (status === window.kakao.maps.services.Status.OK) {
-                setNewStoreLatitude(parseFloat(result[0].y));
-                setNewStoreLongitude(parseFloat(result[0].x));
-                toast.success("주소가 좌표로 변환되었습니다.");
-             } else {
-                toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
-             }
-        });
-      }
-    }).open();
+    // Dialog를 열어서 임베드 방식으로 우편번호 검색
+    setIsPostcodeDialogOpen(true);
   };
+
+  // Dialog가 열릴 때 Daum Postcode 임베드
+  useEffect(() => {
+    if (isPostcodeDialogOpen && window.daum) {
+      // DOM이 완전히 렌더링될 때까지 약간의 지연
+      const timer = setTimeout(() => {
+        const postcodeElement = document.getElementById('daum-postcode-embed');
+        if (!postcodeElement) {
+          console.error('Postcode element not found');
+          return;
+        }
+
+        const geocoder = new window.kakao.maps.services.Geocoder();
+
+        new window.daum.Postcode({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          oncomplete: function(data: any) {
+            const roadAddr = data.roadAddress; // 도로명 주소 변수
+
+            setNewStorePostalCode(data.zonecode);
+            setNewStoreBaseAddress(roadAddr);
+            setNewStoreCity(data.sido);
+            setNewStoreState(data.sigungu);
+
+            // 주소로 좌표를 검색했음
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            geocoder.addressSearch(data.address, function(result: any, status: any) {
+                 if (status === window.kakao.maps.services.Status.OK) {
+                    setNewStoreLatitude(parseFloat(result[0].y));
+                    setNewStoreLongitude(parseFloat(result[0].x));
+                    toast.success("주소가 좌표로 변환되었습니다.");
+                 } else {
+                    toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
+                 }
+            });
+
+            // 주소 선택 후 Dialog 닫기
+            setIsPostcodeDialogOpen(false);
+          },
+          width: '100%',
+          height: '100%',
+        }).embed(postcodeElement);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isPostcodeDialogOpen]);
 
 
   const handleStoreClick = (store: Store | StoreDetailResponse) => {
@@ -1499,6 +1523,22 @@ export default function StoreManage() {
               삭제
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 우편번호 검색 Dialog */}
+      <Dialog open={isPostcodeDialogOpen} onOpenChange={setIsPostcodeDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle>우편번호 찾기</DialogTitle>
+            <DialogDescription>
+              주소를 검색하여 선택하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            id="daum-postcode-embed"
+            className="w-full h-[400px] sm:h-[500px] overflow-auto"
+          />
         </DialogContent>
       </Dialog>
     </div>
