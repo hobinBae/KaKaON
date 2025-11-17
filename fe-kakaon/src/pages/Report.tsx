@@ -196,18 +196,24 @@ export default function Report() {
         const formatMenus = (menus: MenuItem[]) => menus.map(m => `${m.name} (${m.proportion})`).join(', ');
 
         const prompt = `
-          다음은 '${storeName}' 매장의 ${reportType === 'weekly' ? '주간' : '월간'} 매출 데이터입니다.
-          이 데이터를 분석하여 소상공인 매장 주인이 이해하기 쉽게 핵심적인 인사이트 3가지를 요약해주세요.
-          각 인사이트는 한 문장으로, 친근한 어투로 작성해주세요.
+          당신은 소상공인 카페 사장님을 위한 전문 데이터 분석가입니다. 아래에 제공되는 ${reportType === 'weekly' ? '주간' : '월간'} 매출 데이터를 보고, 사장님이 바로 실행에 옮길 수 있는 구체적인 조언을 담은 인사이트를 생성해주세요.
 
-          - 분석 기간: ${data.period}
-          - 주요 지표: ${formatKpis(data.summaryKpis)}
-          - ${reportType === 'weekly' ? '일별' : '주차별'} 요약: ${formatSummary(data.dailySummary)}
-          - 시간대별 패턴: ${formatPatterns(data.hourlyPatterns)}
-          - 인기 메뉴: ${formatMenus(data.topMenus)}
-          - 부진 메뉴: ${formatMenus(data.lowMenus)}
+          **분석 대상 매장:** ${storeName}
+          **분석 기간:** ${data.period}
+
+          **[매출 데이터]**
+          1.  **핵심 지표:** ${formatKpis(data.summaryKpis)}
+          2.  **${reportType === 'weekly' ? '일별' : '주차별'} 매출 추이:** ${formatSummary(data.dailySummary)}
+          3.  **시간대별 매출 분석:** ${formatPatterns(data.hourlyPatterns)}
+          4.  **메뉴 분석:**
+              *   인기 메뉴: ${formatMenus(data.topMenus)}
+              *   부진 메뉴: ${formatMenus(data.lowMenus)}
+          5.  **주문 유형 분석:** ${data.orderTypes.map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`).join(', ')}
+
+          **[분석 요청]**
+          위 데이터를 종합적으로 분석하여, 매장 운영 개선에 도움이 될 만한 핵심적인 인사이트와 구체적인 실행 아이디어를 **개수 제한 없이 생각나는 대로** 제안해주세요. 답변은 사장님이 이해하기 쉽도록 친근하고 상세한 설명을 담아주세요. 각 제안은 번호를 붙여서 구분해주세요.
         `;
-
+        
         // 백엔드 API를 호출하도록 수정
         const response = await apiClient.post("/ai/insight", { prompt });
         const insightText = response.data.data;
@@ -267,7 +273,6 @@ export default function Report() {
 
         {/* 2. 상단 요약 KPI 영역 */}
         <section className="my-3">
-          <h3 className="text-xs font-bold mb-1">요약 지표</h3>
           <div className="grid grid-cols-3 gap-x-2 gap-y-1 border p-2 rounded">
             {data.summaryKpis.map(kpi => (
               <div key={kpi.label}>
@@ -283,26 +288,26 @@ export default function Report() {
         <main className="grid grid-cols-2 gap-x-4">
           {/* 왼쪽 컬럼 */}
           <div className="space-y-3">
-            <ReportTable title={reportType === 'weekly' ? "일별 매출 요약" : "주차별 매출 요약"} headers={["일자/주차", "매출액", "주문 수", "평균 객단가"]} data={data.dailySummary.map(d => [d.date, `${d.sales.toLocaleString()}원`, `${d.orders}건`, `${d.aov.toLocaleString()}원`])} />
-            {/* 월간 리포트일 때만 '요일별 매출 패턴'을 보여줍니다. */}
+            <ReportTable title={reportType === 'weekly' ? "일별 매출" : "주차별 매출"} headers={["일자/주차", "매출액", "주문 수", "평균 객단가"]} data={data.dailySummary.map(d => [d.date, `${d.sales.toLocaleString()}원`, `${d.orders}건`, `${d.aov.toLocaleString()}원`])} />
+            {/* 월간 리포트일 때만 '요일별 매출'을 보여줍니다. */}
             {reportType === 'monthly' && (
-              <ReportTable title="요일별 매출 패턴" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.aov?.toLocaleString()}원`])} />
+              <ReportTable title="요일별 매출" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.aov?.toLocaleString()}원`])} />
             )}
-            <ReportTable title="시간대별 매출 패턴" headers={["시간대", "매출액", "주문 수"]} data={data.hourlyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.orders}건`])} />
-            {/* 주간 리포트일 때만 '주문 유형 상세 분석'을 왼쪽 컬럼 하단에 표시합니다. */}
+            <ReportTable title="시간대별 매출" headers={["시간대", "매출액", "주문 수"]} data={data.hourlyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.orders}건`])} />
+            {/* 주간 리포트일 때만 '주문 유형별 매출'을 왼쪽 컬럼 하단에 표시합니다. */}
             {reportType === 'weekly' && (
-              <ReportTable title="주문 유형 상세 분석" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
+              <ReportTable title="주문 유형별 매출" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
             )}
           </div>
           {/* 오른쪽 컬럼 */}
           <div className="space-y-3">
-            {/* 월간 리포트일 때만 '주문 유형 상세 분석'을 오른쪽 컬럼 최상단에 표시합니다. */}
+            {/* 월간 리포트일 때만 '주문 유형별 매출'을 오른쪽 컬럼 최상단에 표시합니다. */}
             {reportType === 'monthly' && (
-              <ReportTable title="주문 유형 상세 분석" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
+              <ReportTable title="주문 유형별 매출" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
             )}
             <ReportTable title="결제수단별 매출" headers={["결제수단", "매출액", "비중"]} data={data.paymentMethods.map(p => [p.name, `${p.sales.toLocaleString()}원`, p.proportion])} />
             <ReportTable title="메뉴별 매출 상위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.topMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
-            <ReportTable title="매출이 낮은 메뉴" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
+            <ReportTable title="메뉴별 매출 하위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
           </div>
         </main>
 
@@ -313,9 +318,9 @@ export default function Report() {
             {isLoadingAi ? (
               <p className="text-gray-500 text-sm">AI가 리포트를 분석하고 있습니다. 잠시만 기다려주세요...</p>
             ) : (
-              <ol className="list-decimal list-inside text-gray-700 space-y-1">
-                {aiInsight.map((insight, i) => <li key={i}>{insight}</li>)}
-              </ol>
+              <div className="text-gray-700 space-y-2">
+                {aiInsight.map((insight, i) => <p key={i}>{insight}</p>)}
+              </div>
             )}
           </div>
           <p className="text-center text-[9px] text-gray-500 mt-4">
