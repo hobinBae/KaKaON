@@ -129,168 +129,6 @@ public class PaymentServiceImpl implements PaymentService{
         return paymentMapper.fromEntity(payment);
     }
 
-//    @Override
-//    @Transactional
-//    public void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId) {
-//        Member member = memberRepository.findById(memberId)
-//                .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
-//
-//        Store store = storeRepository.findById(storeId)
-//                .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
-//
-//        validateStoreOwner(store, member);
-//
-//        // 날짜별 Stats 캐시
-//        Map<LocalDate, PaymentStats> statsCache = new HashMap<>();
-//        Map<String, PaymentStatsHourly> hourlyCache = new HashMap<>(); // 날짜_시간 형식
-//
-//
-//        try {
-//            String content = new String(file.getBytes(), StandardCharsets.UTF_8);
-//
-//            // BOM 제거 (있는 경우)
-//            if (content.startsWith("\uFEFF")) {
-//                content = content.substring(1);
-//            }
-//
-//            String[] lines = content.split("\n");
-//
-//            if (lines.length < 2) {
-//                throw new ApiException(ErrorCode.INVALID_CSV_FORMAT);
-//            }
-//
-//            // 첫 번째 라인은 헤더이므로 건너뛰기
-//            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-//            int successCount = 0;
-//            int failCount = 0;
-//
-//            for (int i = 1; i < lines.length; i++) {
-//                String line = lines[i].trim();
-//                if (line.isEmpty()) {
-//                    continue;
-//                }
-//
-//                try {
-//                    String[] fields = parseCsvLine(line);
-//
-//                    if (fields.length < 8) {
-//                        log.warn("라인 {} 스킵: 필드 수 부족 ({}개)", i + 1, fields.length);
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // CSV 필드 파싱
-//                    // 매장명(0), 승인번호(1), 금액(2), 결제수단(3), 상태(4), 배달여부(5), 승인일시(6), 취소일시(7)
-//                    String storeName = fields[0].trim();
-//                    String authorizationNo = fields[1].trim();
-//                    Integer amount = Integer.parseInt(fields[2].trim());
-//                    PaymentMethod paymentMethod = PaymentMethod.valueOf(fields[3].trim());
-//                    PaymentStatus status = PaymentStatus.valueOf(fields[4].trim());
-//                    Boolean isDelivery = "배달".equals(fields[5].trim());
-//                    LocalDateTime approvedAt = LocalDateTime.parse(fields[6].trim(), formatter);
-//                    LocalDateTime canceledAt = null;
-//                    if (fields.length > 7 && !fields[7].trim().isEmpty()) {
-//                        canceledAt = LocalDateTime.parse(fields[7].trim(), formatter);
-//                    }
-//
-//                    // 매장명 검증
-//                    if (!storeName.equals(store.getName())) {
-//                        log.warn("라인 {} 스킵: 매장명 불일치 (CSV: {}, 실제: {})", i + 1, storeName, store.getName());
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // 승인번호 중복 체크
-//                    if (paymentRepository.existsByAuthorizationNo(authorizationNo)) {
-//                        log.warn("라인 {} 스킵: 승인번호 {} 중복", i + 1, authorizationNo);
-//                        failCount++;
-//                        continue;
-//                    }
-//
-//                    // Payment 생성 (Order는 null)
-//                    Payment payment = Payment.builder()
-//                            .store(store)
-//                            .order(null)
-//                            .authorizationNo(authorizationNo)
-//                            .amount(amount)
-//                            .paymentMethod(paymentMethod)
-//                            .status(status)
-//                            .approvedAt(approvedAt)
-//                            .canceledAt(canceledAt)
-//                            .delivery(isDelivery)
-//                            .paymentUuid("CSV_UPLOAD_" + authorizationNo)
-//                            .build();
-//
-//                    paymentRepository.save(payment);
-//
-//                    // Stats 캐시에서 가져오기 (없으면 DB 조회 또는 생성)
-//                    LocalDate paymentDate = approvedAt.toLocalDate();
-//                    PaymentStats stats = statsCache.computeIfAbsent(paymentDate, d ->
-//                            paymentStatsRepository.findByStoreIdAndStatsDate(storeId, d)
-//                                    .orElseGet(() -> {
-//                                        // 없으면 새로 생성
-//                                        return PaymentStats.builder()
-//                                                .store(store)
-//                                                .statsDate(d)
-//                                                .totalSales(0)
-//                                                .totalCancelSales(0)
-//                                                .salesCnt(0L)
-//                                                .cancelCnt(0L)
-//                                                .build();
-//                                    })
-//                            );
-//
-//                    // Hourly 캐시
-//                    int hour = approvedAt.getHour();
-//                    String hourlyKey = paymentDate + "_" + hour;
-//                    PaymentStatsHourly hourly = hourlyCache.computeIfAbsent(hourlyKey, k -> {
-//                        // stats.getId() null일 수 있으므로 먼저 저장
-//                        if (stats.getId() == null) {
-//                            paymentStatsRepository.save(stats);
-//                        }
-//                        PaymentStatsHourly newHourly = paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(stats.getId(), hour)
-//                                .orElseGet(() ->{
-//                                    return PaymentStatsHourly.builder()
-//                                            .paymentStats(stats)
-//                                            .hour(hour)
-//                                            .hourlyTotalSales(0)
-//                                            .hourlyPaymentCount(0)
-//                                            .hourlyCancelCount(0)
-//                                            .hourlyCancelRate(0.0)
-//                                            .build();
-//                                        });
-//                        return paymentStatsHourlyRepository.save(newHourly);
-//                    });
-//
-//                    // 메모리에서 업데이트
-//                    stats.applyPayment(amount, paymentMethod, isDelivery);
-//                    hourly.applyPaymentHourly(amount);
-//
-//                    if (status == PaymentStatus.CANCELED) {
-//                        stats.applyCancel(amount, paymentMethod, isDelivery);
-//                        hourly.applyCancelHourly(amount);
-//                    }
-//
-//                    successCount++;
-//
-//                } catch (Exception e) {
-//                    log.error("라인 {} 처리 중 오류: {}", i + 1, e.getMessage(), e);
-//                    failCount++;
-//                }
-//            }
-//
-//            log.info("CSV 업로드 완료: 성공 {}건, 실패 {}건", successCount, failCount);
-//
-//            if (successCount == 0 && failCount > 0) {
-//                throw new ApiException(ErrorCode.CSV_UPLOAD_FAILED);
-//            }
-//
-//        } catch (IOException e) {
-//            log.error("CSV 파일 읽기 오류", e);
-//            throw new ApiException(ErrorCode.FILE_READ_ERROR);
-//        }
-//    }
-
     @Override
     @Transactional
     public void uploadPaymentsFromCsv(MultipartFile file, Long storeId, Long memberId) {
@@ -410,6 +248,11 @@ public class PaymentServiceImpl implements PaymentService{
                 }
             }
 
+            if(!paymentBatch.isEmpty()) {
+                processBatch(paymentBatch); // 남은 배치 처리
+                log.info("마지막 배치 저장 완료: {}건", paymentBatch.size());
+            }
+            saveStatsInBatch(statsCache, hourlyCache);
             log.info("CSV 업로드 완료: 성공 {}건, 실패 {}건", successCount, failCount);
 
             if (successCount == 0 && failCount > 0) {
@@ -466,11 +309,9 @@ public class PaymentServiceImpl implements PaymentService{
         String hourlyKey = paymentDate + "_" + hour;
         PaymentStatsHourly hourly = hourlyCache.computeIfAbsent(hourlyKey, k -> {
             // stats.getId() null일 수 있으므로 먼저 저장
-            if (stats.getId() == null) {
-                paymentStatsRepository.save(stats);
-            }
-            PaymentStatsHourly newHourly = paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(stats.getId(), hour)
-                    .orElseGet(() -> PaymentStatsHourly.builder()
+            if (stats.getId() != null) {
+                return paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(stats.getId(), hour)
+                        .orElseGet(()-> PaymentStatsHourly.builder()
                                 .paymentStats(stats)
                                 .hour(hour)
                                 .hourlyTotalSales(0)
@@ -478,7 +319,19 @@ public class PaymentServiceImpl implements PaymentService{
                                 .hourlyCancelCount(0)
                                 .hourlyCancelRate(0.0)
                                 .build());
-            return paymentStatsHourlyRepository.save(newHourly);
+            }
+            else {
+                return paymentStatsHourlyRepository.findByPaymentStatsIdAndHour(stats.getId(), hour)
+                        .orElseGet(() -> PaymentStatsHourly.builder()
+                                .paymentStats(stats)
+                                .hour(hour)
+                                .hourlyTotalSales(0)
+                                .hourlyPaymentCount(0)
+                                .hourlyCancelCount(0)
+                                .hourlyCancelRate(0.0)
+                                .build());
+            }
+
         });
 
         // 메모리에서 집계 (DB 저장 X)
