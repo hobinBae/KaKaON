@@ -25,10 +25,10 @@ public class SamePaymentMethodDetector implements FraudDetector {
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
     @Value("${fraud.same-payment.window-minutes}")
-    private int windowMinutes;
+    private int windowMinutes;            // 동일 결제수단 원거리 사용 탐지 윈도우 (분)
 
     @Value("${fraud.same-payment.threshold-km}")
-    private double thresholdKm;
+    private double thresholdKm;           // 동일 결제수단 탐지 km threshold (km)
 
     private static final String REDIS_KEY_PREFIX = "fraud:same:";
 

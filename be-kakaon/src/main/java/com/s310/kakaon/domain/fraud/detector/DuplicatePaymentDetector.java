@@ -24,10 +24,10 @@ public class DuplicatePaymentDetector implements FraudDetector {
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
     @Value("${fraud.duplicate.window-minutes}")
-    private int windowMinutes;
+    private int windowMinutes;          // 중복 결제 탐지 윈도우 (분)
 
     @Value("${fraud.duplicate.threshold-count}")
-    private int thresholdCount;
+    private int thresholdCount;         // 중복 결제 탐지 횟수 threshold (횟수)
 
     private static final String REDIS_KEY_PREFIX = "fraud:duplicate:";
 

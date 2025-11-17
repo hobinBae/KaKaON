@@ -28,10 +28,10 @@ public class TransactionFrequencySpikeDetector implements FraudDetector {
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
     @Value("${fraud.frequency.window-minutes}")
-    private int windowMinutes;
+    private int windowMinutes;               // 거래 빈도 급증 탐지 윈도우 (분)
 
     @Value("${fraud.frequency.threshold-count}")
-    private double thresholdCount;
+    private double thresholdCount;           // 거래 빈도 급증 탐지 횟수 threshold (횟수)
 
     private static final String REDIS_KEY_PREFIX = "fraud:freq:";
 
