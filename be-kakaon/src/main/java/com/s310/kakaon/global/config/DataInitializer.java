@@ -2,8 +2,12 @@ package com.s310.kakaon.global.config;
 
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
+import com.s310.kakaon.domain.menu.entity.Menu;
+import com.s310.kakaon.domain.menu.repository.MenuRepository;
+import com.s310.kakaon.domain.order.entity.OrderItem;
 import com.s310.kakaon.domain.order.entity.Orders;
 import com.s310.kakaon.domain.order.entity.OrderStatus;
+import com.s310.kakaon.domain.order.repository.OrderItemRepository;
 import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentMethod;
 import com.s310.kakaon.domain.payment.dto.PaymentStatus;
@@ -17,6 +21,7 @@ import com.s310.kakaon.domain.store.dto.BusinessType;
 import com.s310.kakaon.domain.store.entity.Store;
 import com.s310.kakaon.domain.store.repository.StoreRepository;
 import com.s310.kakaon.global.jwt.JwtTokenProvider;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -24,6 +29,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.time.LocalDate;
@@ -39,11 +45,14 @@ public class DataInitializer implements CommandLineRunner {
 
     private final MemberRepository memberRepository;
     private final StoreRepository storeRepository;
+    private final MenuRepository menuRepository;
     private final OrderRepository orderRepository;
+    private final OrderItemRepository orderItemRepository;
     private final PaymentRepository paymentRepository;
     private final PaymentStatsRepository paymentStatsRepository;
     private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final JwtTokenProvider jwtTokenProvider;
+    private final EntityManager entityManager;
 
     private final Random random = new Random();
     private final SecureRandom secureRandom = new SecureRandom();
@@ -67,8 +76,12 @@ public class DataInitializer implements CommandLineRunner {
         Store store = createTestStore(member);
         log.info("테스트 매장 생성 완료: {}", store.getName());
 
-        // 3. 주문 및 결제 데이터 300개 생성 (최근 60일)
-        createPaymentsData(store, 300);
+        // 3. 테스트 메뉴 생성
+        List<Menu> menus = createTestMenus(store);
+        log.info("테스트 메뉴 생성 완료: {}개", menus.size());
+
+        // 4. 주문 및 결제 데이터 300개 생성 (최근 60일)
+        createPaymentsData(store, menus, 300);
 
         // 4. 테스트용 JWT 토큰 생성 및 출력
         String accessToken = jwtTokenProvider.createAccessToken(member.getProviderId(), member.getRole().name());
@@ -118,7 +131,35 @@ public class DataInitializer implements CommandLineRunner {
                 .build());
     }
 
-    private void createPaymentsData(Store store, int count) {
+    private List<Menu> createTestMenus(Store store) {
+        List<Menu> menus = new ArrayList<>();
+
+        String[] menuNames = {
+            "김치찌개", "된장찌개", "불고기", "제육볶음", "비빔밥",
+            "냉면", "갈비탕", "삼겹살", "치킨", "피자",
+            "햄버거", "파스타", "돈까스", "라면", "김밥"
+        };
+
+        int[] prices = {
+            8000, 7000, 12000, 10000, 9000,
+            9000, 11000, 15000, 18000, 20000,
+            8000, 13000, 9000, 5000, 4000
+        };
+
+        for (int i = 0; i < menuNames.length; i++) {
+            Menu menu = Menu.builder()
+                    .store(store)
+                    .name(menuNames[i])
+                    .price(prices[i])
+                    .imgUrl(null)
+                    .build();
+            menus.add(menuRepository.save(menu));
+        }
+
+        return menus;
+    }
+
+    private void createPaymentsData(Store store, List<Menu> menus, int count) {
         PaymentMethod[] methods = PaymentMethod.values();
         PaymentStatus[] statuses = {PaymentStatus.APPROVED, PaymentStatus.APPROVED, PaymentStatus.APPROVED, PaymentStatus.CANCELED}; // 75% 승인, 25% 취소
         boolean[] deliveryOptions = {true, false};
@@ -127,22 +168,66 @@ public class DataInitializer implements CommandLineRunner {
             // 최근 60일 사이의 랜덤 날짜
             LocalDateTime approvedAt = generateRandomDateRecent60Days();
 
-            // 랜덤 금액 (5,000원 ~ 50,000원)
-            int amount = (random.nextInt(46) + 5) * 1000;
-
             // 랜덤 결제수단, 상태, 배달여부
             PaymentMethod method = methods[random.nextInt(methods.length)];
             PaymentStatus status = statuses[random.nextInt(statuses.length)];
             boolean isDelivery = deliveryOptions[random.nextInt(deliveryOptions.length)];
 
-            // 주문 생성
-            Orders order = orderRepository.save(Orders.builder()
+            // 주문 항목 정보 먼저 준비
+            int itemCount = random.nextInt(4) + 1; // 1~4개
+            int totalAmount = 0;
+            List<Menu> selectedMenus = new ArrayList<>();
+            List<Integer> quantities = new ArrayList<>();
+
+            for (int j = 0; j < itemCount; j++) {
+                Menu randomMenu = menus.get(random.nextInt(menus.size()));
+                int quantity = random.nextInt(3) + 1; // 1~3개
+                totalAmount += randomMenu.getPrice() * quantity;
+
+                selectedMenus.add(randomMenu);
+                quantities.add(quantity);
+            }
+
+            // 주문 생성 및 저장
+            Orders order = Orders.builder()
                     .store(store)
-                    .totalAmount(amount)
-                    .paidAmount(status == PaymentStatus.APPROVED ? amount : 0)
-                    .refundedAmount(status == PaymentStatus.CANCELED ? amount : 0)
-                    .status(status == PaymentStatus.APPROVED ? OrderStatus.CREATED : OrderStatus.CANCELED)
-                    .build());
+                    .totalAmount(totalAmount)
+                    .paidAmount(status == PaymentStatus.APPROVED ? totalAmount : 0)
+                    .refundedAmount(status == PaymentStatus.CANCELED ? totalAmount : 0)
+                    .status(status == PaymentStatus.APPROVED ? OrderStatus.PAID : OrderStatus.CANCELED)
+                    .build();
+
+            Orders savedOrder = orderRepository.save(order);
+
+            // OrderItem 추가 (addOrderItem 메서드 사용)
+            for (int j = 0; j < selectedMenus.size(); j++) {
+                savedOrder.addOrderItem(selectedMenus.get(j), selectedMenus.get(j).getPrice(), quantities.get(j));
+            }
+
+            // OrderItem 저장
+            for (OrderItem item : savedOrder.getOrderItems()) {
+                orderItemRepository.save(item);
+            }
+
+            // 주문 및 주문 항목의 생성 시간을 결제 승인 시간과 동일하게 설정 (네이티브 쿼리)
+            entityManager.createNativeQuery(
+                    "UPDATE orders SET created_date_time = :approvedAt, last_modified_date_time = :approvedAt WHERE order_id = :orderId"
+            )
+            .setParameter("approvedAt", approvedAt)
+            .setParameter("orderId", savedOrder.getOrderId())
+            .executeUpdate();
+
+            entityManager.createNativeQuery(
+                    "UPDATE order_item SET created_date_time = :approvedAt, last_modified_date_time = :approvedAt WHERE order_id = :orderId"
+            )
+            .setParameter("approvedAt", approvedAt)
+            .setParameter("orderId", savedOrder.getOrderId())
+            .executeUpdate();
+
+            // EntityManager flush로 변경사항 즉시 반영
+            entityManager.flush();
+
+            int amount = totalAmount;
 
             // 승인번호 생성 (중복 체크)
             String authorizationNo = generateUniqueAuthorizationNo();
@@ -150,7 +235,7 @@ public class DataInitializer implements CommandLineRunner {
             // 결제 생성
             Payment payment = Payment.builder()
                     .store(store)
-                    .order(order)
+                    .order(savedOrder)
                     .authorizationNo(authorizationNo)
                     .amount(amount)
                     .paymentMethod(method)
