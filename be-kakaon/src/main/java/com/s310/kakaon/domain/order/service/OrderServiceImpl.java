@@ -275,46 +275,7 @@ public class OrderServiceImpl implements OrderService{
 
         // 5) DTO 매핑
         List<OrderListResponseDto.OrderSummary> content = pageData.getContent().stream()
-                .map(o -> {
-                    Payment pay = paymentByOrder.get(o.getOrderId());
-                    OrderType ot = (pay != null && Boolean.TRUE.equals(pay.getDelivery()))
-                            ? OrderType.DELIVERY : OrderType.STORE;
-                    PaymentMethod pm = (pay != null) ? pay.getPaymentMethod() : null;
-
-                    List<OrderItemResponseDto> items = itemsByOrder
-                            .getOrDefault(o.getOrderId(), List.of())
-                            .stream()
-                            .map(oi -> OrderItemResponseDto.builder()
-                                    .orderItemId(oi.getId())
-                                    .menuId(oi.getMenu().getMenuId())
-                                    .menuName(oi.getMenu().getName())
-                                    .price(oi.getMenu().getPrice())
-                                    .imgUrl(oi.getMenu().getImgUrl())
-                                    .quantity(oi.getQuantity())
-                                    .totalPrice(oi.getTotalPrice())
-                                    .createdAt(toIso(oi.getCreatedDateTime(), zone))
-                                    .updatedAt(toIso(oi.getLastModifiedDateTime(), zone))
-                                    .deletedAt(toIso(oi.getDeletedAt(), zone))
-                                    .build())
-                            .toList();
-
-                    return OrderListResponseDto.OrderSummary.builder()
-                            .orderId(o.getOrderId())
-                            .storeId(o.getStore().getId())
-                            .storeName(o.getStore().getName())
-                            .status(o.getStatus().name())
-                            .orderType(ot.name())
-                            .paymentMethod(pm.name())
-                            .totalAmount(o.getTotalAmount())
-                            .paidAmount(o.getPaidAmount())
-                            .refundedAmount(o.getRefundedAmount())
-                            .createdAt(toIso(o.getCreatedDateTime(), zone))
-                            .updatedAt(toIso(o.getLastModifiedDateTime(), zone))
-                            .deletedAt(toIso(o.getDeletedAt(), zone))
-                            .itemsCount(items.size())
-                            .items(items)
-                            .build();
-                })
+                .map(o -> mapOrderToSummary(o, paymentByOrder, itemsByOrder, zone))
                 .toList();
 
         return OrderListResponseDto.builder()
@@ -335,4 +296,61 @@ public class OrderServiceImpl implements OrderService{
         }
         return dt.atZone(zoneId).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
     }
+
+    private OrderListResponseDto.OrderSummary mapOrderToSummary(
+            Orders o,
+            Map<Long, Payment> paymentByOrder,
+            Map<Long, List<OrderItem>> itemsByOrder,
+            ZoneId zone
+    ) {
+        Payment pay = paymentByOrder.get(o.getOrderId());
+
+        OrderType orderType = (pay != null && Boolean.TRUE.equals(pay.getDelivery()))
+                ? OrderType.DELIVERY : OrderType.STORE;
+        PaymentMethod paymentMethod = (pay != null) ? pay.getPaymentMethod() : null;
+
+        List<OrderItemResponseDto> items = mapOrderItems(o.getOrderId(), itemsByOrder, zone);
+
+        return OrderListResponseDto.OrderSummary.builder()
+                .orderId(o.getOrderId())
+                .storeId(o.getStore().getId())
+                .storeName(o.getStore().getName())
+                .status(o.getStatus().name())
+                .orderType(orderType.name())
+                .paymentMethod(paymentMethod != null ? paymentMethod.name() : null)
+                .totalAmount(o.getTotalAmount())
+                .paidAmount(o.getPaidAmount())
+                .refundedAmount(o.getRefundedAmount())
+                .createdAt(toIso(o.getCreatedDateTime(), zone))
+                .updatedAt(toIso(o.getLastModifiedDateTime(), zone))
+                .deletedAt(toIso(o.getDeletedAt(), zone))
+                .itemsCount(items.size())
+                .items(items)
+                .build();
+    }
+
+    // OrderItem 매핑 메서드
+    private List<OrderItemResponseDto> mapOrderItems(
+            Long orderId,
+            Map<Long, List<OrderItem>> itemsByOrder,
+            ZoneId zone
+    ) {
+        return itemsByOrder.getOrDefault(orderId, List.of())
+                .stream()
+                .map(oi -> OrderItemResponseDto.builder()
+                        .orderItemId(oi.getId())
+                        .menuId(oi.getMenu().getMenuId())
+                        .menuName(oi.getMenu().getName())
+                        .price(oi.getMenu().getPrice())
+                        .imgUrl(oi.getMenu().getImgUrl())
+                        .quantity(oi.getQuantity())
+                        .totalPrice(oi.getTotalPrice())
+                        .createdAt(toIso(oi.getCreatedDateTime(), zone))
+                        .updatedAt(toIso(oi.getLastModifiedDateTime(), zone))
+                        .deletedAt(toIso(oi.getDeletedAt(), zone))
+                        .build()
+                )
+                .toList();
+    }
+
 }
