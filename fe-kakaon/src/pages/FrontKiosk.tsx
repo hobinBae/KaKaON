@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, ArrowLeft, Trash2, Edit, Minus, Plus, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
@@ -114,6 +114,7 @@ function SortableMenuItem({ product, isAdminMode, onAddToCart, onDelete, onEdit 
 }
 
 const FrontKiosk = () => {
+  const navigate = useNavigate();
   const {
     selectedStoreId,
     setSelectedStoreId,
@@ -373,7 +374,14 @@ const FrontKiosk = () => {
         onCardSelect={handleCardSelected}
       />
       {!orderType ? (
-        <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
+        <div className="relative flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="absolute top-8 left-8 w-16 h-16"
+          >
+            <ArrowLeft className="size-12" />
+          </Button>
           <img src={logoImg} alt="KaKaON Logo" className="h-24 mb-12" />
           <h1 className="text-6xl font-bold mb-14 text-center text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</h1>
           <div className="flex flex-col gap-10 w-full items-stretch">
