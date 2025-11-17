@@ -42,7 +42,7 @@ const getPayments = async (storeId: number, filters: PaymentFilters) => {
     params.append('paymentMethod', englishMethods.join(','));
   }
   if (filters.orderType && filters.orderType !== 'all') {
-    params.append('orderType', filters.orderType);
+    params.append('isDelivery', filters.orderType);
   }
 
 

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
 import { CartItem, Menu, Transaction, Member } from "@/types/api";
 
 // Zustand 스토어의 상태(state)와 액션(action)에 대한 인터페이스를 정의했음
@@ -39,12 +40,14 @@ interface AppState {
 // Zustand 스토어를 생성했음
 // API 연동을 위해 서버 데이터(stores, transactions, products)는 제거하고,
 // 순수 클라이언트 상태(인증, UI, 장바구니)만 남겼음
-export const useBoundStore = create<AppState>((set, get) => ({
-  // --- Transaction State ---
-  transactions: [], // 초기 거래 내역은 비워둠 (API로 가져올 예정)
-  addTransaction: (newTransaction) => {
-    const { selectedStoreId } = get();
-    const transaction: Transaction = {
+export const useBoundStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      // --- Transaction State ---
+      transactions: [], // 초기 거래 내역은 비워둠 (API로 가져올 예정)
+      addTransaction: (newTransaction) => {
+        const { selectedStoreId } = get();
+        const transaction: Transaction = {
       ...newTransaction,
       id: Date.now(),
       date: new Date().toISOString(),
@@ -131,4 +134,11 @@ export const useBoundStore = create<AppState>((set, get) => ({
         },
       };
     }),
-}));
+    }),
+    {
+      name: "store-storage",
+      storage: createJSONStorage(() => sessionStorage),
+      partialize: (state) => ({ selectedStoreId: state.selectedStoreId }),
+    },
+  ),
+);

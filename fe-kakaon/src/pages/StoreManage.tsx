@@ -18,6 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -242,6 +251,8 @@ export default function StoreManage() {
     address: '',
     businessHours: '',
   });
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertModalContent, setAlertModalContent] = useState({ title: "", description: "" });
 
   const isFormValid = useMemo(() => {
     if (!newStoreName || !newStoreBusinessNumber || !newStorePhone || !newStoreBaseAddress || !newStoreBusinessHours) return false;
@@ -504,7 +515,19 @@ export default function StoreManage() {
         setNewStoreBusinessHours(null);
       },
       onError: (error) => {
-        toast.error("가맹점 등록에 실패했습니다.", { description: error.message });
+        if (error.message.includes("409")) {
+          setAlertModalContent({
+            title: "등록 실패",
+            description: "이미 등록된 사업자 번호입니다."
+          });
+          setIsAlertModalOpen(true);
+        } else {
+          setAlertModalContent({
+            title: "등록 실패",
+            description: "가맹점 등록에 실패했습니다. 입력 내용을 다시 확인해주세요."
+          });
+          setIsAlertModalOpen(true);
+        }
       }
     });
   };
@@ -1541,6 +1564,21 @@ export default function StoreManage() {
           />
         </DialogContent>
       </Dialog>
+
+      {/* 오류 경고 모달 */}
+      <AlertDialog open={isAlertModalOpen} onOpenChange={setIsAlertModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertModalContent.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {alertModalContent.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsAlertModalOpen(false)}>확인</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
