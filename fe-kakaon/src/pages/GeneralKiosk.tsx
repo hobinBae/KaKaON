@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Settings, Plus, Minus, Trash2, Edit } from "lucide-react";
+import { Settings, Plus, Minus, Trash2, Edit, ArrowLeft } from "lucide-react";
 import logoImg from '@/assets/logo.png';
 import {
   Dialog,
@@ -25,6 +25,7 @@ import AdminPinModal from '@/components/AdminPinModal';
 import CardSelectionModal from '@/components/CardSelectionModal';
 
 const GeneralKiosk = () => {
+  const navigate = useNavigate();
   const {
     selectedStoreId,
     setSelectedStoreId,
@@ -60,6 +61,13 @@ const GeneralKiosk = () => {
       setSelectedStoreId(String(stores[0].storeId));
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
+
+  // 컴포넌트 언마운트 시 카트 초기화
+  useEffect(() => {
+    return () => {
+      clearCart();
+    };
+  }, [clearCart]);
 
   useEffect(() => {
     if (isPaymentComplete) {
@@ -246,7 +254,14 @@ const GeneralKiosk = () => {
         onCardSelect={handleCardSelected}
       />
       {!orderType ? (
-        <div className="flex flex-col items-center justify-center w-full h-full bg-gray-50 p-8">
+        <div className="relative flex flex-col items-center justify-center w-full h-full bg-gray-50 p-8">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="absolute top-8 left-8 w-16 h-16"
+          >
+            <ArrowLeft className="size-12" />
+          </Button>
           <div className="text-center mb-12">
             <img src={logoImg} alt="KaKaON Logo" className="h-24 mx-auto mb-6" />
             <p className="text-6xl font-bold text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</p>
@@ -294,10 +309,10 @@ const GeneralKiosk = () => {
               <img src={logoImg} alt="KaKaON Kiosk" className="h-16" />
             )}
             <div className="flex items-center">
-              {!isAdminMode && <Button variant="ghost" className="mr-4 text-2xl h-16" onClick={() => setOrderType(null)}>처음으로</Button>}
+              {!isAdminMode && <Button variant="ghost" className="mr-4 text-2xl h-16" onClick={() => { setOrderType(null); clearCart(); }}>처음으로</Button>}
               {isAdminMode && (
                 <>
-                  <Button onClick={() => setIsAdminMode(false)} variant="destructive" className="mr-2">관리자 모드 종료</Button>
+                  <Button onClick={() => setIsAdminMode(false)} variant="destructive" className="mr-2">설정 완료</Button>
                   <Dialog>
                     <DialogTrigger asChild>
                       <Button variant="outline"><Plus className="mr-2 h-4 w-4" />상품 추가</Button>
@@ -336,35 +351,61 @@ const GeneralKiosk = () => {
             </div>
           </header>
           <main className="flex-1 overflow-y-auto p-8 pt-4 min-h-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {isLoadingProducts ? (
-                <p>메뉴를 불러오는 중입니다...</p>
-              ) : products && products.length > 0 ? (
-                products.map((product) => (
-                <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
-                  {isAdminMode && (
-                    <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                      <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                      <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
-                    </div>
-                  )}
-                  <CardContent className="p-4 text-center">
-                    {product.imageUrl ? (
-                      <img src={product.imageUrl} alt={product.name} className="w-full h-40 object-cover mb-4 rounded-lg" />
-                    ) : (
-                      <div className="bg-gray-200 h-40 mb-4 rounded-lg flex items-center justify-center">
-                        <span className="text-gray-500">이미지</span>
+            {isLoadingProducts ? (
+              <p>메뉴를 불러오는 중입니다...</p>
+            ) : products && products.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+                {products.map((product) => (
+                  <Card
+                    key={product.id}
+                    onClick={() => !isAdminMode && addToCart(product)}
+                    className="cursor-pointer relative"
+                  >
+                    {isAdminMode && (
+                      <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProduct(product.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProduct(product);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
-                    <p className="text-2xl font-semibold">{product.name}</p>
-                    <p className="text-xl">{product.price.toLocaleString()}원</p>
-                  </CardContent>
-                </Card>
-                ))
-              ) : (
-                <p>등록된 메뉴가 없습니다.</p>
-              )}
-            </div>
+                    <CardContent className="p-4 text-center">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-40 object-cover mb-4 rounded-lg"
+                        />
+                      ) : (
+                        <div className="bg-gray-200 h-40 mb-4 rounded-lg flex items-center justify-center">
+                          <span className="text-gray-500">이미지</span>
+                        </div>
+                      )}
+                      <p className="text-2xl font-semibold">{product.name}</p>
+                      <p className="text-xl">{product.price.toLocaleString()}원</p>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            ) : (
+              <p>등록된 메뉴가 없습니다.</p>
+            )}
           </main>
           <footer className="bg-gray-50 p-8 border-t flex-shrink-0">
             <h2 className="text-3xl font-bold mb-4">주문 내역 ({totalItems}개)</h2>

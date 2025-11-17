@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Settings, ArrowLeft, Trash2, Edit, Minus, Plus, ChevronUp, ChevronDown } from "lucide-react";
@@ -25,6 +25,7 @@ import AdminPinModal from '@/components/AdminPinModal';
 import CardSelectionModal from '@/components/CardSelectionModal';
 
 const FrontKiosk = () => {
+  const navigate = useNavigate();
   const {
     selectedStoreId,
     setSelectedStoreId,
@@ -60,6 +61,13 @@ const FrontKiosk = () => {
       setSelectedStoreId(String(stores[0].storeId));
     }
   }, [stores, selectedStoreId, setSelectedStoreId]);
+
+  // 컴포넌트 언마운트 시 카트 초기화
+  useEffect(() => {
+    return () => {
+      clearCart();
+    };
+  }, [clearCart]);
 
   useEffect(() => {
     if (isPaymentComplete) {
@@ -246,7 +254,14 @@ const FrontKiosk = () => {
         onCardSelect={handleCardSelected}
       />
       {!orderType ? (
-        <div className="flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
+        <div className="relative flex flex-col items-center justify-center flex-1 w-full max-w-4xl mx-auto px-16">
+          <Button
+            onClick={() => navigate(-1)}
+            variant="ghost"
+            className="absolute top-8 left-8 w-16 h-16"
+          >
+            <ArrowLeft className="size-12" />
+          </Button>
           <img src={logoImg} alt="KaKaON Logo" className="h-24 mb-12" />
           <h1 className="text-6xl font-bold mb-14 text-center text-gray-800 leading-tight">주문 유형을<br/>선택해주세요</h1>
           <div className="flex flex-col gap-10 w-full items-stretch">
@@ -289,7 +304,7 @@ const FrontKiosk = () => {
                 </SelectContent>
               </Select>
             ) : (
-              <Button variant="ghost" onClick={() => setOrderType(null)} className="w-16 h-16">
+              <Button variant="ghost" onClick={() => { setOrderType(null); clearCart(); }} className="w-16 h-16">
                 <ArrowLeft className="size-12" />
               </Button>
             )}
@@ -338,21 +353,47 @@ const FrontKiosk = () => {
             )}
           </header>
           <main className="flex-1 overflow-y-auto">
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
-              {isLoadingProducts ? (
-                <p>메뉴를 불러오는 중입니다...</p>
-              ) : products && products.length > 0 ? (
-                products.map((product) => (
-                  <Card key={product.id} onClick={() => !isAdminMode && addToCart(product)} className="cursor-pointer relative">
+            {isLoadingProducts ? (
+              <p className="p-6">메뉴를 불러오는 중입니다...</p>
+            ) : products && products.length > 0 ? (
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 p-6 max-w-4xl mx-auto">
+                {products.map((product) => (
+                  <Card
+                    key={product.id}
+                    onClick={() => !isAdminMode && addToCart(product)}
+                    className="cursor-pointer relative"
+                  >
                     {isAdminMode && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
-                        <Button variant="destructive" size="icon" onClick={() => handleDeleteProduct(product.id)}><Trash2 className="h-4 w-4" /></Button>
-                        <Button variant="secondary" size="icon" onClick={() => setEditingProduct(product)}><Edit className="h-4 w-4" /></Button>
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteProduct(product.id);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingProduct(product);
+                          }}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                       </div>
                     )}
                     <CardContent className="p-4 text-center">
                       {product.imageUrl ? (
-                        <img src={product.imageUrl} alt={product.name} className="w-full h-28 object-cover mb-4 rounded-lg" />
+                        <img
+                          src={product.imageUrl}
+                          alt={product.name}
+                          className="w-full h-28 object-cover mb-4 rounded-lg"
+                        />
                       ) : (
                         <div className="bg-gray-200 h-28 mb-4 rounded-lg"></div>
                       )}
@@ -360,11 +401,11 @@ const FrontKiosk = () => {
                       <p className="text-2xl">{product.price.toLocaleString()}원</p>
                     </CardContent>
                   </Card>
-                ))
-              ) : (
-                <p>등록된 메뉴가 없습니다.</p>
-              )}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <p className="p-6">등록된 메뉴가 없습니다.</p>
+            )}
           </main>
           <footer className="p-4 mt-auto border-t bg-white sticky bottom-0">
             <div className="max-w-4xl mx-auto">
