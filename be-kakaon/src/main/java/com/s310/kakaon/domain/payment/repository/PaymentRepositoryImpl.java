@@ -186,4 +186,16 @@ public class PaymentRepositoryImpl implements PaymentRepositoryCustom {
         return avgAmount != null ? avgAmount : 0.0;
     }
 
+    /**
+     * 승인 번호 중복 체크를 위한 모든 승인번호 저장
+     */
+    @Override
+    public List<String> findAllAuthorizationNos() {
+        QPayment payment = QPayment.payment;
+        return jpaQueryFactory
+                .select(payment.authorizationNo)
+                .from(payment)
+                .fetch();
+    }
+
 }
