@@ -287,6 +287,15 @@ export default function StoreManage() {
     const formatted = formatPhoneNumber(e.target.value);
     setNewStorePhone(formatted);
   };
+
+  // 숫자만 입력 허용
+  const handlePhoneBeforeInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const inputEvent = e.nativeEvent as InputEvent;
+    const data = inputEvent.data;
+    if (data && !/^[0-9]$/.test(data)) {
+      e.preventDefault();
+    }
+  };
   const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
   const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
   const [newStorePhone, setNewStorePhone] = useState("");
@@ -652,6 +661,7 @@ export default function StoreManage() {
                 <Input
                   value={newStorePhone}
                   onChange={handlePhoneNumberChange}
+                  onBeforeInput={handlePhoneBeforeInput}
                   // placeholder="000-0000-0000"
                   maxLength={14}
                 />
@@ -888,7 +898,7 @@ export default function StoreManage() {
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} onBeforeInput={handlePhoneBeforeInput} className="rounded-lg" maxLength={14} />
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">주소</label>
@@ -1253,7 +1263,7 @@ export default function StoreManage() {
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} onBeforeInput={handlePhoneBeforeInput} className="rounded-lg" maxLength={14} />
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">업종</label>
