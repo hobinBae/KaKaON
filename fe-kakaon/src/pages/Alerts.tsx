@@ -153,8 +153,8 @@ export default function Alerts() {
         to = endOfDay(today);
         break;
       case 'this-week':
-        from = startOfWeek(today, { weekStartsOn: 1 });
-        to = endOfWeek(today, { weekStartsOn: 1 });
+        from = startOfDay(addDays(today, -6));
+        to = endOfDay(today);
         break;
       case 'this-month':
         from = startOfMonth(today);
@@ -376,13 +376,14 @@ export default function Alerts() {
           <div className="text-sm font-semibold text-[#333]">조회기간</div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} flex-1`}>
-              <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
-              <ToggleGroupItem value="this-week" className={segmentItem}>이번주</ToggleGroupItem>
-              <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
-              <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
-            </ToggleGroup>
-
+            <div className="flex grow min-w-0">
+              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} w-full`}>
+                <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>
+                <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
+                <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+                <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+              </ToggleGroup>
+            </div>
 
             <div className="relative flex items-center gap-2 w-full tablet:w-auto">
               <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
@@ -469,44 +470,58 @@ export default function Alerts() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3 mt-1">
-          <div className="text-sm font-semibold text-[#333]">이상거래</div>
-          <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between flex-wrap gap-4">
-            <div className="w-full tablet:hidden">
-              <Select value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => setTypeFilter(value)}>
-                <SelectTrigger className="w-full h-9 text-sm">
-                  <SelectValue placeholder="이상거래 유형 선택" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">전체 유형</SelectItem>
-                  <SelectItem value="SAME_PAYMENT_METHOD">동일 결제수단</SelectItem>
-                  <SelectItem value="OUT_OF_BUSINESS_HOUR">영업시간 외 거래</SelectItem>
-                  <SelectItem value="REPEATED_PAYMENT">반복결제</SelectItem>
-                  <SelectItem value="HIGH_AMOUNT_SPIKE">고액결제 급증</SelectItem>
-                  <SelectItem value="TRANSACTION_FREQUENCY_SPIKE">거래빈도 급증</SelectItem>
-                  <SelectItem value="CANCEL_RATE_SPIKE">취소율 급증</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <ToggleGroup type="single" value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => value && setTypeFilter(value)} className={`${segmentWrap} hidden tablet:flex flex-1`}>
-              <ToggleGroupItem value="all" className={segmentItem}>전체 유형</ToggleGroupItem>
-              <ToggleGroupItem value="SAME_PAYMENT_METHOD" className={segmentItem}>동일 결제수단</ToggleGroupItem>
-              <ToggleGroupItem value="OUT_OF_BUSINESS_HOUR" className={segmentItem}>영업시간 외 거래</ToggleGroupItem>
-              <ToggleGroupItem value="REPEATED_PAYMENT" className={segmentItem}>반복결제</ToggleGroupItem>
-              <ToggleGroupItem value="HIGH_AMOUNT_SPIKE" className={segmentItem}>고액결제 급증</ToggleGroupItem>
-              <ToggleGroupItem value="TRANSACTION_FREQUENCY_SPIKE" className={segmentItem}>거래빈도 급증</ToggleGroupItem>
-              <ToggleGroupItem value="CANCEL_RATE_SPIKE" className={segmentItem}>취소율 급증</ToggleGroupItem>
-            </ToggleGroup>
-
-            <div className="flex items-center gap-4 w-full tablet:w-auto">
-              <div className="text-sm font-semibold text-[#333] shrink-0 tablet:ml-4">상태</div>
-              <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap} flex-1 tablet:flex-initial`}>
-                <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
-                <ToggleGroupItem value="false" className={`${segmentItem} flex-1`}>미확인</ToggleGroupItem>
-                <ToggleGroupItem value="true" className={`${segmentItem} flex-1`}>확인됨</ToggleGroupItem>
+        {/* Desktop View */}
+        <div className="hidden tablet:block space-y-4">
+          <div className="grid grid-cols-1 tablet:grid-cols-[72px_1fr] items-center gap-3">
+            <div className="text-sm font-semibold text-[#333]">이상거래</div>
+            <div className="flex items-center justify-between gap-4">
+              <ToggleGroup type="single" value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => value && setTypeFilter(value)} className={`${segmentWrap} flex-1`}>
+                <ToggleGroupItem value="all" className={segmentItem}>전체 유형</ToggleGroupItem>
+                <ToggleGroupItem value="SAME_PAYMENT_METHOD" className={segmentItem}>동일 결제수단</ToggleGroupItem>
+                <ToggleGroupItem value="OUT_OF_BUSINESS_HOUR" className={segmentItem}>영업시간 외 거래</ToggleGroupItem>
+                <ToggleGroupItem value="REPEATED_PAYMENT" className={segmentItem}>반복결제 </ToggleGroupItem>
+                <ToggleGroupItem value="HIGH_AMOUNT_SPIKE" className={segmentItem}>고액결제 급증</ToggleGroupItem>
+                <ToggleGroupItem value="TRANSACTION_FREQUENCY_SPIKE" className={segmentItem}>거래빈도 급증</ToggleGroupItem>
+                <ToggleGroupItem value="CANCEL_RATE_SPIKE" className={segmentItem}>취소율 급증</ToggleGroupItem>
               </ToggleGroup>
+              <div className="flex items-center gap-4">
+                <div className="text-sm font-semibold text-[#333] shrink-0">상태</div>
+                <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap}`}>
+                  <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                  <ToggleGroupItem value="false" className={segmentItem}>미확인</ToggleGroupItem>
+                  <ToggleGroupItem value="true" className={segmentItem}>확인됨</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
             </div>
+          </div>
+        </div>
+
+        {/* Mobile View */}
+        <div className="tablet:hidden space-y-4">
+          <div>
+            <div className="text-sm font-semibold text-[#333] mb-2">이상거래 유형</div>
+            <Select value={typeFilter} onValueChange={(value: ApiAlertType | 'all') => setTypeFilter(value)}>
+              <SelectTrigger className="w-full h-9 text-sm">
+                <SelectValue placeholder="이상거래 유형 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">전체 유형</SelectItem>
+                <SelectItem value="SAME_PAYMENT_METHOD">동일 결제수단</SelectItem>
+                <SelectItem value="OUT_OF_BUSINESS_HOUR">영업시간 외 거래</SelectItem>
+                <SelectItem value="REPEATED_PAYMENT">반복결제</SelectItem>
+                <SelectItem value="HIGH_AMOUNT_SPIKE">고액결제 급증</SelectItem>
+                <SelectItem value="TRANSACTION_FREQUENCY_SPIKE">거래빈도 급증</SelectItem>
+                <SelectItem value="CANCEL_RATE_SPIKE">취소율 급증</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <div className="text-sm font-semibold text-[#333] mb-2">상태</div>
+            <ToggleGroup type="single" value={String(statusFilter)} onValueChange={(value) => value && setStatusFilter(value === 'all' ? 'all' : value === 'true')} className={`${segmentWrap} w-full`}>
+              <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
+              <ToggleGroupItem value="false" className={`${segmentItem} flex-1`}>미확인</ToggleGroupItem>
+              <ToggleGroupItem value="true" className={`${segmentItem} flex-1`}>확인됨</ToggleGroupItem>
+            </ToggleGroup>
           </div>
         </div>
 
@@ -650,14 +665,6 @@ export default function Alerts() {
 
               <div className="flex gap-3 pt-4 border-t">
                 <Button variant="outline" className="flex-1 rounded-lg" onClick={() => setSelectedAlertId(null)}>닫기</Button>
-                {!selectedAlertDetail.checked && (
-                  <Button onClick={() => {
-                    readAlert({ storeId: selectedStoreId!, alertId: selectedAlertDetail.id });
-                    setSelectedAlertId(null);
-                  }} className="flex-1 rounded-lg bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FFD700]">
-                    확인 완료
-                  </Button>
-                )}
               </div>
             </div>
           )}

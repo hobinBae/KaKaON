@@ -162,10 +162,29 @@ export default function Dashboard() {
 
   const unreadCount = unreadCountData?.unreadCount ?? 0;
 
-  const salesData = summaryData?.recent7Days.map(d => ({
-    date: format(new Date(d.date), "M/d"),
-    amount: d.totalSales,
-  })) ?? [];
+  const salesData = React.useMemo(() => {
+    const salesMap = new Map<string, number>();
+    if (summaryData?.recent7Days) {
+      for (const dailySale of summaryData.recent7Days) {
+        salesMap.set(dailySale.date, dailySale.totalSales);
+      }
+    }
+
+    const last7DaysData = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      
+      const dateString = format(date, "yyyy-MM-dd");
+      const displayName = format(date, "M/d");
+
+      last7DaysData.push({
+        date: displayName,
+        amount: salesMap.get(dateString) ?? 0,
+      });
+    }
+    return last7DaysData;
+  }, [summaryData]);
 
   if (isLoadingSummary) {
     return null;

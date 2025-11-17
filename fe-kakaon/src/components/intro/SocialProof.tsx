@@ -9,7 +9,7 @@ const testimonials = [
     avatar: '/path/to/avatar1.png',
   },
   {
-    quote: '이상거래 알림 덕분에 카드 도용 사고를 막을 수 있었습니다. 소상공인에게 정말 필요한 서비스라고 생각합니다.',
+    quote: '이상거래 알림 덕분에 카드 도용 범죄를 막을 수 있었습니다. 소상공인에게 정말 필요한 서비스라고 생각합니다.',
     author: '박점장',
     store: '알찬 편의점',
     avatar: '/path/to/avatar2.png',

@@ -154,7 +154,7 @@ export function AppLayout() {
           </Button>
         </div>
         <div className="p-4 border-t border-[rgba(0,0,0,0.06)]">
-          {member && (
+          {member && member.name && (
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
