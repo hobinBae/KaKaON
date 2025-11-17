@@ -220,7 +220,19 @@ export default function StoreManage() {
   }, [selectedStore]);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
-  
+  const [isBusinessNumberErrorModalOpen, setIsBusinessNumberErrorModalOpen] = useState(false);
+  const [isRequiredFieldErrorModalOpen, setIsRequiredFieldErrorModalOpen] = useState(false);
+  const [isPhoneNumberErrorModalOpen, setIsPhoneNumberErrorModalOpen] = useState(false);
+
+  // 필수 항목 에러 상태
+  const [fieldErrors, setFieldErrors] = useState({
+    name: false,
+    businessNumber: false,
+    phone: false,
+    address: false,
+    businessHours: false,
+  });
+
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
@@ -308,6 +320,24 @@ export default function StoreManage() {
     const formatted = formatPhoneNumber(e.target.value);
     setNewStorePhone(formatted);
   };
+
+  // 숫자만 입력 허용
+  const handlePhoneBeforeInput = (e: React.FormEvent<HTMLInputElement>) => {
+    const inputEvent = e.nativeEvent as InputEvent;
+    const data = inputEvent.data;
+    if (data && !/^[0-9]$/.test(data)) {
+      e.preventDefault();
+    }
+  };
+  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
+  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
+  const [newStorePhone, setNewStorePhone] = useState("");
+  const [newStoreCity, setNewStoreCity] = useState("");
+  const [newStoreState, setNewStoreState] = useState("");
+  const [newStorePostalCode, setNewStorePostalCode] = useState("");
+  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
+  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
+  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState>(defaultBusinessHours);
 
   // 가맹점 정보 수정을 위한 상태
   const [editingStoreName, setEditingStoreName] = useState("");
@@ -430,9 +460,18 @@ export default function StoreManage() {
   };
 
   const handleAddStore = () => {
-    // 필수 입력 항목 검사
-    if (!isFormValid) {
-      toast.error("입력 양식을 다시 확인해주세요.");
+    // 필수 입력 항목 검사 및 에러 상태 설정
+    const errors = {
+      name: !newStoreName,
+      businessNumber: !newStoreBusinessNumber,
+      phone: !newStorePhone,
+      address: !newStoreBaseAddress,
+      businessHours: !newStoreBusinessHours,
+    };
+
+    if (Object.values(errors).some(error => error)) {
+      setFieldErrors(errors);
+      setIsRequiredFieldErrorModalOpen(true);
       return;
     }
 
@@ -618,7 +657,19 @@ export default function StoreManage() {
             여러 매장의 종합 분석 및 정보 관리
           </p>
         </div>
-        <Dialog open={isAddingStore} onOpenChange={setIsAddingStore}>
+        <Dialog open={isAddingStore} onOpenChange={(open) => {
+          setIsAddingStore(open);
+          if (open) {
+            // 모달이 열릴 때 에러 상태 초기화
+            setFieldErrors({
+              name: false,
+              businessNumber: false,
+              phone: false,
+              address: false,
+              businessHours: false,
+            });
+          }
+        }}>
           <DialogTrigger asChild>
             <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
@@ -630,19 +681,33 @@ export default function StoreManage() {
               <DialogTitle>새 가맹점 추가</DialogTitle>
               <DialogDescription>추가할 가맹점의 정보를 입력하세요.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
-              <div className="sm:col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">* 상호명</label>
-                <Input value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} />
-                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+              <div>
+                <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+                <Input
+                  value={newStoreName}
+                  onChange={(e) => {
+                    setNewStoreName(e.target.value);
+                    if (fieldErrors.name) {
+                      setFieldErrors(prev => ({ ...prev, name: false }));
+                    }
+                  }}
+                  className={fieldErrors.name ? "border-red-500" : ""}
+                />
               </div>
               <div>
                 <label className="text-sm text-[#717182] mb-2 block">* 사업자등록번호</label>
                 <Input
                   value={newStoreBusinessNumber}
-                  onChange={handleBusinessNumberChange}
+                  onChange={(e) => {
+                    handleBusinessNumberChange(e);
+                    if (fieldErrors.businessNumber) {
+                      setFieldErrors(prev => ({ ...prev, businessNumber: false }));
+                    }
+                  }}
                   placeholder="000-00-00000"
                   maxLength={12}
+                  className={fieldErrors.businessNumber ? "border-red-500" : ""}
                 />
                 {formErrors.businessNumber && <p className="text-red-500 text-xs mt-1">{formErrors.businessNumber}</p>}
               </div>
@@ -668,24 +733,51 @@ export default function StoreManage() {
                 <label className="text-sm text-[#717182] mb-2 block">* 전화번호</label>
                 <Input
                   value={newStorePhone}
-                  onChange={handlePhoneNumberChange}
+                  onChange={(e) => {
+                    handlePhoneNumberChange(e);
+                    if (fieldErrors.phone) {
+                      setFieldErrors(prev => ({ ...prev, phone: false }));
+                    }
+                  }}
+                  onBeforeInput={handlePhoneBeforeInput}
                   // placeholder="000-0000-0000"
                   maxLength={14}
+                  className={fieldErrors.phone ? "border-red-500" : ""}
                 />
                 {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
               </div>
               <div className="sm:col-span-2">
                 <label className="text-sm text-[#717182] mb-2 block">* 주소</label>
                 <div className="flex gap-2">
-                  <Input value={newStorePostalCode} placeholder="우편번호" readOnly />
-                  <Button type="button" variant="outline" onClick={handleAddressSearch}>
+                  <Input
+                    value={newStorePostalCode}
+                    placeholder="우편번호"
+                    readOnly
+                    className={fieldErrors.address ? "border-red-500" : ""}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      handleAddressSearch();
+                      if (fieldErrors.address) {
+                        setFieldErrors(prev => ({ ...prev, address: false }));
+                      }
+                    }}
+                    className={fieldErrors.address ? "border-red-500" : ""}
+                  >
                     우편번호 찾기
                   </Button>
                 </div>
                 {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
-              <div className="sm:col-span-2">
-                <Input value={newStoreBaseAddress} placeholder="주소" readOnly />
+              <div className="col-span-2">
+                <Input
+                  value={newStoreBaseAddress}
+                  placeholder="주소"
+                  readOnly
+                  className={fieldErrors.address ? "border-red-500" : ""}
+                />
               </div>
               <div className="sm:col-span-2">
                 <Input 
@@ -694,11 +786,19 @@ export default function StoreManage() {
                   placeholder="상세주소 입력" 
                 />
               </div>
-              <div className="sm:col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">* 영업시간</label>
-                <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
+              <div className="col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">영업시간</label>
+                <Dialog open={isBusinessHoursModalOpen} onOpenChange={(open) => {
+                  setIsBusinessHoursModalOpen(open);
+                  if (open && fieldErrors.businessHours) {
+                    setFieldErrors(prev => ({ ...prev, businessHours: false }));
+                  }
+                }}>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start font-normal">
+                    <Button
+                      variant="outline"
+                      className={`w-full justify-start font-normal ${fieldErrors.businessHours ? "border-red-500" : ""}`}
+                    >
                       영업시간 설정
                     </Button>
                   </DialogTrigger>
@@ -913,7 +1013,7 @@ export default function StoreManage() {
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                  <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} onBeforeInput={handlePhoneBeforeInput} className="rounded-lg" maxLength={14} />
                                 </div>
                                 <div>
                                   <label className="text-sm text-[#717182] mb-2 block">주소</label>
@@ -1269,7 +1369,7 @@ export default function StoreManage() {
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
-                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} className="rounded-lg" maxLength={14} />
+                                    <Input value={editingStorePhone} onChange={(e) => setEditingStorePhone(formatPhoneNumber(e.target.value))} onBeforeInput={handlePhoneBeforeInput} className="rounded-lg" maxLength={14} />
                                   </div>
                                   <div>
                                     <label className="text-sm text-[#717182] mb-2 block">업종</label>
@@ -1471,6 +1571,57 @@ export default function StoreManage() {
           </>
         )}
       </Card>
+
+      {/* 필수 입력 항목 오류 모달 */}
+      <Dialog open={isRequiredFieldErrorModalOpen} onOpenChange={setIsRequiredFieldErrorModalOpen}>
+        <DialogContent className="w-[60vw] sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>입력 오류</DialogTitle>
+            <DialogDescription>
+              모든 필수 항목을 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsRequiredFieldErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 사업자번호 오류 모달 */}
+      <Dialog open={isBusinessNumberErrorModalOpen} onOpenChange={setIsBusinessNumberErrorModalOpen}>
+        <DialogContent className="w-[60vw] sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>사업자번호 오류</DialogTitle>
+            <DialogDescription>
+              사업자번호는 10자리 숫자여야 합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsBusinessNumberErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 전화번호 오류 모달 */}
+      <Dialog open={isPhoneNumberErrorModalOpen} onOpenChange={setIsPhoneNumberErrorModalOpen}>
+        <DialogContent className="w-[60vw] sm:max-w-xs">
+          <DialogHeader>
+            <DialogTitle>전화번호 오류</DialogTitle>
+            <DialogDescription>
+              전화번호는 10~12자리 숫자여야 합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => setIsPhoneNumberErrorModalOpen(false)} className="w-full">
+              확인
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* 알림 수신자 삭제 확인 모달 */}
       <Dialog open={isDeleteRecipientModalOpen} onOpenChange={setIsDeleteRecipientModalOpen}>
