@@ -56,6 +56,12 @@ dependencies {
 
     // Kafka
     implementation 'org.springframework.kafka:spring-kafka'
+
+    // WebClient
+    implementation 'org.springframework.boot:spring-boot-starter-webflux'
+
+    // S3
+    implementation 'software.amazon.awssdk:s3:2.25.+'
 }
 
 // Querydsl 설정

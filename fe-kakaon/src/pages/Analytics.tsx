@@ -38,6 +38,9 @@ import SalesVsLabor from "@/components/analytics/SalesVsLabor";
 import StoreComparison from "@/components/analytics/StoreComparison";
 import CancellationRate from "@/components/analytics/CancellationRate";
 import PaymentMethod from "@/components/analytics/PaymentMethod";
+import MenuSalesOverview from "@/components/analytics/MenuSalesOverview";
+import { usePayments } from "@/lib/hooks/usePayments";
+import apiClient from "@/lib/apiClient";
 import { Link } from "react-router-dom";
 
 // 커스텀 달력 캡션 컴포넌트
@@ -151,6 +154,10 @@ export default function Analytics() {
     { enabled: storeId > 0 && apiParams.periodType !== 'YESTERDAY' && apiParams.periodType !== 'TODAY' }
   );
 
+  useEffect(() => {
+    console.log("Raw cancelRateData:", cancelRateData);
+  }, [cancelRateData]);
+
   const { data: paymentMethodRatioData } = usePaymentMethodRatioByPeriod(
     storeId,
     apiParams,
@@ -175,6 +182,7 @@ export default function Analytics() {
   const [alertMessage, setAlertMessage] = useState<ReactNode>("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [menuSalesPeriod, setMenuSalesPeriod] = useState<'today' | 'yesterday'>('today');
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -189,6 +197,51 @@ export default function Analytics() {
   const [salesTypeDistribution, setSalesTypeDistribution] = useState<{name: string; value: number; color: string}[]>([]);
   const [hourlySales, setHourlySales] = useState<{time: string; sales: number}[]>([]);
   const [salesVsLabor, setSalesVsLabor] = useState<{month: string; sales: number; labor: number; laborRatio: number}[]>([]);
+  const [menuSalesData, setMenuSalesData] = useState<{ name: string; quantity: number }[]>([]);
+
+  const menuSalesDate = useMemo(() => {
+    const date = new Date();
+    if (menuSalesPeriod === 'yesterday') {
+      date.setDate(date.getDate() - 1);
+    }
+    return format(date, 'yyyy-MM-dd');
+  }, [menuSalesPeriod]);
+
+  const { data: menuSalesPayments } = usePayments(storeId, { startDate: menuSalesDate, endDate: menuSalesDate, size: 1000 });
+
+  useEffect(() => {
+    const fetchMenuSales = async () => {
+      if (!menuSalesPayments || !menuSalesPayments.data || !menuSalesPayments.data.content) {
+        setMenuSalesData([]);
+        return;
+      }
+
+      const menuSales: { [menuName: string]: number } = {};
+
+      for (const payment of menuSalesPayments.data.content) {
+        try {
+          const response = await apiClient.get(`/orders/${payment.orderId}`);
+          const orderDetail = response.data.data;
+
+          orderDetail.items.forEach((item: any) => {
+            if (item.menuName) {
+              menuSales[item.menuName] = (menuSales[item.menuName] || 0) + item.quantity;
+            }
+          });
+        } catch (error) {
+          console.error(`Failed to fetch order detail for orderId: ${payment.orderId}`, error);
+        }
+      }
+
+      const chartData = Object.entries(menuSales)
+        .map(([name, quantity]) => ({ name, quantity }))
+        .sort((a, b) => b.quantity - a.quantity);
+
+      setMenuSalesData(chartData);
+    };
+
+    fetchMenuSales();
+  }, [menuSalesPayments]);
 
   useEffect(() => {
     if (salesData && salesData.saleList) {
@@ -325,9 +378,10 @@ export default function Analytics() {
       return Array.from({ length: 7 }).map((_, i) => {
         const currentDate = addDays(today, -6 + i);
         const dateKey = format(currentDate, 'yyyy-MM-dd');
+        const cancelRate = rateMap.get(dateKey) || 0;
         return {
           date: format(currentDate, 'MM/dd'),
-          cancelRate: rateMap.get(dateKey) || 0,
+          cancelRate: cancelRate > 1 ? cancelRate : cancelRate * 100,
         };
       });
     } else if (activePeriod === 'this-month') {
@@ -342,9 +396,10 @@ export default function Analytics() {
             cancelRate: 0,
           };
         }
+        const cancelRate = rateMap.get(dateKey) || 0;
         return {
           date: format(currentDate, 'MM/dd'),
-          cancelRate: rateMap.get(dateKey) || 0,
+          cancelRate: cancelRate > 1 ? cancelRate : cancelRate * 100,
         };
       });
     } else if (activePeriod === 'this-year') {
@@ -369,9 +424,10 @@ export default function Analytics() {
 		  };
 		}
         const monthData = monthMap.get(monthKey);
+        const cancelRate = monthData ? monthData.total / monthData.count : 0;
         return {
           month: format(monthDate, 'MM월'),
-          cancelRate: monthData ? monthData.total / monthData.count : 0,
+          cancelRate: cancelRate > 1 ? cancelRate : cancelRate * 100,
         };
       });
     } else if (dateRange?.from && dateRange?.to) {
@@ -379,9 +435,10 @@ export default function Analytics() {
       return Array.from({ length: diff + 1 }).map((_, i) => {
         const currentDate = addDays(dateRange.from!, i);
         const dateKey = format(currentDate, 'yyyy-MM-dd');
+        const cancelRate = rateMap.get(dateKey) || 0;
         return {
           date: format(currentDate, 'MM/dd'),
-          cancelRate: rateMap.get(dateKey) || 0,
+          cancelRate: cancelRate > 1 ? cancelRate : cancelRate * 100,
         };
       });
     }
@@ -416,7 +473,7 @@ export default function Analytics() {
     if (stores) {
       setSelectedStoreIds(stores.map(s => s.storeId));
     }
-  }, []);
+  }, [stores]);
 
   useEffect(() => {
     if (activeTab === "sales-vs-labor") {
@@ -636,13 +693,13 @@ export default function Analytics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-col tablet:flex-row justify-between items-start tablet:items-center gap-4">
         <div>
           <h1 className="text-[#333333] mb-1">매출분석</h1>
           <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
         </div>
-        <Link to="/report">
-          <Button>매출 분석 리포트</Button>
+        <Link to="/report" className="w-full tablet:w-auto">
+          <Button className="w-full tablet:w-auto">매출 분석 리포트</Button>
         </Link>
       </div>
 
@@ -655,47 +712,57 @@ export default function Analytics() {
             <SelectContent>
               <SelectItem value="sales-trend">기간별 매출</SelectItem>
               <SelectItem value="hourly-sales">시간대별 매출</SelectItem>
-              <SelectItem value="sales-vs-labor">인건비 대비 매출</SelectItem>
-              <SelectItem value="store-comparison">가맹점별 매출</SelectItem>
+              <SelectItem value="menu-sales">메뉴별 판매량</SelectItem>
               <SelectItem value="cancellation-rate">취소율 추이</SelectItem>
               <SelectItem value="payment-method">결제수단별 비중</SelectItem>
+              <SelectItem value="store-comparison">가맹점별 매출</SelectItem>
             </SelectContent>
           </Select>
         </div>
-        <TabsList className="hidden tablet:grid w-full grid-cols-5 bg-[#F5F5F7] p-1 rounded-lg h-10">
+        <TabsList className="hidden tablet:grid w-full grid-cols-6 bg-[#F5F5F7] p-1 rounded-lg h-10">
             <TabsTrigger value="sales-trend" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">기간별 매출</TabsTrigger>
             <TabsTrigger value="hourly-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">시간대별 매출</TabsTrigger>
-            {/* <TabsTrigger value="sales-vs-labor" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">인건비 대비 매출</TabsTrigger> */}
-            <TabsTrigger value="store-comparison" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">가맹점별 매출</TabsTrigger>
+            <TabsTrigger value="menu-sales" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">메뉴별 판매량</TabsTrigger>
             <TabsTrigger value="cancellation-rate" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">취소율 추이</TabsTrigger>
             <TabsTrigger value="payment-method" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">결제수단별 비중</TabsTrigger>
+            <TabsTrigger value="store-comparison" className="rounded-lg data-[state=active]:bg-white data-[state=active]:shadow-sm">가맹점별 매출</TabsTrigger>
         </TabsList>
 
         <Card className="p-4 tablet:p-6 rounded-2xl border border-gray-200 shadow-sm bg-white mb-4">
-          <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4">
-            <div className="text-sm font-semibold text-[#333]">조회기간</div>
-            <div className="flex flex-col tablet:flex-row items-center gap-2">
-              <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} tablet:flex-1`}>
-                {activeTab === "sales-vs-labor" ? (
-                  <>
-                    <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
-                    <ToggleGroupItem value="last-year" className={segmentItem}>작년</ToggleGroupItem>
-                  </>
-                ) : (
-                  <>
-                    {activeTab === "payment-method" && <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>}
-                    {activeTab === "hourly-sales" && <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>}
-                    <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
-                    <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
-                    <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
-                  </>
-                )}
+          {activeTab === 'menu-sales' ? (
+            <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4">
+              <div className="text-sm font-semibold text-[#333]">조회기간</div>
+              <ToggleGroup type="single" value={menuSalesPeriod} onValueChange={(value: 'today' | 'yesterday') => value && setMenuSalesPeriod(value)} className={`${segmentWrap} w-full tablet:w-auto`}>
+                <ToggleGroupItem value="yesterday" className={`${segmentItem} flex-1`}>어제</ToggleGroupItem>
+                <ToggleGroupItem value="today" className={`${segmentItem} flex-1`}>오늘</ToggleGroupItem>
               </ToggleGroup>
-              <div className="relative flex items-center gap-2 w-full tablet:w-auto">
-                <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
-                  <Input
-                    type="text"
-                    placeholder="YYYY.MM.DD"
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4">
+                <div className="text-sm font-semibold text-[#333]">조회기간</div>
+                <div className="flex flex-col tablet:flex-row items-center gap-2">
+                  <ToggleGroup type="single" value={activePeriod} onValueChange={handlePeriodChange} className={`${segmentWrap} tablet:flex-1`}>
+                    {activeTab === "sales-vs-labor" ? (
+                      <>
+                        <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                        <ToggleGroupItem value="last-year" className={segmentItem}>작년</ToggleGroupItem>
+                      </>
+                    ) : (
+                      <>
+                        {activeTab === "payment-method" && <ToggleGroupItem value="yesterday" className={segmentItem}>어제</ToggleGroupItem>}
+                        {activeTab === "hourly-sales" && <ToggleGroupItem value="today" className={segmentItem}>오늘</ToggleGroupItem>}
+                        <ToggleGroupItem value="this-week" className={segmentItem}>최근 7일</ToggleGroupItem>
+                        <ToggleGroupItem value="this-month" className={segmentItem}>이번달</ToggleGroupItem>
+                        <ToggleGroupItem value="this-year" className={segmentItem}>올해</ToggleGroupItem>
+                      </>
+                    )}
+                  </ToggleGroup>
+                  <div className="relative flex items-center gap-2 w-full tablet:w-auto">
+                    <div className="flex-1 grid grid-cols-[1fr_auto_1fr] items-center gap-1 tablet:flex tablet:gap-1">
+                      <Input
+                        type="text"
+                        placeholder="YYYY.MM.DD"
                     value={startDateInput}
                     onChange={(e) => handleDateInputChange('start', e.target.value)}
                     onBlur={() => handleDateInputBlur('start')}
@@ -781,8 +848,10 @@ export default function Analytics() {
                   </div>
                 )}
               </div>
-            </div>
-          </div>
+                </div>
+              </div>
+            </>
+          )}
 
           {activeTab === 'store-comparison' && stores && stores.length > 1 && (
             <div className="grid grid-cols-1 tablet:grid-cols-[auto_1fr] items-center gap-4 mt-4">
@@ -874,20 +943,21 @@ export default function Analytics() {
           <div className="flex flex-col tablet:flex-row justify-between items-start tablet:items-center pt-4 border-t border-gray-200 mt-4 gap-3">
             <div className="w-full tablet:w-auto">
               <div className="text-md text-[#333]">
-                {dateRange?.from && dateRange?.to && (
+                {activeTab === 'menu-sales' ? (
                   <>
-                    {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
-                    <span className="text-[#007AFF] ml-1">
-                      ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
-                    </span>
+                    {format(new Date(menuSalesDate), "yyyy.MM.dd")} (1일간)
                   </>
+                ) : (
+                  dateRange?.from && dateRange?.to && (
+                    <>
+                      {format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")}{" "}
+                      <span className="text-[#007AFF] ml-1">
+                        ({differenceInCalendarDays(dateRange.to, dateRange.from) + 1}일간)
+                      </span>
+                    </>
+                  )
                 )}
               </div>
-              {activeTab !== 'sales-trend' && !(activeTab === "hourly-sales" && activePeriod === "today") && (
-                <div className="text-md text-red-500 mt-1">
-                  * 오늘 매출은 영업 종료 후 반영됩니다.
-                </div>
-              )}
             </div>
             {activeTab === "sales-trend" && (
               <div className="w-full tablet:w-auto border-2 border-gray-200 rounded-xl px-6 py-3 flex items-center justify-between gap-3">
@@ -915,6 +985,9 @@ export default function Analytics() {
         </TabsContent>
         <TabsContent value="cancellation-rate">
           <CancellationRate data={cancelChartData} activePeriod={activePeriod} totalCancellations={totalCancellations} isLoading={isCancelRateLoading} />
+        </TabsContent>
+        <TabsContent value="menu-sales">
+          <MenuSalesOverview data={menuSalesData} title={`${menuSalesPeriod === 'today' ? '오늘' : '어제'} 메뉴별 판매량`} />
         </TabsContent>
         <TabsContent value="payment-method">
           <PaymentMethod paymentDistribution={paymentDistribution} salesTypeDistribution={salesTypeDistribution} windowWidth={windowWidth} />

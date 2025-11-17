@@ -176,16 +176,15 @@ export default function StoreManage() {
     );
   }, [sortedStores, appliedSearchTerm]);
 
-  // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
-  const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
-    const totalSales = store.totalSales ?? 0;
+  // 기간별 매출 계산 함수
+  const getSalesData = (store: Store, period: SalesPeriod) => {
     switch (period) {
       case "일별":
-        return Math.round(totalSales * 0.03); // 임시: 전체 매출의 3%를 오늘 매출로 가정
+        return store.todaySales ?? 0;
       case "주별":
-        return Math.round(totalSales * 0.2); // 임시: 전체 매출의 20%를 이번주 매출로 가정
+        return store.weeklySales ?? 0;
       case "월별":
-        return totalSales; // 전체 매출을 이번달 매출로 사용
+        return store.monthlySales ?? 0;
       default:
         return 0;
     }
@@ -238,6 +237,31 @@ export default function StoreManage() {
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
   const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
+  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
+  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
+  const [newStorePhone, setNewStorePhone] = useState("");
+  const [newStoreCity, setNewStoreCity] = useState("");
+  const [newStoreState, setNewStoreState] = useState("");
+  const [newStorePostalCode, setNewStorePostalCode] = useState("");
+  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
+  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
+  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState | null>(null);
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    businessNumber: '',
+    phone: '',
+    address: '',
+    businessHours: '',
+  });
+
+  const isFormValid = useMemo(() => {
+    if (!newStoreName || !newStoreBusinessNumber || !newStorePhone || !newStoreBaseAddress || !newStoreBusinessHours) return false;
+    const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
+    if (businessNumberDigits.length !== 10) return false;
+    const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
+    if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) return false;
+    return true;
+  }, [newStoreName, newStoreBusinessNumber, newStorePhone, newStoreBaseAddress, newStoreBusinessHours]);
 
   // 사업자번호 포맷팅 함수
   const formatBusinessNumber = (value: string) => {
@@ -320,6 +344,23 @@ export default function StoreManage() {
   const [editingStorePhone, setEditingStorePhone] = useState("");
   const [editingStoreType, setEditingStoreType] = useState<BusinessType>('RESTAURANT');
   const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
+
+  useEffect(() => {
+    const errors = { name: '', businessNumber: '', phone: '', address: '', businessHours: '' };
+    if (isAddingStore) {
+      if (!newStoreName) errors.name = '상호명을 입력해 주세요.';
+      
+      const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
+      if (businessNumberDigits.length !== 10) errors.businessNumber = '사업자등록번호는 10자리 숫자여야 합니다.';
+
+      const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
+      if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) errors.phone = '전화번호는 10~12자리 숫자여야 합니다.';
+
+      if (!newStoreBaseAddress) errors.address = '주소를 검색해 주세요.';
+      if (!newStoreBusinessHours) errors.businessHours = '영업시간을 설정해 주세요.';
+    }
+    setFormErrors(errors);
+  }, [newStoreName, newStoreBusinessNumber, newStorePhone, newStoreBaseAddress, newStoreBusinessHours, isAddingStore]);
 
   useEffect(() => {
     if (selectedStore) {
@@ -434,21 +475,7 @@ export default function StoreManage() {
       return;
     }
 
-    // 사업자번호 유효성 검사
-    const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
-    if (businessNumberDigits.length !== 10) {
-      setIsBusinessNumberErrorModalOpen(true);
-      return;
-    }
-
-    // 전화번호 유효성 검사
-    const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
-    if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) {
-      setIsPhoneNumberErrorModalOpen(true);
-      return;
-    }
-
-    const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours)
+    const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours!)
       .map(([day, val]) => ({
         dayOfWeek: koreanToDayOfWeek[day],
         openTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).start,
@@ -669,7 +696,7 @@ export default function StoreManage() {
                 />
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 사업자등록번호</label>
                 <Input
                   value={newStoreBusinessNumber}
                   onChange={(e) => {
@@ -682,9 +709,10 @@ export default function StoreManage() {
                   maxLength={12}
                   className={fieldErrors.businessNumber ? "border-red-500" : ""}
                 />
+                {formErrors.businessNumber && <p className="text-red-500 text-xs mt-1">{formErrors.businessNumber}</p>}
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 업종</label>
                 <Select
                   value={newStoreType}
                   onValueChange={(value) => setNewStoreType(value as StoreCreateRequest['businessType'])}
@@ -702,7 +730,7 @@ export default function StoreManage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 전화번호</label>
                 <Input
                   value={newStorePhone}
                   onChange={(e) => {
@@ -716,9 +744,10 @@ export default function StoreManage() {
                   maxLength={14}
                   className={fieldErrors.phone ? "border-red-500" : ""}
                 />
+                {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
               </div>
-              <div className="col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">주소</label>
+              <div className="sm:col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">* 주소</label>
                 <div className="flex gap-2">
                   <Input
                     value={newStorePostalCode}
@@ -740,6 +769,7 @@ export default function StoreManage() {
                     우편번호 찾기
                   </Button>
                 </div>
+                {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
               <div className="col-span-2">
                 <Input
@@ -749,7 +779,7 @@ export default function StoreManage() {
                   className={fieldErrors.address ? "border-red-500" : ""}
                 />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Input 
                   value={newStoreDetailAddress}
                   onChange={(e) => setNewStoreDetailAddress(e.target.value)} 
@@ -780,19 +810,25 @@ export default function StoreManage() {
                       </DialogDescription>
                     </DialogHeader>
                     <BusinessHoursForm
-                      initialState={newStoreBusinessHours}
+                      initialState={newStoreBusinessHours ?? defaultBusinessHours}
                       onStateChange={setNewStoreBusinessHours}
                     />
                     <DialogFooter className="sm:justify-center">
-                      <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
+                      <Button onClick={() => {
+                        setIsBusinessHoursModalOpen(false);
+                        if (newStoreBusinessHours) {
+                          setFormErrors(prev => ({ ...prev, businessHours: '' }));
+                        }
+                      }} className="w-full sm:w-auto">확인</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                {formErrors.businessHours && <p className="text-red-500 text-xs mt-1">{formErrors.businessHours}</p>}
               </div>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setIsAddingStore(false)}>취소</Button>
-              <Button onClick={handleAddStore} disabled={isCreatingStore}>
+              <Button onClick={handleAddStore} disabled={!isFormValid || isCreatingStore}>
                 {isCreatingStore ? "저장 중..." : "저장"}
               </Button>
             </DialogFooter>
@@ -868,21 +904,21 @@ export default function StoreManage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <span className="text-[#717182]">매출: </span>
-                          <span className="text-[#333333] font-medium">₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M</span>
+                          <span className="text-[#717182]">금일 매출: </span>
+                          <span className="text-[#333333] font-medium">{((store.todaySales ?? 0) / 10000).toFixed(1)}만원</span>
                         </div>
                         <div>
-                          <span className="text-[#717182]">취소율: </span>
-                          {store.cancelRate !== undefined ? (
+                          <span className="text-[#717182]">금일 취소율: </span>
+                          {store.todayCancelRate !== undefined ? (
                             <Badge
                               variant="outline"
                               className={`rounded text-xs ${
-                                store.cancelRate > 3.5
+                                store.todayCancelRate > 3.5
                                   ? "border-[#FF4D4D] text-[#FF4D4D]"
                                   : "border-[#717182] text-[#717182]"
                               }`}
                             >
-                              {store.cancelRate}%
+                              {store.todayCancelRate.toFixed(1)}%
                             </Badge>
                           ) : (
                             <span className="text-xs text-[#717182]">-</span>
@@ -1164,8 +1200,7 @@ export default function StoreManage() {
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
                 <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
-                <TableHead className="text-[#333333] text-center">매출</TableHead>
-                <TableHead className="text-[#333333] text-center">취소율</TableHead>
+                <TableHead className="text-[#333333] text-center">금일 취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
                 <TableHead className="text-[#333333] text-center">상태</TableHead>
                 <TableHead className="text-[#333333] text-center hidden md:table-cell">
@@ -1207,24 +1242,16 @@ export default function StoreManage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
-                      <div>
-                        <p className="text-sm text-[#333333]">
-                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
-                        </p>
-                        {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
-                      {store.cancelRate !== undefined ? (
+                      {store.todayCancelRate !== undefined ? (
                         <Badge
                           variant="outline"
                           className={`rounded ${
-                            store.cancelRate > 3.5
+                            store.todayCancelRate > 3.5
                               ? "border-[#FF4D4D] text-[#FF4D4D]"
                               : "border-[#717182] text-[#717182]"
                           }`}
                         >
-                          {store.cancelRate}%
+                          {store.todayCancelRate.toFixed(1)}%
                         </Badge>
                       ) : (
                         <span className="text-xs text-[#717182]">-</span>
@@ -1263,7 +1290,7 @@ export default function StoreManage() {
                           ></div>
                         </div>
                         <span className="text-xs text-gray-500 w-16 text-right">
-                          {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
+                          {getSalesData(store, selectedPeriod) > 0 ? `${(getSalesData(store, selectedPeriod) / 10000).toFixed(1)}만원` : ''}
                         </span>
                       </div>
                     </TableCell>
@@ -1300,7 +1327,7 @@ export default function StoreManage() {
                   {/* Expanded Detail Row */}
                   {selectedStoreId === store.storeId && (
                     <TableRow key={`${store.storeId}-detail`}>
-                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-4 md:p-6">
+                      <TableCell colSpan={6} className="bg-[#FAFAFA] p-4 md:p-6">
                         {isStoreDetailLoading ? (
                           <div className="text-center p-8">상세 정보를 불러오는 중...</div>
                         ) : selectedStore ? (

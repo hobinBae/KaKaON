@@ -40,6 +40,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import CardSelectionModal from '@/components/CardSelectionModal';
+import { Menu } from '@/types/api';
 
 const ITEMS_PER_PAGE = 24;
 
@@ -71,7 +72,7 @@ const Pos = () => {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
+  const [editingProduct, setEditingProduct] = useState<Menu | null>(null);
   const [view, setView] = useState('products');
   const [selectedTransactionId, setSelectedTransactionId] = useState<number | null>(null);
   const { data: selectedTransaction } = useOrderDetail(selectedTransactionId);
@@ -145,7 +146,7 @@ const Pos = () => {
     }
   };
 
-  const handlePriceChange = (e) => {
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     const onlyNumbers = value.replace(/[^0-9]/g, '');
     setNewProductPrice(onlyNumbers ? Number(onlyNumbers).toLocaleString('ko-KR') : '');
@@ -172,7 +173,7 @@ const Pos = () => {
 
   const handlePayment = () => {
     if (cart.length > 0 && selectedStoreId && paymentMethod) {
-      const paymentMethodMap = {
+      const paymentMethodMap: { [key: string]: string } = {
         '카드': 'CARD',
         '계좌': 'TRANSFER',
         '카카오페이': 'KAKAOPAY',
@@ -217,7 +218,7 @@ const Pos = () => {
     }
   };
 
-  const handleDeleteProduct = (productId) => {
+  const handleDeleteProduct = (productId: number) => {
     if (selectedStoreId) {
       deleteMenuMutation.mutate({
         storeId: Number(selectedStoreId),
@@ -325,7 +326,7 @@ const Pos = () => {
               {paginatedHistory.length > 0 ? (
                 <div className="space-y-3 flex-1 overflow-y-auto pr-2">
                   {paginatedHistory.map(tx => (
-                    <Card key={tx.id} className="p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors shadow-sm" onClick={() => setSelectedTransactionId(tx.id)}>
+                    <Card key={tx.id} className="p-3 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors shadow-sm" onClick={() => setSelectedTransactionId(Number(tx.id))}>
                       <div className="flex justify-between items-center mb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-semibold text-sm text-gray-700">{new Date(tx.date).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
@@ -510,7 +511,7 @@ const Pos = () => {
                             if (selectedStoreId) {
                               cancelOrderMutation.mutate({
                                 storeId: Number(selectedStoreId),
-                                orderId: selectedTransaction.id,
+                                orderId: Number(selectedTransaction.id),
                               }, {
                                 onSuccess: () => {
                                   setSelectedTransactionId(null);
@@ -530,14 +531,14 @@ const Pos = () => {
       )}
 
       <div className="w-[35%] flex flex-col gap-4">
-        <div className="flex-1 bg-white rounded-xl p-6 flex flex-col">
+        <div className="flex-1 bg-white rounded-xl p-6 flex flex-col min-h-0">
           <header className="flex justify-between items-center pb-4 border-b">
             <h2 className="text-xl font-bold">주문 내역</h2>
             <Button variant="ghost" size="icon" className="h-12 w-12 group hover:bg-transparent" onClick={clearCart}>
               <RotateCw className="h-8 w-8 text-gray-600 transition-transform group-hover:scale-110" />
             </Button>
           </header>
-          <div className="flex-1 py-4 overflow-y-auto">
+          <div className="flex-1 py-4 overflow-y-auto pr-2">
             {cart.map((item) => (
               <div key={item.id} className="bg-blue-50 rounded-lg p-4 mb-3">
                 <div className="flex justify-between items-start">

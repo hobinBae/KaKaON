@@ -5,7 +5,7 @@ import { format, subWeeks, startOfWeek, endOfWeek, subMonths, startOfMonth, endO
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
 import logoSrc from "@/assets/logo.png"; // 로고 이미지를 import 합니다.
-// import OpenAI from "openai"; // AI 기능 주석 처리
+import apiClient from "@/lib/apiClient"; // apiClient를 import 합니다.
 
 // --- 타입 정의 ---
 // 나중에 API 응답 타입으로 대체하기 용이하도록 인터페이스를 정의했음
@@ -106,11 +106,7 @@ const weeklyReportData = {
     { type: "가게 주문", sales: 950000, orders: 60, aov: 15833 },
     { type: "배달 주문", sales: 300000, orders: 25, aov: 12000 },
   ],
-  aiInsight: [
-    "금요일 매출이 350,000원으로 주간 최고치를 기록했으며, 이는 주말을 앞둔 소비 심리 증가와 관련이 있을 수 있습니다.",
-    "점심 시간대(12-14시) 매출이 450,000원으로 가장 높아, 해당 시간대 집중 프로모션 또는 세트 메뉴 구성이 유효할 것으로 보입니다.",
-    "아메리카노 단일 품목이 전체 매출의 약 48%를 차지하여 매출 의존도가 높으므로, 카페라떼 또는 다른 음료 메뉴의 판매를 촉진할 전략이 필요합니다.",
-  ],
+  aiInsight: [], // AI가 생성할 것이므로 초기값은 빈 배열로 설정
 };
 
 const monthlyReportData = {
@@ -131,15 +127,6 @@ const monthlyReportData = {
         { date: "5주차 (29-31일)", sales: 200000, orders: 15, aov: 13333 },
     ],
 };
-
-/* // AI 기능은 나중에 활성화할 예정이므로 관련 코드를 주석 처리합니다.
-import OpenAI from "openai";
-const openai = new OpenAI({
-  apiKey: import.meta.env.VITE_GMS_KEY,
-  baseURL: "http://localhost/gmsapi/gmsapi/api.openai.com/v1",
-  dangerouslyAllowBrowser: true,
-});
-*/
 
 export default function Report() {
   const [reportType, setReportType] = useState<"weekly" | "monthly">("weekly");
@@ -191,43 +178,63 @@ export default function Report() {
 
   const data = reportData;
 
-  /* // AI 인사이트 생성 로직 (주석 처리)
-  // 나중에 실제 API를 호출할 때 이 부분을 활성화하여 사용합니다.
-  const [aiInsight, setAiInsight] = useState("");
+  // AI 인사이트 생성 로직
+  const [aiInsight, setAiInsight] = useState<string[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   useEffect(() => {
+    if (!data) return;
+
     const fetchAiInsight = async () => {
       setIsLoadingAi(true);
+      setAiInsight([]); // 리포트 타입 변경 시 이전 인사이트 초기화
       try {
-        const prompt = `
-          다음은 한 매장의 ${data.period} 매출 데이터입니다. 이 데이터를 바탕으로, 
-          1. 매출의 긍정적/부정적 요인, 
-          2. 주목해야 할 핵심 지표, 
-          3. 매출 증대를 위한 개선 아이디어를 구체적으로 제안해주세요.
+        // 데이터 요약을 위해 간단한 헬퍼 함수를 사용
+        const formatKpis = (kpis: SummaryKpi[]) => kpis.map(k => `${k.label}: ${k.value} (${k.change})`).join(', ');
+        const formatSummary = (summary: DailySummary[]) => summary.map(d => `${d.date} 매출 ${d.sales.toLocaleString()}원`).join(', ');
+        const formatPatterns = (patterns: PatternData[]) => patterns.map(p => `${p.label} 매출 ${p.sales.toLocaleString()}원`).join(', ');
+        const formatMenus = (menus: MenuItem[]) => menus.map(m => `${m.name} (${m.proportion})`).join(', ');
 
-          - 총 매출: ${data.totalSales.toLocaleString()}원
-          - 총 주문 건수: ${data.totalOrders}건
-          - 일별 매출 데이터: ${JSON.stringify(data.dailySummary)}
-          - 시간대별 평균 매출: ${JSON.stringify(data.hourlyPatterns)}
-          - 인기 메뉴 Top 3: ${JSON.stringify(data.topMenus.slice(0, 3))}
+        const prompt = `
+          당신은 소상공인 카페 사장님을 위한 전문 데이터 분석가입니다. 아래에 제공되는 ${reportType === 'weekly' ? '주간' : '월간'} 매출 데이터를 보고, 사장님이 바로 실행에 옮길 수 있는 구체적인 조언을 담은 인사이트를 생성해주세요.
+
+          **분석 대상 매장:** ${storeName}
+          **분석 기간:** ${data.period}
+
+          **[매출 데이터]**
+          1.  **핵심 지표:** ${formatKpis(data.summaryKpis)}
+          2.  **${reportType === 'weekly' ? '일별' : '주차별'} 매출 추이:** ${formatSummary(data.dailySummary)}
+          3.  **시간대별 매출 분석:** ${formatPatterns(data.hourlyPatterns)}
+          4.  **메뉴 분석:**
+              *   인기 메뉴: ${formatMenus(data.topMenus)}
+              *   부진 메뉴: ${formatMenus(data.lowMenus)}
+          5.  **주문 유형 분석:** ${data.orderTypes.map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`).join(', ')}
+
+          **[분석 요청]**
+          위 데이터를 종합적으로 분석하여, 매장 운영 개선에 도움이 될 만한 핵심적인 인사이트와 구체적인 실행 아이디어를 **개수 제한 없이 생각나는 대로** 제안해주세요. 답변은 사장님이 이해하기 쉽도록 친근하고 상세한 설명을 담아주세요. 각 제안은 번호를 붙여서 구분해주세요.
         `;
-        const completion = await openai.chat.completions.create({
-          model: "gpt-4o-mini",
-          messages: [{ role: "user", content: prompt }],
-        });
-        setAiInsight(completion.choices[0].message.content || "인사이트를 생성하지 못했습니다.");
+        
+        // 백엔드 API를 호출하도록 수정
+        const response = await apiClient.post("/ai/insight", { prompt });
+        const insightText = response.data.data;
+
+        if (insightText) {
+          // 응답 텍스트를 줄바꿈 기준으로 분리하여 리스트로 만듭니다.
+          const insights = insightText.split('\n').map(line => line.replace(/^[0-9]+\.\s*/, '')).filter(line => line.trim() !== '');
+          setAiInsight(insights);
+        } else {
+          setAiInsight(["인사이트를 생성하지 못했습니다."]);
+        }
       } catch (error) {
         console.error("Error fetching AI insight:", error);
-        setAiInsight("AI 인사이트를 가져오는 중 오류가 발생했습니다.");
+        setAiInsight(["AI 인사이트를 가져오는 중 오류가 발생했습니다."]);
       } finally {
         setIsLoadingAi(false);
       }
     };
     
-    // fetchAiInsight(); // 실제 API 호출이 필요할 때 이 줄의 주석을 해제하세요.
-  }, [data]);
-  */
+    fetchAiInsight();
+  }, [data, reportType]);
 
   return (
     <div className="bg-gray-100 p-4 sm:p-8">
@@ -266,7 +273,6 @@ export default function Report() {
 
         {/* 2. 상단 요약 KPI 영역 */}
         <section className="my-3">
-          <h3 className="text-xs font-bold mb-1">요약 지표</h3>
           <div className="grid grid-cols-3 gap-x-2 gap-y-1 border p-2 rounded">
             {data.summaryKpis.map(kpi => (
               <div key={kpi.label}>
@@ -282,26 +288,26 @@ export default function Report() {
         <main className="grid grid-cols-2 gap-x-4">
           {/* 왼쪽 컬럼 */}
           <div className="space-y-3">
-            <ReportTable title={reportType === 'weekly' ? "일별 매출 요약" : "주차별 매출 요약"} headers={["일자/주차", "매출액", "주문 수", "평균 객단가"]} data={data.dailySummary.map(d => [d.date, `${d.sales.toLocaleString()}원`, `${d.orders}건`, `${d.aov.toLocaleString()}원`])} />
-            {/* 월간 리포트일 때만 '요일별 매출 패턴'을 보여줍니다. */}
+            <ReportTable title={reportType === 'weekly' ? "일별 매출" : "주차별 매출"} headers={["일자/주차", "매출액", "주문 수", "평균 객단가"]} data={data.dailySummary.map(d => [d.date, `${d.sales.toLocaleString()}원`, `${d.orders}건`, `${d.aov.toLocaleString()}원`])} />
+            {/* 월간 리포트일 때만 '요일별 매출'을 보여줍니다. */}
             {reportType === 'monthly' && (
-              <ReportTable title="요일별 매출 패턴" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.aov?.toLocaleString()}원`])} />
+              <ReportTable title="요일별 매출" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.aov?.toLocaleString()}원`])} />
             )}
-            <ReportTable title="시간대별 매출 패턴" headers={["시간대", "매출액", "주문 수"]} data={data.hourlyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.orders}건`])} />
-            {/* 주간 리포트일 때만 '주문 유형 상세 분석'을 왼쪽 컬럼 하단에 표시합니다. */}
+            <ReportTable title="시간대별 매출" headers={["시간대", "매출액", "주문 수"]} data={data.hourlyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.orders}건`])} />
+            {/* 주간 리포트일 때만 '주문 유형별 매출'을 왼쪽 컬럼 하단에 표시합니다. */}
             {reportType === 'weekly' && (
-              <ReportTable title="주문 유형 상세 분석" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
+              <ReportTable title="주문 유형별 매출" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
             )}
           </div>
           {/* 오른쪽 컬럼 */}
           <div className="space-y-3">
-            {/* 월간 리포트일 때만 '주문 유형 상세 분석'을 오른쪽 컬럼 최상단에 표시합니다. */}
+            {/* 월간 리포트일 때만 '주문 유형별 매출'을 오른쪽 컬럼 최상단에 표시합니다. */}
             {reportType === 'monthly' && (
-              <ReportTable title="주문 유형 상세 분석" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
+              <ReportTable title="주문 유형별 매출" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
             )}
             <ReportTable title="결제수단별 매출" headers={["결제수단", "매출액", "비중"]} data={data.paymentMethods.map(p => [p.name, `${p.sales.toLocaleString()}원`, p.proportion])} />
             <ReportTable title="메뉴별 매출 상위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.topMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
-            <ReportTable title="매출이 낮은 메뉴" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
+            <ReportTable title="메뉴별 매출 하위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
           </div>
         </main>
 
@@ -309,9 +315,13 @@ export default function Report() {
         <footer className="mt-3 pt-2 border-t">
           <div>
             <h3 className="text-xs font-bold mb-1">AI 인사이트 요약</h3>
-            <ol className="list-decimal list-inside text-gray-700 space-y-1">
-              {data.aiInsight.map((insight, i) => <li key={i}>{insight}</li>)}
-            </ol>
+            {isLoadingAi ? (
+              <p className="text-gray-500 text-sm">AI가 리포트를 분석하고 있습니다. 잠시만 기다려주세요...</p>
+            ) : (
+              <div className="text-gray-700 space-y-2">
+                {aiInsight.map((insight, i) => <p key={i}>{insight}</p>)}
+              </div>
+            )}
           </div>
           <p className="text-center text-[9px] text-gray-500 mt-4">
             ※ 본 리포트는 KaKaON 시스템의 거래 데이터를 기반으로 자동 생성되었습니다. 실제 매장 운영 상황과 일부 차이가 있을 수 있습니다.

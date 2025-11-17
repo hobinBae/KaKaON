@@ -611,10 +611,11 @@ export default function Transactions() {
               </div>
             </div>
 
-            {/* ====== 결제수단 + 상태 : 같은 줄 ====== */}
-            <div className="grid grid-cols-[72px_1fr] items-center gap-3">
-              <div className="text-sm font-semibold text-[#333]">결제수단</div>
-              <div className="flex items-center gap-10 flex-wrap">
+            {/* ====== 필터 그룹 ====== */}
+            <div className="flex items-start gap-x-8 gap-y-4 flex-wrap">
+              {/* 결제수단 그룹 */}
+              <div className="flex items-start gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pt-2 pr-5">결제수단</div>
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#F5F5F7] px-2 py-1">
                   <label htmlFor="all-methods-desktop" className="flex items-center gap-2 rounded-lg bg-white px-4 h-8 text-sm text-[#50505f] hover:shadow-sm cursor-pointer">
                     <Checkbox id="all-methods-desktop" checked={selectedMethods.includes('all')} onCheckedChange={(checked) => { setSelectedMethods(checked ? ['all'] : []); }} />
@@ -627,22 +628,24 @@ export default function Transactions() {
                     </label>
                   ))}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold text-[#333] shrink-0">결제상태</div>
-                  <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')} className={segmentWrap}>
-                    <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
-                    <ToggleGroupItem value="completed" className={segmentItem}>완료</ToggleGroupItem>
-                    <ToggleGroupItem value="cancelled" className={segmentItem}>취소</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold text-[#333] shrink-0">주문구분</div>
-                  <ToggleGroup type="single" value={orderTypeFilter} className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
-                    <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
-                    <ToggleGroupItem value="delivery" className={segmentItem}>배달 주문</ToggleGroupItem>
-                    <ToggleGroupItem value="store" className={segmentItem}>가게 주문</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+              </div>
+              {/* 결제상태 그룹 */}
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pr-5">결제상태</div>
+                <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')} className={segmentWrap}>
+                  <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                  <ToggleGroupItem value="completed" className={segmentItem}>완료</ToggleGroupItem>
+                  <ToggleGroupItem value="cancelled" className={segmentItem}>취소</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {/* 주문구분 그룹 */}
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pr-5">주문구분</div>
+                <ToggleGroup type="single" value={orderTypeFilter} className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
+                  <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                  <ToggleGroupItem value="delivery" className={segmentItem}>배달 주문</ToggleGroupItem>
+                  <ToggleGroupItem value="store" className={segmentItem}>가게 주문</ToggleGroupItem>
+                </ToggleGroup>
               </div>
             </div>
 
