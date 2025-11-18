@@ -16,6 +16,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @Tag(name = "Analytics", description = "가맹점 별 매출 분석 정보 조회 API")
 @RestController
 @RequestMapping("/api/v1/analytics")
@@ -132,5 +134,26 @@ public class AnalyticsController {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
         StoreSalesResponseDto response = analyticsService.getStoreSalesByPeriod(memberId, period);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "가맹점별 매출 합계 조회 성공", response, request.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "기간별 메뉴 분석 조회",
+            description = """
+                    지정된 기간 동안의 메뉴별 판매량과 매출액을 조회합니다.
+                    - 기간 타입(WEEK/MONTH/YEAR/RANGE)
+                    - 조회 시작 날짜 (기간 타입 "RANGE" 시 필수)
+                    - 조회 종료 날짜 (기간 타입 "RANGE" 시 필수)
+                    """
+    )
+    @GetMapping("/{storeId}/menu-summary")
+    public ResponseEntity<ApiResponse<MenuSummaryResponseDto>> getMenuSummaryByPeriod(
+            @PathVariable Long storeId,
+            @AuthenticationPrincipal String kakaoId,
+            @ParameterObject @ModelAttribute SalesPeriodRequestDto period,
+            HttpServletRequest request
+    ) {
+        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+        MenuSummaryResponseDto response = analyticsService.getMenuSummaryByPeriod(storeId, memberId, period);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "기간별 메뉴 분석 조회 성공", response, request.getRequestURI()));
     }
 }

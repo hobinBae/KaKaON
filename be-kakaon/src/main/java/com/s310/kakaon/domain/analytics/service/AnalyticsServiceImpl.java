@@ -6,6 +6,7 @@ import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
+import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepositoryImpl;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -34,6 +35,43 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final MemberRepository memberRepository;
     private final SalesCacheService salesCacheService;
     private final PaymentStatsRepositoryImpl paymentStatsRepositoryImpl;
+    private final OrderRepository orderRepository;
+
+    @Override
+    public MenuSummaryResponseDto getMenuSummaryByPeriod(Long storeId, Long memberId, SalesPeriodRequestDto period) {
+        validateOwner(storeId, memberId);
+
+        LocalDate startDate = period.getStartDate();
+        LocalDate endDate = period.getEndDate();
+        LocalDate today = LocalDate.now();
+
+        // 기간 설정 로직 (기존 getCancelRateByPeriod 등에서 참고)
+        switch (period.getPeriodType().toUpperCase()) {
+            case "WEEK":
+                startDate = today.minusDays(6);
+                endDate = today;
+                break;
+            case "MONTH":
+                startDate = today.withDayOfMonth(1);
+                endDate = today;
+                break;
+            case "YEAR":
+                startDate = LocalDate.of(today.getYear(), 1, 1);
+                endDate = today;
+                break;
+            case "RANGE":
+                if (startDate == null || endDate == null) {
+                    throw new ApiException(ErrorCode.PERIOD_NOT_FOUND);
+                }
+                break;
+            default:
+                throw new ApiException(ErrorCode.INVALID_PERIOD);
+        }
+
+        List<MenuSummaryDto> summaries = orderRepository.findMenuSummaryByPeriod(storeId, startDate.atStartOfDay(), endDate.plusDays(1).atStartOfDay());
+
+        return new MenuSummaryResponseDto(summaries);
+    }
 
     /**
      * 가맹점의 점주가 로그인된 사람인지 확인하는 유효성 검사 메서드
