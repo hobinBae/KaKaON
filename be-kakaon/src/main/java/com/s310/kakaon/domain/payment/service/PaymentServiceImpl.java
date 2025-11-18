@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.payment.service;
 
 import com.s310.kakaon.domain.alert.dto.AlertEvent;
 import com.s310.kakaon.domain.alert.entity.AlertType;
+import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
@@ -44,6 +45,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
+import static com.s310.kakaon.global.util.Util.generateAlertId;
 import static com.s310.kakaon.global.util.Util.validateStoreOwner;
 
 @Service
@@ -56,6 +58,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final OrderRepository orderRepository;
+    private final AlertRepository alertRepository;
     private final PaymentCancelRepository paymentCancelRepository;
     private final ApplicationEventPublisher publisher;
     private final StringRedisTemplate stringRedisTemplate;
@@ -65,7 +68,6 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentStatsRepository paymentStatsRepository;
     private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final EntityManager entityManager;
-
 
     @Override
     @Transactional
@@ -688,7 +690,7 @@ public class PaymentServiceImpl implements PaymentService{
 
         if (!open) {
             AlertEvent event = AlertEvent.builder()
-                    .alertUuid(UUID.randomUUID().toString().substring(0, 20))
+                    .alertUuid(generateAlertId(alertRepository))
                     .storeId(store.getId())
                     .storeName(store.getName())
                     .alertType(AlertType.OUT_OF_BUSINESS_HOUR)
@@ -717,7 +719,7 @@ public class PaymentServiceImpl implements PaymentService{
 
             if (avgAmount > 0 && currentAmount >= avgAmount * 10) {
                 AlertEvent event = AlertEvent.builder()
-                        .alertUuid(UUID.randomUUID().toString().substring(0, 20))
+                        .alertUuid(generateAlertId(alertRepository))
                         .storeId(store.getId())
                         .storeName(store.getName())
                         .alertType(AlertType.HIGH_AMOUNT_SPIKE)
@@ -742,6 +744,7 @@ public class PaymentServiceImpl implements PaymentService{
         LocalDateTime startTime = LocalDateTime.parse(startTimeObj.toString());
         return approveTime.isBefore(startTime);
     }
+
 
 
 }

@@ -371,8 +371,8 @@ public class StoreServiceImpl implements StoreService{
     private final Random random = new Random();
     private final SecureRandom secureRandom = new SecureRandom();
 
-    private static final int STORE_COUNT = 10000;   // 요청당 1만 개 생성
-    private static final int PAYMENTS_PER_STORE = 100; // 스토어당 결제 10개
+    private static final int STORE_COUNT = 1;   // 요청당 1만 개 생성
+    private static final int PAYMENTS_PER_STORE = 1000000; // 스토어당 결제 10개
     private final OrderRepository orderRepository;
     @Transactional
     public void generate(Long memberId) {
