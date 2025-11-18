@@ -22,7 +22,10 @@ export default function SalesTrend({ data, xAxisDataKey }: SalesTrendProps) {
           <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
           <XAxis dataKey={xAxisDataKey} stroke="#717182" dy={10} />
           <YAxis stroke="#717182" tickFormatter={formatYAxis} />
-          <Tooltip contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }} />
+          <Tooltip
+            contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+            formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+          />
           <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
         </LineChart>
       </ResponsiveContainer>
