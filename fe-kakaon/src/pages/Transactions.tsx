@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { RotateCw, Calendar as CalendarIcon, Upload, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { RotateCw, Calendar as CalendarIcon, Upload, Download, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -97,6 +97,10 @@ export default function Transactions() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const queryClient = useQueryClient();
 
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [dateRange, activePeriod, orderTypeFilter, searchTerm, selectedMethods, statusFilter]);
+
   const paymentMethodOptions = ['카드', '계좌', '카카오페이', '현금'];
 
   const { data: ordersData } = usePayments(
@@ -136,9 +140,9 @@ export default function Transactions() {
   const totalPages = ordersData?.data?.pageable?.totalPages || 0;
 
   const handlePageChange = (page: number) => {
-    setCurrentPage(page);
-    setSearchTerm(''); // 페이지 변경 시 검색어 초기화
-    setSearchInput('');
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   const handlePeriodChange = (value: string) => {
@@ -496,7 +500,7 @@ export default function Transactions() {
           <p className="text-sm text-[#717182]">결제내역을 조회하고 관리하세요</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={() => fileInputRef.current?.click()}>
+          <Button variant="outline" className="h-8 rounded-3xl flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={() => fileInputRef.current?.click()}>
             <Upload className="w-4 h-4" />
             CSV 업로드
           </Button>
@@ -507,7 +511,7 @@ export default function Transactions() {
             accept=".csv"
             style={{ display: 'none' }}
           />
-          <Button variant="outline" className="h-8 rounded-lg flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={handleDownloadCSV}>
+          <Button variant="outline" className="h-8 rounded-3xl flex items-center gap-2 text-sm px-4 flex-1 tablet:flex-none" onClick={handleDownloadCSV}>
             <Download className="w-4 h-4" />
             CSV 다운로드
           </Button>
@@ -912,12 +916,78 @@ export default function Transactions() {
           </Table>
         </div>
 
-        <div className="flex items-center justify-end p-4 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="flex items-center gap-4">
-            <Button size="sm" variant="outline" className="rounded" onClick={() => handlePageChange(currentPage - 1)} disabled={currentPage === 0}>이전</Button>
-            <span className="text-sm text-gray-600">{currentPage + 1} / {totalPages}</span>
-            <Button size="sm" variant="outline" className="rounded" onClick={() => handlePageChange(currentPage + 1)} disabled={currentPage >= totalPages - 1}>다음</Button>
-          </div>
+        <div className="flex items-center justify-center p-4 border-t border-[rgba(0,0,0,0.08)]">
+          {totalPages > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(0)}
+                disabled={currentPage === 0}
+              >
+                <ChevronFirst className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => {
+                const page = i;
+                const pageNumber = i + 1;
+                const showPage =
+                  page === 0 ||
+                  page === totalPages - 1 ||
+                  (page >= currentPage - 1 && page <= currentPage + 1);
+
+                const showEllipsis =
+                  (page === 1 && currentPage > 3) ||
+                  (page === totalPages - 2 && currentPage < totalPages - 4);
+
+                if (showEllipsis) {
+                  return <span key={`ellipsis-${page}`} className="px-2">...</span>;
+                }
+
+                if (showPage) {
+                  return (
+                    <Button
+                      key={page}
+                      size="icon"
+                      variant={page === currentPage ? "default" : "ghost"}
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                }
+                return null;
+              })}
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(totalPages - 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronLast className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 

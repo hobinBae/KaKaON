@@ -97,7 +97,7 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
         <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">{`${title}`}</h3>
         <ResponsiveContainer width="100%" height={Math.max(300, data.length * 40)}>
           {totalQuantity > 0 ? (
-            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
+            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
               <XAxis type="number" allowDecimals={false} ticks={ticks} domain={[0, 'dataMax + 4']} />
               <YAxis

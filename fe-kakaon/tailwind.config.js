@@ -17,6 +17,9 @@ module.exports = {
       },
     },
     extend: {
+      borderWidth: {
+        '3': '3px',
+      },
       screens: {
         'tablet': '800px',
         'wide': '1400px',
