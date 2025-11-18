@@ -384,8 +384,8 @@ export const useReportData = (storeId: number, reportType: 'weekly' | 'monthly')
       const totalMenuSales = sortedMenus.reduce((sum, m) => sum + m.sales, 0);
       if (totalMenuSales === 0) return { topMenus: [], lowMenus: [] };
 
-      const topMenus = sortedMenus.slice(0, 5).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
-      const lowMenus = sortedMenus.slice(-5).sort((a,b) => a.sales - b.sales).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
+      const topMenus = sortedMenus.slice(0, 3).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
+      const lowMenus = sortedMenus.slice(-3).sort((a,b) => a.sales - b.sales).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
 
       return { topMenus, lowMenus };
     }

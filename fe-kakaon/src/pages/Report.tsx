@@ -52,7 +52,7 @@ export default function Report() {
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'PNG', 0, -5, pdfWidth, pdfHeight);
     pdf.save(`매출리포트_${reportType}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
@@ -149,13 +149,13 @@ export default function Report() {
       </div>
       
       {/* 주간/월간 선택 컨트롤 (인쇄 시 숨김) */}
-      <div className="no-print max-w-4xl mx-auto mb-4 grid w-full grid-cols-2 bg-gray-200 p-1 rounded-lg h-10">
+      <div className="no-print max-w-4xl mx-auto mb-4 grid w-full grid-cols-2 bg-gray-200 p-1 rounded-lg">
         <Button onClick={() => setReportType("weekly")} className={`rounded-lg ${reportType === 'weekly' ? 'bg-white shadow-sm text-black' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}>주간 리포트</Button>
         <Button onClick={() => setReportType("monthly")} className={`rounded-lg ${reportType === 'monthly' ? 'bg-white shadow-sm text-black' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}>월간 리포트</Button>
       </div>
       
       {/* A4 리포트 컨테이너 */}
-      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-4 sm:p-8 text-[11px] leading-snug mx-auto shadow-lg border w-full max-w-4xl">
+      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-4 sm:p-8 text-[11px] leading-normal mx-auto shadow-lg border w-full max-w-4xl">
         {/* 1. 헤더 영역 */}
         <header className="flex flex-col sm:flex-row justify-between items-start pb-2 border-b-2 border-gray-900">
           <div>
@@ -274,13 +274,13 @@ function ReportTable({ title, headers, data }: { title: string; headers: string[
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr>
-            {headers.map(h => <th key={h} className="border border-gray-300 bg-gray-100 px-1 py-0.5 text-left font-semibold">{h}</th>)}
+            {headers.map(h => <th key={h} className="border border-gray-300 bg-gray-100 px-1 pt-0 pb-1 text-left font-semibold">{h}</th>)}
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} className="bg-white">
-              {row.map((cell, j) => <td key={j} className="border border-gray-300 px-1 py-0.5">{cell}</td>)}
+              {row.map((cell, j) => <td key={j} className="border border-gray-300 px-1 pt-0 pb-1">{cell}</td>)}
             </tr>
           ))}
         </tbody>
