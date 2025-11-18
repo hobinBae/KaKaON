@@ -667,7 +667,7 @@ export default function StoreManage() {
         </div>
         <Dialog open={isAddingStore} onOpenChange={setIsAddingStore}>
           <DialogTrigger asChild>
-            <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none w-full sm:w-auto">
+            <Button className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none w-full sm:w-auto">
               <Plus className="w-4 h-4 mr-2" />
               가맹점 추가
             </Button>
@@ -1009,7 +1009,7 @@ export default function StoreManage() {
                                 </div>
 
                                 <div className="flex justify-end">
-                                  <Button onClick={handleUpdateStore} className="w-full">수정 완료</Button>
+                                  <Button onClick={handleUpdateStore} className="w-full rounded-3xl">수정 완료</Button>
                                 </div>
 
                                 <Card className="p-4 border-[#FF4D4D] border">
@@ -1018,7 +1018,7 @@ export default function StoreManage() {
                                       <h3 className="text-[#FF4D4D] text-sm font-medium mb-1">가맹점 삭제</h3>
                                       <p className="text-xs text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
                                     </div>
-                                    <Button variant="destructive" className="rounded-lg w-full" onClick={() => handleDeleteStore(selectedStore.storeId)}>
+                                    <Button variant="destructive" className="rounded-3xl w-full" onClick={() => handleDeleteStore(selectedStore.storeId)}>
                                       가맹점 삭제
                                     </Button>
                                   </div>
@@ -1123,7 +1123,7 @@ export default function StoreManage() {
 
                               <div className="flex justify-center mt-6">
                                 <Button
-                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none w-full"
+                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none w-full"
                                   onClick={() => setIsAddingAlert(true)}
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
@@ -1379,7 +1379,7 @@ export default function StoreManage() {
                               </div>
 
                               <div className="flex justify-end mt-4 md:mt-6">
-                                <Button onClick={handleUpdateStore} className="w-full md:w-auto">수정 완료</Button>
+                                <Button onClick={handleUpdateStore} className="w-full md:w-auto rounded-3xl">수정 완료</Button>
                               </div>
 
                               {/* Danger Zone */}
@@ -1389,7 +1389,7 @@ export default function StoreManage() {
                                     <h3 className="text-[#FF4D4D] mb-1 text-sm md:text-base">가맹점 삭제</h3>
                                     <p className="text-xs md:text-sm text-[#717182]">가맹점을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
                                   </div>
-                                  <Button variant="destructive" className="rounded-lg w-full md:w-auto" onClick={() => handleDeleteStore(selectedStore.storeId)}>
+                                  <Button variant="destructive" className="rounded-lg w-full md:w-auto rounded-3xl" onClick={() => handleDeleteStore(selectedStore.storeId)}>
                                     가맹점 삭제
                                   </Button>
                                 </div>
@@ -1495,7 +1495,7 @@ export default function StoreManage() {
 
                               <div className="flex justify-center mt-6">
                                 <Button
-                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none"
+                                  className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none"
                                   onClick={() => setIsAddingAlert(true)}
                                 >
                                   <Plus className="w-4 h-4 mr-2" />
