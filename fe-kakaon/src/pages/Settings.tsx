@@ -191,8 +191,8 @@ export default function Settings() {
             <div className="flex justify-center mt-6">
               <Button
                 type="submit"
-                disabled={isUpdating}
-                className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none px-8 w-full max-w-xs"
+                disabled={!profileForm.formState.isDirty || isUpdating}
+                className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none px-8 w-full max-w-xs"
               >
                 {isUpdating ? "수정 중..." : "정보 수정"}
               </Button>
@@ -248,8 +248,8 @@ export default function Settings() {
             <div className="flex justify-center mt-6">
               <Button
                 type="submit"
-                disabled={isUpdating}
-                className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none px-8 w-full max-w-xs"
+                disabled={!pinForm.formState.isDirty || isUpdating}
+                className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none px-8 w-full max-w-xs"
               >
                 {isUpdating ? "수정 중..." : "PIN 번호 수정"}
               </Button>
@@ -263,12 +263,12 @@ export default function Settings() {
         <Card className="p-6 border-red-200">
           <div className="flex flex-col tablet:flex-row items-start tablet:items-center justify-between gap-4">
             <div>
-              <h3 className="text-[#FF4D4D] mb-1">계정 삭제</h3>
+              <h3 className="text-[#FF4D4D] mb-1 ">계정 삭제</h3>
               <p className="text-sm text-[#717182]">계정을 영구적으로 삭제합니다. 이 작업은 되돌릴 수 없습니다.</p>
             </div>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="destructive" className="rounded-lg w-full tablet:w-auto" disabled={isDeleting}>
+                <Button variant="destructive" className="rounded-3xl w-full tablet:w-auto" disabled={isDeleting}>
                   {isDeleting ? "삭제 중..." : "계정 삭제"}
                 </Button>
               </AlertDialogTrigger>
