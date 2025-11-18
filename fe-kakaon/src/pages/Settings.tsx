@@ -191,7 +191,7 @@ export default function Settings() {
             <div className="flex justify-center mt-6">
               <Button
                 type="submit"
-                disabled={isUpdating}
+                disabled={!profileForm.formState.isDirty || isUpdating}
                 className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none px-8 w-full max-w-xs"
               >
                 {isUpdating ? "수정 중..." : "정보 수정"}
@@ -248,7 +248,7 @@ export default function Settings() {
             <div className="flex justify-center mt-6">
               <Button
                 type="submit"
-                disabled={isUpdating}
+                disabled={!pinForm.formState.isDirty || isUpdating}
                 className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none px-8 w-full max-w-xs"
               >
                 {isUpdating ? "수정 중..." : "PIN 번호 수정"}
