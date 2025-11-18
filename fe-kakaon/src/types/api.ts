@@ -305,6 +305,16 @@ export interface PaymentMethodRatioResponse {
   totalAmount: number;
 }
 
+export interface MenuSummary {
+  menuName: string;
+  totalQuantity: number;
+  totalSales: number;
+}
+
+export interface MenuSummaryResponse {
+  menuSummaries: MenuSummary[];
+}
+
 // ================== Order ==================
 export interface OrderDetailItem {
   orderItemId: number;

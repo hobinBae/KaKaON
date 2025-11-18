@@ -24,7 +24,7 @@ export default function SalesTrend({ data, xAxisDataKey }: SalesTrendProps) {
           <YAxis stroke="#717182" tickFormatter={formatYAxis} />
           <Tooltip
             contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-            formatter={(value: number) => [`${Math.round(value).toLocaleString()}원`, '매출']}
+            formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
           />
           <Line type="linear" dataKey="sales" stroke="#FEE500" strokeWidth={3} dot={{ fill: '#FEE500', r: 4 }} />
         </LineChart>
