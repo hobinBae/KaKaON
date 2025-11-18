@@ -43,6 +43,8 @@ public class PaymentRepositoryImpl implements PaymentRepositoryCustom {
 
         List<Payment> payments = jpaQueryFactory
                 .selectFrom(payment)
+//                .leftJoin(payment.store).fetchJoin()
+//                .leftJoin(payment.order).fetchJoin()
                 .where(builder)
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())

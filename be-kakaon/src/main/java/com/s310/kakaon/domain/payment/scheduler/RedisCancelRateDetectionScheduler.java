@@ -25,8 +25,8 @@ public class RedisCancelRateDetectionScheduler implements CancelRateDetectionSch
     private final ApplicationEventPublisher publisher;
 
     @Override
-//    @Scheduled(cron = "0 0 * * * *")
-    @Scheduled(cron = "0 * * * * *") //  매 분 0초마다
+    @Scheduled(cron = "0 0 * * * *")
+//    @Scheduled(cron = "0 * * * * *") //  매 분 0초마다
     public void detectCancelRateIncrease() {
 
         long t1 = System.currentTimeMillis();
