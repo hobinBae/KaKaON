@@ -26,7 +26,7 @@ export default function HourlySales({ data, activePeriod }: HourlySalesProps) {
           <YAxis stroke="#717182" tickFormatter={formatYAxis} />
           <Tooltip
             contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
-            formatter={(value: number) => [`${value.toLocaleString()}원`, '매출']}
+            formatter={(value: number) => [`${Math.round(value).toLocaleString()}원`, '매출']}
           />
           <Bar dataKey="sales" fill="#FEE500" radius={[8, 8, 0, 0]} maxBarSize={50} />
         </BarChart>

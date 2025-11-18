@@ -699,7 +699,7 @@ export default function Analytics() {
           <p className="text-sm text-[#717182]">다양한 차트로 매출 데이터를 분석하세요</p>
         </div>
         <Link to="/report" className="w-full tablet:w-auto">
-          <Button className="w-full tablet:w-auto">매출 분석 리포트</Button>
+          <Button className="w-full tablet:w-auto rounded-3xl">매출 분석 리포트</Button>
         </Link>
       </div>
 
@@ -987,7 +987,7 @@ export default function Analytics() {
           <CancellationRate data={cancelChartData} activePeriod={activePeriod} totalCancellations={totalCancellations} isLoading={isCancelRateLoading} />
         </TabsContent>
         <TabsContent value="menu-sales">
-          <MenuSalesOverview data={menuSalesData} title={`${menuSalesPeriod === 'today' ? '오늘' : '어제'} 메뉴별 판매량`} />
+          <MenuSalesOverview data={menuSalesData} title={`${menuSalesPeriod === 'today' ? '오늘' : '전일'} 메뉴별 판매량`} />
         </TabsContent>
         <TabsContent value="payment-method">
           <PaymentMethod paymentDistribution={paymentDistribution} salesTypeDistribution={salesTypeDistribution} windowWidth={windowWidth} />
