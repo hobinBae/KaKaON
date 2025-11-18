@@ -18,6 +18,15 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -176,16 +185,15 @@ export default function StoreManage() {
     );
   }, [sortedStores, appliedSearchTerm]);
 
-  // 기간별 매출 계산 함수 (API에서 todaySales, weeklySales, monthlySales가 제공되면 사용)
-  const getSalesData = (store: Store | StoreDetailResponse, period: SalesPeriod) => {
-    const totalSales = store.totalSales ?? 0;
+  // 기간별 매출 계산 함수
+  const getSalesData = (store: Store, period: SalesPeriod) => {
     switch (period) {
       case "일별":
-        return Math.round(totalSales * 0.03); // 임시: 전체 매출의 3%를 오늘 매출로 가정
+        return store.todaySales ?? 0;
       case "주별":
-        return Math.round(totalSales * 0.2); // 임시: 전체 매출의 20%를 이번주 매출로 가정
+        return store.weeklySales ?? 0;
       case "월별":
-        return totalSales; // 전체 매출을 이번달 매출로 사용
+        return store.monthlySales ?? 0;
       default:
         return 0;
     }
@@ -221,14 +229,39 @@ export default function StoreManage() {
   }, [selectedStore]);
   const [isAddingStore, setIsAddingStore] = useState(false);
   const [isBusinessHoursModalOpen, setIsBusinessHoursModalOpen] = useState(false);
-  const [isBusinessNumberErrorModalOpen, setIsBusinessNumberErrorModalOpen] = useState(false);
-  const [isRequiredFieldErrorModalOpen, setIsRequiredFieldErrorModalOpen] = useState(false);
-  const [isPhoneNumberErrorModalOpen, setIsPhoneNumberErrorModalOpen] = useState(false);
+  const [isPostcodeDialogOpen, setIsPostcodeDialogOpen] = useState(false);
   
   // 새 가맹점 추가를 위한 상태
   const [newStoreName, setNewStoreName] = useState("");
   const [newStoreBusinessNumber, setNewStoreBusinessNumber] = useState("");
   const [newStoreType, setNewStoreType] = useState<StoreCreateRequest['businessType']>('RESTAURANT');
+  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
+  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
+  const [newStorePhone, setNewStorePhone] = useState("");
+  const [newStoreCity, setNewStoreCity] = useState("");
+  const [newStoreState, setNewStoreState] = useState("");
+  const [newStorePostalCode, setNewStorePostalCode] = useState("");
+  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
+  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
+  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState | null>(null);
+  const [formErrors, setFormErrors] = useState({
+    name: '',
+    businessNumber: '',
+    phone: '',
+    address: '',
+    businessHours: '',
+  });
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertModalContent, setAlertModalContent] = useState({ title: "", description: "" });
+
+  const isFormValid = useMemo(() => {
+    if (!newStoreName || !newStoreBusinessNumber || !newStorePhone || !newStoreBaseAddress || !newStoreBusinessHours) return false;
+    const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
+    if (businessNumberDigits.length !== 10) return false;
+    const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
+    if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) return false;
+    return true;
+  }, [newStoreName, newStoreBusinessNumber, newStorePhone, newStoreBaseAddress, newStoreBusinessHours]);
 
   // 사업자번호 포맷팅 함수
   const formatBusinessNumber = (value: string) => {
@@ -287,21 +320,29 @@ export default function StoreManage() {
     const formatted = formatPhoneNumber(e.target.value);
     setNewStorePhone(formatted);
   };
-  const [newStoreBaseAddress, setNewStoreBaseAddress] = useState(""); // 검색된 기본 주소
-  const [newStoreDetailAddress, setNewStoreDetailAddress] = useState(""); // 직접 입력한 상세 주소
-  const [newStorePhone, setNewStorePhone] = useState("");
-  const [newStoreCity, setNewStoreCity] = useState("");
-  const [newStoreState, setNewStoreState] = useState("");
-  const [newStorePostalCode, setNewStorePostalCode] = useState("");
-  const [newStoreLatitude, setNewStoreLatitude] = useState(0);
-  const [newStoreLongitude, setNewStoreLongitude] = useState(0);
-  const [newStoreBusinessHours, setNewStoreBusinessHours] = useState<BusinessHoursState>(defaultBusinessHours);
 
   // 가맹점 정보 수정을 위한 상태
   const [editingStoreName, setEditingStoreName] = useState("");
   const [editingStorePhone, setEditingStorePhone] = useState("");
   const [editingStoreType, setEditingStoreType] = useState<BusinessType>('RESTAURANT');
   const [editingBusinessHours, setEditingBusinessHours] = useState<BusinessHoursState | null>(null);
+
+  useEffect(() => {
+    const errors = { name: '', businessNumber: '', phone: '', address: '', businessHours: '' };
+    if (isAddingStore) {
+      if (!newStoreName) errors.name = '상호명을 입력해 주세요.';
+      
+      const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
+      if (businessNumberDigits.length !== 10) errors.businessNumber = '사업자등록번호는 10자리 숫자여야 합니다.';
+
+      const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
+      if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) errors.phone = '전화번호는 10~12자리 숫자여야 합니다.';
+
+      if (!newStoreBaseAddress) errors.address = '주소를 검색해 주세요.';
+      if (!newStoreBusinessHours) errors.businessHours = '영업시간을 설정해 주세요.';
+    }
+    setFormErrors(errors);
+  }, [newStoreName, newStoreBusinessNumber, newStorePhone, newStoreBaseAddress, newStoreBusinessHours, isAddingStore]);
 
   useEffect(() => {
     if (selectedStore) {
@@ -318,33 +359,56 @@ export default function StoreManage() {
       toast.error("주소 검색 서비스 로딩에 실패했습니다. 페이지를 새로고침 해주세요.");
       return;
     }
-
-    const geocoder = new window.kakao.maps.services.Geocoder();
-
-    new window.daum.Postcode({
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      oncomplete: function(data: any) {
-        const roadAddr = data.roadAddress; // 도로명 주소 변수
-        
-        setNewStorePostalCode(data.zonecode);
-        setNewStoreBaseAddress(roadAddr);
-        setNewStoreCity(data.sido);
-        setNewStoreState(data.sigungu);
-
-        // 주소로 좌표를 검색했음
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        geocoder.addressSearch(data.address, function(result: any, status: any) {
-             if (status === window.kakao.maps.services.Status.OK) {
-                setNewStoreLatitude(parseFloat(result[0].y));
-                setNewStoreLongitude(parseFloat(result[0].x));
-                toast.success("주소가 좌표로 변환되었습니다.");
-             } else {
-                toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
-             }
-        });
-      }
-    }).open();
+    // Dialog를 열어서 임베드 방식으로 우편번호 검색
+    setIsPostcodeDialogOpen(true);
   };
+
+  // Dialog가 열릴 때 Daum Postcode 임베드
+  useEffect(() => {
+    if (isPostcodeDialogOpen && window.daum) {
+      // DOM이 완전히 렌더링될 때까지 약간의 지연
+      const timer = setTimeout(() => {
+        const postcodeElement = document.getElementById('daum-postcode-embed');
+        if (!postcodeElement) {
+          console.error('Postcode element not found');
+          return;
+        }
+
+        const geocoder = new window.kakao.maps.services.Geocoder();
+
+        new window.daum.Postcode({
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          oncomplete: function(data: any) {
+            const roadAddr = data.roadAddress; // 도로명 주소 변수
+
+            setNewStorePostalCode(data.zonecode);
+            setNewStoreBaseAddress(roadAddr);
+            setNewStoreCity(data.sido);
+            setNewStoreState(data.sigungu);
+
+            // 주소로 좌표를 검색했음
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            geocoder.addressSearch(data.address, function(result: any, status: any) {
+                 if (status === window.kakao.maps.services.Status.OK) {
+                    setNewStoreLatitude(parseFloat(result[0].y));
+                    setNewStoreLongitude(parseFloat(result[0].x));
+                    toast.success("주소가 좌표로 변환되었습니다.");
+                 } else {
+                    toast.error("좌표 변환에 실패했습니다. 위도/경도를 직접 입력해주세요.");
+                 }
+            });
+
+            // 주소 선택 후 Dialog 닫기
+            setIsPostcodeDialogOpen(false);
+          },
+          width: '100%',
+          height: '100%',
+        }).embed(postcodeElement);
+      }, 100);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isPostcodeDialogOpen]);
 
 
   const handleStoreClick = (store: Store | StoreDetailResponse) => {
@@ -402,26 +466,12 @@ export default function StoreManage() {
 
   const handleAddStore = () => {
     // 필수 입력 항목 검사
-    if (!newStoreName || !newStoreBusinessNumber || !newStorePhone || !newStoreBaseAddress || !newStoreDetailAddress || !newStoreBusinessHours) {
-      setIsRequiredFieldErrorModalOpen(true);
+    if (!isFormValid) {
+      toast.error("입력 양식을 다시 확인해주세요.");
       return;
     }
 
-    // 사업자번호 유효성 검사
-    const businessNumberDigits = newStoreBusinessNumber.replace(/[^\d]/g, '');
-    if (businessNumberDigits.length !== 10) {
-      setIsBusinessNumberErrorModalOpen(true);
-      return;
-    }
-
-    // 전화번호 유효성 검사
-    const phoneNumberDigits = newStorePhone.replace(/[^\d]/g, '');
-    if (phoneNumberDigits.length < 10 || phoneNumberDigits.length > 12) {
-      setIsPhoneNumberErrorModalOpen(true);
-      return;
-    }
-
-    const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours)
+    const businessHours: BusinessHour[] = Object.entries(newStoreBusinessHours!)
       .map(([day, val]) => ({
         dayOfWeek: koreanToDayOfWeek[day],
         openTime: val.isClosed ? null : (val.timeSlots[0] as { start: string; end: string }).start,
@@ -465,7 +515,19 @@ export default function StoreManage() {
         setNewStoreBusinessHours(null);
       },
       onError: (error) => {
-        toast.error("가맹점 등록에 실패했습니다.", { description: error.message });
+        if (error.message.includes("409")) {
+          setAlertModalContent({
+            title: "등록 실패",
+            description: "이미 등록된 사업자 번호입니다."
+          });
+          setIsAlertModalOpen(true);
+        } else {
+          setAlertModalContent({
+            title: "등록 실패",
+            description: "가맹점 등록에 실패했습니다. 입력 내용을 다시 확인해주세요."
+          });
+          setIsAlertModalOpen(true);
+        }
       }
     });
   };
@@ -615,22 +677,24 @@ export default function StoreManage() {
               <DialogTitle>새 가맹점 추가</DialogTitle>
               <DialogDescription>추가할 가맹점의 정보를 입력하세요.</DialogDescription>
             </DialogHeader>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
-              <div>
-                <label className="text-sm text-[#717182] mb-2 block">상호명</label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 py-4">
+              <div className="sm:col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">* 상호명</label>
                 <Input value={newStoreName} onChange={(e) => setNewStoreName(e.target.value)} />
+                {formErrors.name && <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>}
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">사업자등록번호</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 사업자등록번호</label>
                 <Input
                   value={newStoreBusinessNumber}
                   onChange={handleBusinessNumberChange}
                   placeholder="000-00-00000"
                   maxLength={12}
                 />
+                {formErrors.businessNumber && <p className="text-red-500 text-xs mt-1">{formErrors.businessNumber}</p>}
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">업종</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 업종</label>
                 <Select
                   value={newStoreType}
                   onValueChange={(value) => setNewStoreType(value as StoreCreateRequest['businessType'])}
@@ -648,35 +712,37 @@ export default function StoreManage() {
                 </Select>
               </div>
               <div>
-                <label className="text-sm text-[#717182] mb-2 block">전화번호</label>
+                <label className="text-sm text-[#717182] mb-2 block">* 전화번호</label>
                 <Input
                   value={newStorePhone}
                   onChange={handlePhoneNumberChange}
                   // placeholder="000-0000-0000"
                   maxLength={14}
                 />
+                {formErrors.phone && <p className="text-red-500 text-xs mt-1">{formErrors.phone}</p>}
               </div>
-              <div className="col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">주소</label>
+              <div className="sm:col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">* 주소</label>
                 <div className="flex gap-2">
                   <Input value={newStorePostalCode} placeholder="우편번호" readOnly />
                   <Button type="button" variant="outline" onClick={handleAddressSearch}>
                     우편번호 찾기
                   </Button>
                 </div>
+                {formErrors.address && <p className="text-red-500 text-xs mt-1">{formErrors.address}</p>}
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Input value={newStoreBaseAddress} placeholder="주소" readOnly />
               </div>
-              <div className="col-span-2">
+              <div className="sm:col-span-2">
                 <Input 
                   value={newStoreDetailAddress}
                   onChange={(e) => setNewStoreDetailAddress(e.target.value)} 
                   placeholder="상세주소 입력" 
                 />
               </div>
-              <div className="col-span-2">
-                <label className="text-sm text-[#717182] mb-2 block">영업시간</label>
+              <div className="sm:col-span-2">
+                <label className="text-sm text-[#717182] mb-2 block">* 영업시간</label>
                 <Dialog open={isBusinessHoursModalOpen} onOpenChange={setIsBusinessHoursModalOpen}>
                   <DialogTrigger asChild>
                     <Button variant="outline" className="w-full justify-start font-normal">
@@ -691,19 +757,25 @@ export default function StoreManage() {
                       </DialogDescription>
                     </DialogHeader>
                     <BusinessHoursForm
-                      initialState={newStoreBusinessHours}
+                      initialState={newStoreBusinessHours ?? defaultBusinessHours}
                       onStateChange={setNewStoreBusinessHours}
                     />
                     <DialogFooter className="sm:justify-center">
-                      <Button onClick={() => setIsBusinessHoursModalOpen(false)} className="w-full sm:w-auto">확인</Button>
+                      <Button onClick={() => {
+                        setIsBusinessHoursModalOpen(false);
+                        if (newStoreBusinessHours) {
+                          setFormErrors(prev => ({ ...prev, businessHours: '' }));
+                        }
+                      }} className="w-full sm:w-auto">확인</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
+                {formErrors.businessHours && <p className="text-red-500 text-xs mt-1">{formErrors.businessHours}</p>}
               </div>
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setIsAddingStore(false)}>취소</Button>
-              <Button onClick={handleAddStore} disabled={isCreatingStore}>
+              <Button onClick={handleAddStore} disabled={!isFormValid || isCreatingStore}>
                 {isCreatingStore ? "저장 중..." : "저장"}
               </Button>
             </DialogFooter>
@@ -779,21 +851,21 @@ export default function StoreManage() {
                       </div>
                       <div className="grid grid-cols-2 gap-2 text-sm">
                         <div>
-                          <span className="text-[#717182]">매출: </span>
-                          <span className="text-[#333333] font-medium">₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M</span>
+                          <span className="text-[#717182]">금일 매출: </span>
+                          <span className="text-[#333333] font-medium">{((store.todaySales ?? 0) / 10000).toFixed(1)}만원</span>
                         </div>
                         <div>
-                          <span className="text-[#717182]">취소율: </span>
-                          {store.cancelRate !== undefined ? (
+                          <span className="text-[#717182]">금일 취소율: </span>
+                          {store.todayCancelRate !== undefined ? (
                             <Badge
                               variant="outline"
                               className={`rounded text-xs ${
-                                store.cancelRate > 3.5
+                                store.todayCancelRate > 3.5
                                   ? "border-[#FF4D4D] text-[#FF4D4D]"
                                   : "border-[#717182] text-[#717182]"
                               }`}
                             >
-                              {store.cancelRate}%
+                              {store.todayCancelRate.toFixed(1)}%
                             </Badge>
                           ) : (
                             <span className="text-xs text-[#717182]">-</span>
@@ -1075,8 +1147,7 @@ export default function StoreManage() {
             <TableHeader>
               <TableRow className="bg-[#F5F5F5] hover:bg-[#F5F5F5]">
                 <TableHead className="text-[#333333] pl-6 md:pl-6">가맹점명</TableHead>
-                <TableHead className="text-[#333333] text-center">매출</TableHead>
-                <TableHead className="text-[#333333] text-center">취소율</TableHead>
+                <TableHead className="text-[#333333] text-center">금일 취소율</TableHead>
                 <TableHead className="text-[#333333] text-center">알림</TableHead>
                 <TableHead className="text-[#333333] text-center">상태</TableHead>
                 <TableHead className="text-[#333333] text-center hidden md:table-cell">
@@ -1118,24 +1189,16 @@ export default function StoreManage() {
                       </div>
                     </TableCell>
                     <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
-                      <div>
-                        <p className="text-sm text-[#333333]">
-                          ₩{((store.totalSales ?? 0) / 1000000).toFixed(1)}M
-                        </p>
-                        {/* 상세 정보가 아니므로 변동률 데이터 없음 */}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center" style={{ backgroundColor: 'transparent' }}>
-                      {store.cancelRate !== undefined ? (
+                      {store.todayCancelRate !== undefined ? (
                         <Badge
                           variant="outline"
                           className={`rounded ${
-                            store.cancelRate > 3.5
+                            store.todayCancelRate > 3.5
                               ? "border-[#FF4D4D] text-[#FF4D4D]"
                               : "border-[#717182] text-[#717182]"
                           }`}
                         >
-                          {store.cancelRate}%
+                          {store.todayCancelRate.toFixed(1)}%
                         </Badge>
                       ) : (
                         <span className="text-xs text-[#717182]">-</span>
@@ -1174,7 +1237,7 @@ export default function StoreManage() {
                           ></div>
                         </div>
                         <span className="text-xs text-gray-500 w-16 text-right">
-                          {(getSalesData(store, selectedPeriod) / 10000).toFixed(0)}만원
+                          {getSalesData(store, selectedPeriod) > 0 ? `${(getSalesData(store, selectedPeriod) / 10000).toFixed(1)}만원` : ''}
                         </span>
                       </div>
                     </TableCell>
@@ -1211,7 +1274,7 @@ export default function StoreManage() {
                   {/* Expanded Detail Row */}
                   {selectedStoreId === store.storeId && (
                     <TableRow key={`${store.storeId}-detail`}>
-                      <TableCell colSpan={7} className="bg-[#FAFAFA] p-4 md:p-6">
+                      <TableCell colSpan={6} className="bg-[#FAFAFA] p-4 md:p-6">
                         {isStoreDetailLoading ? (
                           <div className="text-center p-8">상세 정보를 불러오는 중...</div>
                         ) : selectedStore ? (
@@ -1456,57 +1519,6 @@ export default function StoreManage() {
         )}
       </Card>
 
-      {/* 필수 입력 항목 오류 모달 */}
-      <Dialog open={isRequiredFieldErrorModalOpen} onOpenChange={setIsRequiredFieldErrorModalOpen}>
-        <DialogContent className="w-[90vw] max-w-xs">
-          <DialogHeader>
-            <DialogTitle>입력 오류</DialogTitle>
-            <DialogDescription>
-              모든 필수 항목을 입력해주세요.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setIsRequiredFieldErrorModalOpen(false)} className="w-full">
-              확인
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 사업자번호 오류 모달 */}
-      <Dialog open={isBusinessNumberErrorModalOpen} onOpenChange={setIsBusinessNumberErrorModalOpen}>
-        <DialogContent className="w-[90vw] max-w-xs">
-          <DialogHeader>
-            <DialogTitle>사업자번호 오류</DialogTitle>
-            <DialogDescription>
-              사업자번호는 10자리 숫자여야 합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setIsBusinessNumberErrorModalOpen(false)} className="w-full">
-              확인
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* 전화번호 오류 모달 */}
-      <Dialog open={isPhoneNumberErrorModalOpen} onOpenChange={setIsPhoneNumberErrorModalOpen}>
-        <DialogContent className="w-[90vw] max-w-xs">
-          <DialogHeader>
-            <DialogTitle>전화번호 오류</DialogTitle>
-            <DialogDescription>
-              전화번호는 10~12자리 숫자여야 합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button onClick={() => setIsPhoneNumberErrorModalOpen(false)} className="w-full">
-              확인
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* 알림 수신자 삭제 확인 모달 */}
       <Dialog open={isDeleteRecipientModalOpen} onOpenChange={setIsDeleteRecipientModalOpen}>
         <DialogContent className="w-[90vw] max-w-md">
@@ -1536,6 +1548,37 @@ export default function StoreManage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* 우편번호 검색 Dialog */}
+      <Dialog open={isPostcodeDialogOpen} onOpenChange={setIsPostcodeDialogOpen}>
+        <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-hidden p-0 gap-0">
+          <DialogHeader className="px-6 pt-6 pb-4 border-b">
+            <DialogTitle>우편번호 찾기</DialogTitle>
+            <DialogDescription>
+              주소를 검색하여 선택하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div
+            id="daum-postcode-embed"
+            className="w-full h-[400px] sm:h-[500px] overflow-auto"
+          />
+        </DialogContent>
+      </Dialog>
+
+      {/* 오류 경고 모달 */}
+      <AlertDialog open={isAlertModalOpen} onOpenChange={setIsAlertModalOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{alertModalContent.title}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {alertModalContent.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setIsAlertModalOpen(false)}>확인</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

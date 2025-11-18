@@ -24,8 +24,8 @@ import { useMyInfo, useUpdateMyInfo, useDeleteMyAccount } from "@/lib/hooks/useM
 // 프로필 정보 폼 유효성 검사 스키마
 const profileFormSchema = z.object({
   name: z.string().min(2, { message: "이름은 2자 이상이어야 합니다." }),
-  phone: z.string().optional().refine(val => !val || /^\d{3}-\d{3,4}-\d{4}$/.test(val), {
-    message: "전화번호 형식이 올바르지 않습니다. (예: 010-1234-5678)",
+  phone: z.string().optional().refine(val => !val || (val.length >= 12 && val.length <= 14 && /^(\d{3}-\d{3}-\d{4}|\d{3}-\d{4}-\d{4}|\d{4}-\d{4}-\d{4})$/.test(val)), {
+    message: "전화번호는 하이픈 포함 12~14자리여야 합니다. (예: 010-1234-5678)",
   }),
 });
 
@@ -49,6 +49,26 @@ export default function Settings() {
   const { data: member, isLoading, isError } = useMyInfo();
   const { mutate: updateInfo, isPending: isUpdating } = useUpdateMyInfo();
   const { mutate: deleteAccount, isPending: isDeleting } = useDeleteMyAccount();
+
+  // 전화번호 포맷팅 함수
+  const formatPhoneNumber = (value: string) => {
+    const numbers = value.replace(/[^\d]/g, '');
+    const limitedNumbers = numbers.slice(0, 12);
+
+    if (limitedNumbers.length <= 3) {
+      return limitedNumbers;
+    } else if (limitedNumbers.length <= 6) {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+    } else if (limitedNumbers.length === 10) {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 6)}-${limitedNumbers.slice(6)}`;
+    } else if (limitedNumbers.length === 11) {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3, 7)}-${limitedNumbers.slice(7)}`;
+    } else if (limitedNumbers.length === 12) {
+      return `${limitedNumbers.slice(0, 4)}-${limitedNumbers.slice(4, 8)}-${limitedNumbers.slice(8)}`;
+    } else {
+      return `${limitedNumbers.slice(0, 3)}-${limitedNumbers.slice(3)}`;
+    }
+  };
 
   const profileForm = useForm<ProfileFormValues>({
     resolver: zodResolver(profileFormSchema),
@@ -145,9 +165,15 @@ export default function Settings() {
               <div>
                 <label className="block text-sm text-[#333333] mb-2">전화번호</label>
                 <Input
-                  {...profileForm.register("phone")}
+                  {...profileForm.register("phone", {
+                    onChange: (e) => {
+                      const formatted = formatPhoneNumber(e.target.value);
+                      profileForm.setValue("phone", formatted);
+                    }
+                  })}
                   placeholder="010-1234-5678"
                   className="rounded-lg bg-white border-[rgba(0,0,0,0.1)]"
+                  maxLength={14}
                 />
                 {profileForm.formState.errors.phone && (
                   <p className="text-red-500 text-sm mt-1">{profileForm.formState.errors.phone.message}</p>
@@ -265,5 +291,3 @@ export default function Settings() {
     </div>
   );
 }
-
-

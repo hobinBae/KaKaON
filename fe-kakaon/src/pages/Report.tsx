@@ -1,39 +1,33 @@
 import { useState, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Download, Printer } from "lucide-react";
-import { format, subWeeks, startOfWeek, endOfWeek, subMonths, startOfMonth, endOfMonth } from "date-fns";
+import { format } from "date-fns";
 import jsPDF from "jspdf";
 import html2canvas from "html2canvas";
-import logoSrc from "@/assets/logo.png"; // 로고 이미지를 import 합니다.
-import apiClient from "@/lib/apiClient"; // apiClient를 import 합니다.
+import logoSrc from "@/assets/logo.png";
+import apiClient from "@/lib/apiClient";
+import { useBoundStore } from "@/stores/storeStore";
+import { useReportData } from "@/lib/hooks/useAnalytics";
 
 // --- 타입 정의 ---
-// 나중에 API 응답 타입으로 대체하기 용이하도록 인터페이스를 정의했음
-
-// 요약 KPI 항목 타입
+// useReportData 훅에서 반환되는 데이터 타입과 일치시킴
 interface SummaryKpi {
   label: string;
   value: string;
   change?: string;
 }
-
-// 일별/주차별 요약 항목 타입
 interface DailySummary {
   date: string;
   sales: number;
   orders: number;
-  aov: number; // Average Order Value
+  aov: number;
 }
-
-// 요일별/시간대별 패턴 항목 타입
 interface PatternData {
   label: string;
   sales: number;
   orders?: number;
   aov?: number;
 }
-
-// 메뉴 항목 타입
 interface MenuItem {
   name: string;
   sales: number;
@@ -41,100 +35,15 @@ interface MenuItem {
   proportion: string;
 }
 
-// 결제수단 항목 타입
-interface PaymentMethod {
-  name: string;
-  sales: number;
-  proportion: string;
-}
-
-
-// --- 리포트용 더미 데이터 ---
-// 요구사항에 맞춰 부족한 데이터를 추가하고 구조를 재정의했음
-
-const storeName = "카카오N점"; // 가맹점명 더미 데이터
-
-const weeklyReportData = {
-  summaryKpis: [
-    { label: "총 매출액", value: "1,250,000원", change: "+5.2% (전주 대비)" },
-    { label: "총 주문 수", value: "85건", change: "+2.4% (전주 대비)" },
-    { label: "평균 객단가", value: "14,705원", change: "+2.8% (전주 대비)" },
-    { label: "최고 매출 요일", value: "금요일", change: "350,000원" },
-    { label: "최저 매출 요일", value: "일요일", change: "90,000원" },
-    { label: "주문 취소", value: "1건", change: "20,000원" },
-  ] as SummaryKpi[],
-  dailySummary: [
-    { date: "11-10 (월)", sales: 150000, orders: 10, aov: 15000 },
-    { date: "11-11 (화)", sales: 180000, orders: 12, aov: 15000 },
-    { date: "11-12 (수)", sales: 220000, orders: 15, aov: 14667 },
-    { date: "11-13 (목)", sales: 140000, orders: 9, aov: 15556 },
-    { date: "11-14 (금)", sales: 350000, orders: 20, aov: 17500 },
-    { date: "11-15 (토)", sales: 120000, orders: 11, aov: 10909 },
-    { date: "11-16 (일)", sales: 90000, orders: 8, aov: 11250 },
-  ] as DailySummary[],
-  dailyPatterns: [
-    { label: "월요일", sales: 150000, aov: 15000 },
-    { label: "화요일", sales: 180000, aov: 15000 },
-    { label: "수요일", sales: 220000, aov: 14667 },
-    { label: "목요일", sales: 140000, aov: 15556 },
-    { label: "금요일", sales: 350000, aov: 17500 },
-    { label: "토요일", sales: 120000, aov: 10909 },
-    { label: "일요일", sales: 90000, aov: 11250 },
-  ] as PatternData[],
-  hourlyPatterns: [
-    { label: "오전 (09-12시)", sales: 250000, orders: 18 },
-    { label: "점심 (12-14시)", sales: 450000, orders: 30 },
-    { label: "오후 (14-18시)", sales: 300000, orders: 22 },
-    { label: "저녁 (18-21시)", sales: 250000, orders: 15 },
-  ] as PatternData[],
-  topMenus: [
-    { name: "아메리카노", sales: 600000, orders: 150, proportion: "48.0%" },
-    { name: "카페라떼", sales: 360000, orders: 80, proportion: "28.8%" },
-    { name: "치즈케이크", sales: 250000, orders: 50, proportion: "20.0%" },
-  ] as MenuItem[],
-  lowMenus: [
-    { name: "바닐라 쉐이크", sales: 20000, orders: 4, proportion: "1.6%" },
-    { name: "녹차 프라페", sales: 15000, orders: 3, proportion: "1.2%" },
-  ] as MenuItem[],
-  paymentMethods: [
-    { name: "신용카드", sales: 850000, proportion: "68.0%" },
-    { name: "간편결제", sales: 250000, proportion: "20.0%" },
-    { name: "현금", sales: 100000, proportion: "8.0%" },
-    { name: "기타", sales: 50000, proportion: "4.0%" },
-  ] as PaymentMethod[],
-  orderTypes: [
-    { type: "가게 주문", sales: 950000, orders: 60, aov: 15833 },
-    { type: "배달 주문", sales: 300000, orders: 25, aov: 12000 },
-  ],
-  aiInsight: [], // AI가 생성할 것이므로 초기값은 빈 배열로 설정
-};
-
-const monthlyReportData = {
-    ...weeklyReportData, // 기본 구조 재사용
-    summaryKpis: [
-        { label: "총 매출액", value: "5,300,000원", change: "-2.1% (전월 대비)" },
-        { label: "총 주문 수", value: "360건", change: "-5.3% (전월 대비)" },
-        { label: "평균 객단가", value: "14,722원", change: "+3.2% (전월 대비)" },
-        { label: "최고 매출일", value: "10월 25일", change: "480,000원" },
-        { label: "최저 매출일", value: "10월 10일", change: "80,000원" },
-        { label: "주문 취소", value: "5건", change: "80,000원" },
-    ],
-    dailySummary: [ // 월간 리포트에서는 주차별 요약으로 변경
-        { date: "1주차 (01-07일)", sales: 1200000, orders: 80, aov: 15000 },
-        { date: "2주차 (08-14일)", sales: 1350000, orders: 90, aov: 15000 },
-        { date: "3주차 (15-21일)", sales: 1450000, orders: 100, aov: 14500 },
-        { date: "4주차 (22-28일)", sales: 1100000, orders: 75, aov: 14667 },
-        { date: "5주차 (29-31일)", sales: 200000, orders: 15, aov: 13333 },
-    ],
-};
-
 export default function Report() {
   const [reportType, setReportType] = useState<"weekly" | "monthly">("weekly");
+  const { selectedStoreId } = useBoundStore();
+  const storeId = selectedStoreId ? parseInt(selectedStoreId, 10) : 0;
 
-  // 인쇄 기능을 호출하는 핸들러
+  const { data, isLoading, isError } = useReportData(storeId, reportType);
+
   const handlePrint = () => { window.print(); };
 
-  // PDF 다운로드 기능을 호출하는 핸들러
   const handleDownloadPdf = async () => {
     const reportContent = document.getElementById('report-a4-container');
     if (!reportContent) return;
@@ -147,49 +56,30 @@ export default function Report() {
     pdf.save(`매출리포트_${reportType}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
-  const reportData = useMemo(() => {
-    const now = new Date();
-    if (reportType === 'weekly') {
-      const lastWeek = subWeeks(now, 1);
-      const start = startOfWeek(lastWeek, { weekStartsOn: 1 });
-      const end = endOfWeek(lastWeek, { weekStartsOn: 1 });
-      const month = format(start, 'M월');
-      // '월'의 몇 번째 주인지 계산합니다. (예: 1~7일 -> 1주차, 8~14일 -> 2주차)
-      const week = Math.ceil(start.getDate() / 7);
-
-      return {
-        ...weeklyReportData,
-        title: `${month} ${week}주차 매출 분석 리포트`,
-        period: `${format(start, "yyyy-MM-dd")} ~ ${format(end, "yyyy-MM-dd")}`,
-      };
-    } else {
-      const lastMonth = subMonths(now, 1);
-      const start = startOfMonth(lastMonth);
-      const end = endOfMonth(lastMonth);
-      const month = format(start, 'M월');
-
-      return {
-        ...monthlyReportData,
-        title: `${month} 매출 분석 리포트`,
-        period: `${format(start, "yyyy-MM-dd")} ~ ${format(end, "yyyy-MM-dd")}`,
-      };
-    }
-  }, [reportType]);
-
-  const data = reportData;
-
-  // AI 인사이트 생성 로직
   const [aiInsight, setAiInsight] = useState<string[]>([]);
   const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  // data 객체의 참조가 아닌 내용이 변경될 때만 effect를 실행하기 위해 직렬화한 값을 사용
+  const stableDataString = useMemo(() => JSON.stringify(data), [data]);
 
   useEffect(() => {
     if (!data) return;
 
     const fetchAiInsight = async () => {
       setIsLoadingAi(true);
-      setAiInsight([]); // 리포트 타입 변경 시 이전 인사이트 초기화
+      setAiInsight([]);
+
+      // 로컬 스토리지 키 생성 (가맹점 ID, 리포트 타입, 기간을 조합)
+      const cacheKey = `aiInsight-${storeId}-${reportType}-${data.period}`;
+      const cachedInsight = localStorage.getItem(cacheKey);
+
+      if (cachedInsight) {
+        setAiInsight(JSON.parse(cachedInsight));
+        setIsLoadingAi(false);
+        return; // 캐시된 데이터가 있으면 API 호출 생략
+      }
+
       try {
-        // 데이터 요약을 위해 간단한 헬퍼 함수를 사용
         const formatKpis = (kpis: SummaryKpi[]) => kpis.map(k => `${k.label}: ${k.value} (${k.change})`).join(', ');
         const formatSummary = (summary: DailySummary[]) => summary.map(d => `${d.date} 매출 ${d.sales.toLocaleString()}원`).join(', ');
         const formatPatterns = (patterns: PatternData[]) => patterns.map(p => `${p.label} 매출 ${p.sales.toLocaleString()}원`).join(', ');
@@ -198,7 +88,7 @@ export default function Report() {
         const prompt = `
           당신은 소상공인 카페 사장님을 위한 전문 데이터 분석가입니다. 아래에 제공되는 ${reportType === 'weekly' ? '주간' : '월간'} 매출 데이터를 보고, 사장님이 바로 실행에 옮길 수 있는 구체적인 조언을 담은 인사이트를 생성해주세요.
 
-          **분석 대상 매장:** ${storeName}
+          **분석 대상 매장:** ${data.storeName}
           **분석 기간:** ${data.period}
 
           **[매출 데이터]**
@@ -211,17 +101,17 @@ export default function Report() {
           5.  **주문 유형 분석:** ${data.orderTypes.map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`).join(', ')}
 
           **[분석 요청]**
-          위 데이터를 종합적으로 분석하여, 매장 운영 개선에 도움이 될 만한 핵심적인 인사이트와 구체적인 실행 아이디어를 **개수 제한 없이 생각나는 대로** 제안해주세요. 답변은 사장님이 이해하기 쉽도록 친근하고 상세한 설명을 담아주세요. 각 제안은 번호를 붙여서 구분해주세요.
+          위 데이터를 종합적으로 분석하여, 매장 운영 개선에 도움이 될 만한 핵심적인 인사이트와 구체적인 실행 아이디어를 **가장 중요한 순서대로 최대 17줄 이내로** 제안해주세요. 답변은 사장님이 이해하기 쉽도록 친근하고 상세한 설명을 담아주세요. 각 제안은 번호를 붙여서 구분해주세요.
         `;
         
-        // 백엔드 API를 호출하도록 수정
         const response = await apiClient.post("/ai/insight", { prompt });
         const insightText = response.data.data;
 
         if (insightText) {
-          // 응답 텍스트를 줄바꿈 기준으로 분리하여 리스트로 만듭니다.
           const insights = insightText.split('\n').map(line => line.replace(/^[0-9]+\.\s*/, '')).filter(line => line.trim() !== '');
           setAiInsight(insights);
+          // 성공적으로 받아온 인사이트를 로컬 스토리지에 저장
+          localStorage.setItem(cacheKey, JSON.stringify(insights));
         } else {
           setAiInsight(["인사이트를 생성하지 못했습니다."]);
         }
@@ -234,7 +124,15 @@ export default function Report() {
     };
     
     fetchAiInsight();
-  }, [data, reportType]);
+  }, [stableDataString, reportType]);
+
+  if (isLoading) {
+    return <div className="p-8">리포트 데이터를 불러오는 중입니다...</div>;
+  }
+
+  if (isError || !data) {
+    return <div className="p-8">리포트 데이터를 불러오는 데 실패했습니다.</div>;
+  }
 
   return (
     <div className="bg-gray-100 p-4 sm:p-8">
@@ -257,23 +155,23 @@ export default function Report() {
       </div>
       
       {/* A4 리포트 컨테이너 */}
-      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-8 text-[11px] leading-snug mx-auto shadow-lg border">
+      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-4 sm:p-8 text-[11px] leading-snug mx-auto shadow-lg border w-full max-w-4xl">
         {/* 1. 헤더 영역 */}
-        <header className="flex justify-between items-start pb-2 border-b-2 border-gray-900">
+        <header className="flex flex-col sm:flex-row justify-between items-start pb-2 border-b-2 border-gray-900">
           <div>
             <img src={logoSrc} alt="KaKaON Logo" className="h-6 mb-2" />
             <h2 className="text-lg font-bold">{data.title}</h2>
             <p className="text-xs">리포트 기간: {data.period}</p>
           </div>
-          <div className="text-right text-xs">
-            <p className="font-bold">{storeName}</p>
+          <div className="text-left sm:text-right text-xs mt-2 sm:mt-0">
+            <p className="font-bold">{data.storeName}</p>
             <p>생성일: {format(new Date(), "yyyy-MM-dd")}</p>
           </div>
         </header>
 
         {/* 2. 상단 요약 KPI 영역 */}
         <section className="my-3">
-          <div className="grid grid-cols-3 gap-x-2 gap-y-1 border p-2 rounded">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2 gap-y-1 border p-2 rounded">
             {data.summaryKpis.map(kpi => (
               <div key={kpi.label}>
                 <p className="text-gray-600">{kpi.label}</p>
@@ -285,13 +183,13 @@ export default function Report() {
         </section>
 
         {/* 3. 중간 본문: 좌/우 2컬럼 레이아웃 */}
-        <main className="grid grid-cols-2 gap-x-4">
+        <main className="grid grid-cols-1 sm:grid-cols-2 gap-x-4">
           {/* 왼쪽 컬럼 */}
           <div className="space-y-3">
             <ReportTable title={reportType === 'weekly' ? "일별 매출" : "주차별 매출"} headers={["일자/주차", "매출액", "주문 수", "평균 객단가"]} data={data.dailySummary.map(d => [d.date, `${d.sales.toLocaleString()}원`, `${d.orders}건`, `${d.aov.toLocaleString()}원`])} />
             {/* 월간 리포트일 때만 '요일별 매출'을 보여줍니다. */}
-            {reportType === 'monthly' && (
-              <ReportTable title="요일별 매출" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.aov?.toLocaleString()}원`])} />
+            {reportType === 'monthly' && data.dailyPatterns && (
+              <ReportTable title="요일별 매출" headers={["요일", "매출액", "평균 객단가"]} data={data.dailyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${Math.round(p.aov ?? 0).toLocaleString()}원`])} />
             )}
             <ReportTable title="시간대별 매출" headers={["시간대", "매출액", "주문 수"]} data={data.hourlyPatterns.map(p => [p.label, `${p.sales.toLocaleString()}원`, `${p.orders}건`])} />
             {/* 주간 리포트일 때만 '주문 유형별 매출'을 왼쪽 컬럼 하단에 표시합니다. */}
@@ -306,8 +204,8 @@ export default function Report() {
               <ReportTable title="주문 유형별 매출" headers={["유형", "매출액", "주문 수", "평균 객단가"]} data={data.orderTypes.map(o => [o.type, `${o.sales.toLocaleString()}원`, `${o.orders}건`, `${o.aov.toLocaleString()}원`])} />
             )}
             <ReportTable title="결제수단별 매출" headers={["결제수단", "매출액", "비중"]} data={data.paymentMethods.map(p => [p.name, `${p.sales.toLocaleString()}원`, p.proportion])} />
-            <ReportTable title="메뉴별 매출 상위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.topMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
-            <ReportTable title="메뉴별 매출 하위" headers={["메뉴명", "매출액", "주문 수", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}건`, m.proportion])} />
+            <ReportTable title="메뉴별 매출 상위" headers={["메뉴명", "매출액", "판매량", "매출 비중"]} data={data.topMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}개`, m.proportion])} />
+            <ReportTable title="메뉴별 매출 하위" headers={["메뉴명", "매출액", "판매량", "매출 비중"]} data={data.lowMenus.map(m => [m.name, `${m.sales.toLocaleString()}원`, `${m.orders}개`, m.proportion])} />
           </div>
         </main>
 
@@ -331,11 +229,16 @@ export default function Report() {
       
       {/* A4 크기 및 인쇄용 스타일 */}
       <style>{`
-        .report-a4 {
-          width: 210mm;
-          min-height: 297mm;
-          /* 화면에서 보기 좋게 하기 위한 스타일 */
-          /* 실제 인쇄 시에는 @media print 스타일에 의해 제어됨 */
+        @media screen {
+          .report-a4 {
+            width: 100%;
+          }
+          @media (min-width: 640px) {
+            .report-a4 {
+              width: 210mm;
+              min-height: 297mm;
+            }
+          }
         }
         @media print {
           @page {

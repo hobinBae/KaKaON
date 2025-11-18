@@ -85,6 +85,7 @@ export default function Transactions() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [orderTypeFilter, setOrderTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [selectedMethods, setSelectedMethods] = useState<string[]>(['all']);
   const [statusFilter, setStatusFilter] = useState('all');
   const [startDateInput, setStartDateInput] = useState<string>("");
@@ -137,6 +138,7 @@ export default function Transactions() {
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     setSearchTerm(''); // 페이지 변경 시 검색어 초기화
+    setSearchInput('');
   };
 
   const handlePeriodChange = (value: string) => {
@@ -178,6 +180,7 @@ export default function Transactions() {
     setActivePeriod("today");
     setOrderTypeFilter('all');
     setSearchTerm('');
+    setSearchInput('');
     setSelectedMethods(['all']);
     setStatusFilter('all');
     setCurrentPage(0);
@@ -611,10 +614,11 @@ export default function Transactions() {
               </div>
             </div>
 
-            {/* ====== 결제수단 + 상태 : 같은 줄 ====== */}
-            <div className="grid grid-cols-[72px_1fr] items-center gap-3">
-              <div className="text-sm font-semibold text-[#333]">결제수단</div>
-              <div className="flex items-center gap-10 flex-wrap">
+            {/* ====== 필터 그룹 ====== */}
+            <div className="flex items-start gap-x-8 gap-y-4 flex-wrap">
+              {/* 결제수단 그룹 */}
+              <div className="flex items-start gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pt-2 pr-5">결제수단</div>
                 <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[#F5F5F7] px-2 py-1">
                   <label htmlFor="all-methods-desktop" className="flex items-center gap-2 rounded-lg bg-white px-4 h-8 text-sm text-[#50505f] hover:shadow-sm cursor-pointer">
                     <Checkbox id="all-methods-desktop" checked={selectedMethods.includes('all')} onCheckedChange={(checked) => { setSelectedMethods(checked ? ['all'] : []); }} />
@@ -627,22 +631,24 @@ export default function Transactions() {
                     </label>
                   ))}
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold text-[#333] shrink-0">결제상태</div>
-                  <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')} className={segmentWrap}>
-                    <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
-                    <ToggleGroupItem value="completed" className={segmentItem}>완료</ToggleGroupItem>
-                    <ToggleGroupItem value="cancelled" className={segmentItem}>취소</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-sm font-semibold text-[#333] shrink-0">주문구분</div>
-                  <ToggleGroup type="single" value={orderTypeFilter} className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
-                    <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
-                    <ToggleGroupItem value="delivery" className={segmentItem}>배달 주문</ToggleGroupItem>
-                    <ToggleGroupItem value="store" className={segmentItem}>가게 주문</ToggleGroupItem>
-                  </ToggleGroup>
-                </div>
+              </div>
+              {/* 결제상태 그룹 */}
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pr-5">결제상태</div>
+                <ToggleGroup type="single" value={statusFilter} onValueChange={(value) => setStatusFilter(value || 'all')} className={segmentWrap}>
+                  <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                  <ToggleGroupItem value="completed" className={segmentItem}>완료</ToggleGroupItem>
+                  <ToggleGroupItem value="cancelled" className={segmentItem}>취소</ToggleGroupItem>
+                </ToggleGroup>
+              </div>
+              {/* 주문구분 그룹 */}
+              <div className="flex items-center gap-3">
+                <div className="text-sm font-semibold text-[#333] shrink-0 pr-5">주문구분</div>
+                <ToggleGroup type="single" value={orderTypeFilter} className={segmentWrap} onValueChange={(value) => setOrderTypeFilter(value || 'all')}>
+                  <ToggleGroupItem value="all" className={segmentItem}>전체</ToggleGroupItem>
+                  <ToggleGroupItem value="true" className={segmentItem}>배달 주문</ToggleGroupItem>
+                  <ToggleGroupItem value="false" className={segmentItem}>가게 주문</ToggleGroupItem>
+                </ToggleGroup>
               </div>
             </div>
 
@@ -652,10 +658,28 @@ export default function Transactions() {
                 {dateRange?.from && dateRange?.to && (<>{format(dateRange.from, "yyyy.MM.dd")} ~ {format(dateRange.to, "yyyy.MM.dd")} <span className="text-[#007AFF] ml-1">({differenceInCalendarDays(addDays(dateRange.to, 1), dateRange.from)}일간)</span></>)}
               </div>
               <div className="flex gap-2 items-center">
-                <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 w-48" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                  onKeyDown={(e) => { if (e.key === 'Enter') setCurrentPage(0); }}
+                <Input
+                  type="text"
+                  placeholder="승인번호 검색"
+                  className="h-8 rounded-lg text-sm px-4 w-48"
+                  value={searchInput}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      setSearchTerm(searchInput);
+                      setCurrentPage(0);
+                    }
+                  }}
                 />
-                <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8" onClick={() => setCurrentPage(0)}>검색</Button>
+                <Button
+                  className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-4 text-sm h-8"
+                  onClick={() => {
+                    setSearchTerm(searchInput);
+                    setCurrentPage(0);
+                  }}
+                >
+                  검색
+                </Button>
                 <Button variant="ghost" className="text-gray-500 hover:bg-gray-100 rounded-lg text-sm h-8" onClick={handleReset}><RotateCw className="w-4 h-4 mr-1" />초기화</Button>
               </div>
             </div>
@@ -776,8 +800,8 @@ export default function Transactions() {
               <div className="space-y-2">
                 <ToggleGroup type="single" value={orderTypeFilter} onValueChange={(v) => setOrderTypeFilter(v || 'all')} className={`${segmentWrap} w-full`}>
                   <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
-                  <ToggleGroupItem value="store" className={`${segmentItem} flex-1`}>가게</ToggleGroupItem>
-                  <ToggleGroupItem value="delivery" className={`${segmentItem} flex-1`}>배달</ToggleGroupItem>
+                  <ToggleGroupItem value="false" className={`${segmentItem} flex-1`}>가게</ToggleGroupItem>
+                  <ToggleGroupItem value="true" className={`${segmentItem} flex-1`}>배달</ToggleGroupItem>
                 </ToggleGroup>
                 <ToggleGroup type="single" value={statusFilter} onValueChange={(v) => setStatusFilter(v || 'all')} className={`${segmentWrap} w-full`}>
                   <ToggleGroupItem value="all" className={`${segmentItem} flex-1`}>전체</ToggleGroupItem>
@@ -804,10 +828,28 @@ export default function Transactions() {
               </div>
             </div>
             <div className="flex gap-2 items-center w-full">
-              <Input type="text" placeholder="승인번호 검색" className="h-8 rounded-lg text-sm px-4 flex-1" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} 
-                onKeyDown={(e) => { if (e.key === 'Enter') setCurrentPage(0); }}
+              <Input
+                type="text"
+                placeholder="승인번호 검색"
+                className="h-8 rounded-lg text-sm px-4 flex-1"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    setSearchTerm(searchInput);
+                    setCurrentPage(0);
+                  }
+                }}
               />
-              <Button className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8" onClick={() => setCurrentPage(0)}>검색</Button>
+              <Button
+                className="bg-[#333] text-white hover:bg-[#444] rounded-lg px-6 text-sm h-8"
+                onClick={() => {
+                  setSearchTerm(searchInput);
+                  setCurrentPage(0);
+                }}
+              >
+                검색
+              </Button>
             </div>
           </div>
         </div>

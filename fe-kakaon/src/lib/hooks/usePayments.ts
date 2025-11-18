@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/apiClient";
-import { Transaction } from "@/types/api";
 
 interface PaymentFilters {
   page?: number;
@@ -29,7 +28,7 @@ const getPayments = async (storeId: number, filters: PaymentFilters) => {
     params.append('authorizationNo', filters.authorizationNo);
   }
   if (filters.status && filters.status !== 'all') {
-    params.append('status', filters.status === 'completed' ? 'APPROVED' : 'CANCELLED');
+    params.append('status', filters.status === 'completed' ? 'APPROVED' : 'CANCELED');
   }
   if (filters.paymentMethod && !filters.paymentMethod.includes('all')) {
     const paymentMethodMapToEnglish: { [key: string]: string } = {
@@ -42,7 +41,7 @@ const getPayments = async (storeId: number, filters: PaymentFilters) => {
     params.append('paymentMethod', englishMethods.join(','));
   }
   if (filters.orderType && filters.orderType !== 'all') {
-    params.append('orderType', filters.orderType);
+    params.append('isDelivery', filters.orderType);
   }
 
 

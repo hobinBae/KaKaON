@@ -19,6 +19,7 @@ module.exports = {
     extend: {
       screens: {
         'tablet': '800px',
+        'wide': '1400px',
       },
       fontFamily: {
         sans: ['Noto Sans KR', 'sans-serif'],

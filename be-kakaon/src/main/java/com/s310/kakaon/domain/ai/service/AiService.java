@@ -18,7 +18,7 @@ public class AiService {
     public String getAiInsight(String prompt) {
         // GMS API에 전달할 요청 바디를 생성했음
         GmsChatRequestDto requestDto = new GmsChatRequestDto(
-                "gpt-4o-mini",
+                "gpt-5-mini",
                 Collections.singletonList(new GmsChatRequestDto.Message("user", prompt))
         );
 
