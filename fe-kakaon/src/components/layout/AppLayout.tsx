@@ -81,6 +81,11 @@ export function AppLayout() {
   const { data: selectedOrderDetail } = useOrderDetail(selectedOrderId);
   const isOpeningModal = useRef(false);
 
+  const profileImage = useMemo(() => {
+    const randomIndex = Math.floor(Math.random() * 10) + 1;
+    return `/profile/p${randomIndex}.PNG`;
+  }, []);
+
   const location = useLocation();
   const { selectedStoreId, setSelectedStoreId, member } = useBoundStore();
   const { mutate: logout } = useLogout();
@@ -213,11 +218,15 @@ export function AppLayout() {
           {member && member.name && (
             <div className="flex items-center justify-between gap-3 mb-3">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#FEE500] flex items-center justify-center">
-                  <span className="text-[#3C1E1E] font-bold">{member.name.charAt(0)}</span>
-                </div>
+                <img
+                  src={profileImage}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full ring-[3px] ring-yellow-300"
+                />
                 <div className="flex-1">
-                  <div className="text-sm text-[#333333] font-medium">{member.name}님</div>
+                  <div className="text-base text-[#333333] font-semibold">
+                    {member.name.length > 5 ? `${member.name.substring(0, 5)}...` : member.name}님
+                  </div>
                 </div>
               </div>
               <Button asChild variant="ghost" size="icon" className="rounded-full w-8 h-8 text-gray-500 hover:text-gray-800">
@@ -341,7 +350,7 @@ export function AppLayout() {
                       </div>
                     ))}
                   </div>
-                  <Button size="sm" className="w-full bg-yellow-400 text-black hover:bg-yellow-500" asChild>
+                  <Button size="sm" className="w-full bg-yellow-300 text-black hover:bg-yellow-400 rounded-3xl" asChild>
                     <Link to="/alerts">모든 알림 보기</Link>
                   </Button>
                 </div>
@@ -349,8 +358,8 @@ export function AppLayout() {
             </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full w-8 h-8 bg-[#FEE500] hover:bg-[#FEE500]/90">
-                  <User className="w-4 h-4 text-[#3C1E1E]" />
+                <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 transition-transform duration-200 hover:scale-110">
+                  <img src={profileImage} alt="Profile" className="w-full h-full rounded-full ring-2 ring-yellow-300" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-40">

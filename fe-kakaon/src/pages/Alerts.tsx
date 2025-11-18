@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, Calendar as CalendarIcon, RotateCw, ChevronLeft, ChevronRight } from "lucide-react";
+import { AlertTriangle, Calendar as CalendarIcon, RotateCw, ChevronLeft, ChevronRight, ChevronFirst, ChevronLast } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -88,7 +88,7 @@ export default function Alerts() {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState<React.ReactNode>("");
   const [calendarMonth, setCalendarMonth] = useState<Date>(new Date());
-  const [page, setPage] = useState(0);
+  const [currentPage, setCurrentPage] = useState(0);
   const pageSize = 10;
 
   const searchFilters: AlertSearchRequest = {
@@ -98,10 +98,18 @@ export default function Alerts() {
     checked: statusFilter === 'all' ? undefined : statusFilter,
   };
 
-  const { data: alertsData, isLoading, isError } = useAlerts(selectedStoreId!, searchFilters, page, pageSize);
+  const { data: alertsData, isLoading, isError } = useAlerts(selectedStoreId!, searchFilters, currentPage, pageSize);
   const { data: selectedAlertDetail } = useAlertDetail(selectedStoreId!, selectedAlertId);
   const { mutate: readAlert } = useReadAlert();
   const { mutate: readAllAlerts } = useReadAllAlerts();
+
+  const totalPages = alertsData?.pageable?.totalPages || 0;
+
+  const handlePageChange = (page: number) => {
+    if (page >= 0 && page < totalPages) {
+      setCurrentPage(page);
+    }
+  };
 
   const handleReadAll = () => {
     if (selectedStoreId) {
@@ -121,12 +129,16 @@ export default function Alerts() {
     setDateRange({ from: startOfMonth(new Date()), to: endOfMonth(new Date()) });
     setTypeFilter('all');
     setStatusFilter('all');
-    setPage(0);
+    setCurrentPage(0);
   };
 
   useEffect(() => {
     handlePeriodChange(activePeriod);
   }, []);
+
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [dateRange, activePeriod, typeFilter, statusFilter]);
 
   useEffect(() => {
     if (dateRange?.from) {
@@ -365,7 +377,7 @@ export default function Alerts() {
           <h1 className="text-[#333333] mb-1">이상거래 알림</h1>
           <p className="text-sm text-[#717182]">이상거래 및 중요 알림을 확인하세요</p>
         </div>
-        <Button onClick={handleReadAll} className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-lg shadow-none mt-4 tablet:mt-0">
+        <Button onClick={handleReadAll} className="bg-[#FEE500] hover:bg-[#FFD700] text-[#3C1E1E] rounded-3xl shadow-none mt-4 tablet:mt-0">
           모두 읽음으로 표시
         </Button>
       </div>
@@ -633,13 +645,78 @@ export default function Alerts() {
             ))}
           </TableBody>
         </Table>
-        <div className="flex items-center justify-between p-4 border-t border-[rgba(0,0,0,0.08)]">
-          <div className="text-sm text-[#717182]">총 {alertsData?.totalElements || 0}건</div>
-          <div className="flex gap-2">
-            <Button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0} size="sm" variant="outline" className="rounded">이전</Button>
-            <Button size="sm" className="bg-[#FEE500] text-[#3C1E1E] rounded shadow-none">{page + 1}</Button>
-            <Button onClick={() => setPage(p => p + 1)} disabled={page >= (alertsData?.totalPages || 1) - 1} size="sm" variant="outline" className="rounded">다음</Button>
-          </div>
+        <div className="flex items-center justify-center p-4 border-t border-[rgba(0,0,0,0.08)]">
+          {totalPages > 0 && (
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(0)}
+                disabled={currentPage === 0}
+              >
+                <ChevronFirst className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {Array.from({ length: totalPages }, (_, i) => {
+                const page = i;
+                const pageNumber = i + 1;
+                const showPage =
+                  page === 0 ||
+                  page === totalPages - 1 ||
+                  (page >= currentPage - 1 && page <= currentPage + 1);
+
+                const showEllipsis =
+                  (page === 1 && currentPage > 3) ||
+                  (page === totalPages - 2 && currentPage < totalPages - 4);
+
+                if (showEllipsis) {
+                  return <span key={`ellipsis-${page}`} className="px-2">...</span>;
+                }
+
+                if (showPage) {
+                  return (
+                    <Button
+                      key={page}
+                      size="icon"
+                      variant={page === currentPage ? "default" : "ghost"}
+                      className="h-8 w-8 rounded-full"
+                      onClick={() => handlePageChange(page)}
+                    >
+                      {pageNumber}
+                    </Button>
+                  );
+                }
+                return null;
+              })}
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="h-8 w-8 rounded-full"
+                onClick={() => handlePageChange(totalPages - 1)}
+                disabled={currentPage >= totalPages - 1}
+              >
+                <ChevronLast className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
         </div>
       </Card>
 
