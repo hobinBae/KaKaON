@@ -166,9 +166,9 @@
 | 구분        | 기술                   |
 | ----------- | ---------------------- |
 | 프레임워크  | React, TypeScript      |
-| 상태관리    | Zustand                |
-| 차트/시각화 | Recharts 또는 Chart.js |
-| 스타일링    | Tailwind CSS           |
+| 상태관리    | Zustand, TanStack Query   |
+| 차트/시각화 | Recharts |
+| 스타일링    | Tailwind CSS, shadcn/ui |
 
 ### 인프라 & 협업
 
