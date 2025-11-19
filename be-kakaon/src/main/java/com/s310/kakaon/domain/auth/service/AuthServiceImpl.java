@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.auth.service;
 
 import com.s310.kakaon.domain.auth.dto.RefreshTokenRequestDto;
+import com.s310.kakaon.domain.auth.dto.TestLoginRequestDto;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.entity.Provider;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
@@ -10,9 +11,11 @@ import com.s310.kakaon.global.jwt.JwtTokenProvider;
 import com.s310.kakaon.global.jwt.TokenResponseDto;
 import com.s310.kakaon.global.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.Optional;
 
@@ -79,4 +82,17 @@ public class AuthServiceImpl implements AuthService {
 
         log.info("logout 완료!!");
     }
+
+    @Override
+    public TokenResponseDto testLogin(TestLoginRequestDto dto, HttpServletResponse response) {
+        if(dto.getTestId().equals("test@kakao.com") && dto.getTestPassword().equals("test1234!")) {
+            Member member = memberRepository.findByProviderAndProviderId(Provider.KAKAO, "test_dummy_user")
+                    .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+            TokenResponseDto tokenResponseDto = jwtTokenProvider.createTokenResponse(member.getProviderId(), member.getRole().name());
+            cookieUtil.addRefreshTokenCookie(response, tokenResponseDto.getRefreshToken());
+            return tokenResponseDto;
+        }
+        throw new ApiException(ErrorCode.INVALID_TEST_LOGIN);
+    }
+
 }

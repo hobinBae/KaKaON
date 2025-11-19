@@ -109,7 +109,7 @@ public class DataInitializer implements CommandLineRunner {
     private Member createTestMember() {
         return memberRepository.save(Member.builder()
                 .name("테스트 매장주")
-                .email("test@example.com")
+                .email("test@kakao.com")
                 .provider(com.s310.kakaon.domain.member.entity.Provider.KAKAO)
                 .providerId("test_dummy_user")
                 .build());

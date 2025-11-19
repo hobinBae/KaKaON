@@ -49,7 +49,7 @@ public class SecurityConfig {
                                 "/swagger", "/swagger-ui.html", "/swagger-ui/**",
                                 "/api-docs", "/api-docs/**", "/v3/api-docs/**",
                                 "/oauth2/**", "/login/oauth2/**",
-                                "/api/v1/auth/refresh", "/auth/callback"
+                                "/api/v1/auth/refresh", "/auth/callback", "/api/v1/auth/test-login"
                         ).permitAll()
                         // 그 외 /api/v1/ 로 시작하는 모든 경로는 인증을 요구
                         .requestMatchers("/api/v1/**").authenticated()

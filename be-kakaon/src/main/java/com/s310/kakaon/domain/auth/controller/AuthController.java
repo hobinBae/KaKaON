@@ -1,6 +1,7 @@
 package com.s310.kakaon.domain.auth.controller;
 
 import com.s310.kakaon.domain.auth.dto.RefreshTokenRequestDto;
+import com.s310.kakaon.domain.auth.dto.TestLoginRequestDto;
 import com.s310.kakaon.domain.auth.service.AuthService;
 import com.s310.kakaon.global.dto.ApiResponse;
 import com.s310.kakaon.global.jwt.TokenResponseDto;
@@ -9,10 +10,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -72,6 +75,22 @@ public class AuthController {
         cookieUtil.addRefreshTokenCookie(httpResponse, tokens.getRefreshToken());
 
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "토큰 갱신 성공", tokens, httpRequest.getRequestURI()));
+    }
+
+    @Operation(
+            summary = "테스트 계정 로그인",
+            description = """
+                    테스트 계정 ID, PW를 입력하면 테스트용 계정으로 로그인됩니다.
+                    AccessToken / RefreshToken을 반환합니다.
+                    """
+    )
+    @PostMapping("/test-login")
+    public ResponseEntity<ApiResponse<TokenResponseDto>> testLogin(
+            @RequestBody @Valid TestLoginRequestDto dto,
+            HttpServletRequest httpRequest, HttpServletResponse httpResponse
+    ) {
+        TokenResponseDto token = authService.testLogin(dto, httpResponse);
+        return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "테스트 로그인 성공",  token, httpRequest.getRequestURI()));
     }
 }
 
