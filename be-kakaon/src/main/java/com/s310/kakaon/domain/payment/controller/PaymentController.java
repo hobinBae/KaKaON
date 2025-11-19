@@ -203,12 +203,12 @@ public class PaymentController {
                     .body(ApiResponse.of(HttpStatus.BAD_REQUEST, "CSV 파일만 업로드 가능합니다.", null, httpRequest.getRequestURI()));
         }
 
-        long maxSize = 50 * 1024 * 1024; // 50MB in bytes
+        long maxSize = 80 * 1024 * 1024; // 80MB in bytes
         if (file.getSize() > maxSize) {
             return ResponseEntity.status(HttpStatus.PAYLOAD_TOO_LARGE)
                     .body(ApiResponse.of(
                             HttpStatus.PAYLOAD_TOO_LARGE,
-                            "파일 크기가 너무 큽니다. 최대 50MB까지 업로드 가능합니다.", null, httpRequest.getRequestURI()
+                            "파일 크기가 너무 큽니다. 최대 80MB까지 업로드 가능합니다.", null, httpRequest.getRequestURI()
                     ));
         }
 
