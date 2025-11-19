@@ -52,7 +52,7 @@ export default function Report() {
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pdfWidth = pdf.internal.pageSize.getWidth();
     const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-    pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+    pdf.addImage(imgData, 'PNG', 0, -5, pdfWidth, pdfHeight);
     pdf.save(`매출리포트_${reportType}_${new Date().toISOString().slice(0, 10)}.pdf`);
   };
 
@@ -86,23 +86,43 @@ export default function Report() {
         const formatMenus = (menus: MenuItem[]) => menus.map(m => `${m.name} (${m.proportion})`).join(', ');
 
         const prompt = `
-          당신은 소상공인 카페 사장님을 위한 전문 데이터 분석가입니다. 아래에 제공되는 ${reportType === 'weekly' ? '주간' : '월간'} 매출 데이터를 보고, 사장님이 바로 실행에 옮길 수 있는 구체적인 조언을 담은 인사이트를 생성해주세요.
+        당신은 '${data.storeName}' 매장의 전문 데이터 분석가입니다. 
+        아래 ${reportType === "weekly" ? "주간" : "월간"} 매출 데이터를 기반으로 인사이트를 생성하되,
+        리포트 A4 하단 영역에 들어가도록 **총 8~12개의 짧은 문장**만 출력하세요.
 
-          **분석 대상 매장:** ${data.storeName}
-          **분석 기간:** ${data.period}
+        ------------------------------------
+        [출력 형식 규칙 – 반드시 지키기]
+        1) 무조건 번호를 붙여 1~12번까지만 작성
+        2) 한 문장은 최대 18~22단어 안에서 끝낼 것 (너무 긴 문장 금지)
+        3) 각 번호당 한 문장만 작성 (줄 넘김 없이)
+        4) 데이터 요약 금지, 반드시 원인 + 실행 전략을 포함
+        5) 두 문항 이상 비슷한 내용 금지
+        6) 지나치게 디테일한 실행 항목(예: 세트명, 게시물 문구 등) 금지
+        7) 너무 전문적인 표현 금지. 사장님이 바로 이해 가능한 말만 작성
 
-          **[매출 데이터]**
-          1.  **핵심 지표:** ${formatKpis(data.summaryKpis)}
-          2.  **${reportType === 'weekly' ? '일별' : '주차별'} 매출 추이:** ${formatSummary(data.dailySummary)}
-          3.  **시간대별 매출 분석:** ${formatPatterns(data.hourlyPatterns)}
-          4.  **메뉴 분석:**
-              *   인기 메뉴: ${formatMenus(data.topMenus)}
-              *   부진 메뉴: ${formatMenus(data.lowMenus)}
-          5.  **주문 유형 분석:** ${data.orderTypes.map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`).join(', ')}
+        ------------------------------------
+        [매출 데이터]
+        ■ 핵심 지표: ${formatKpis(data.summaryKpis)}
+        ■ ${reportType === "weekly" ? "일별" : "주차별"} 매출 추이: ${formatSummary(data.dailySummary)}
+        ■ 시간대별 매출: ${formatPatterns(data.hourlyPatterns)}
+        ■ 인기 메뉴: ${formatMenus(data.topMenus)}
+        ■ 부진 메뉴: ${formatMenus(data.lowMenus)}
+        ■ 주문 유형별 매출: ${data.orderTypes
+          .map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`)
+          .join(', ')}
 
-          **[분석 요청]**
-          위 데이터를 종합적으로 분석하여, 매장 운영 개선에 도움이 될 만한 핵심적인 인사이트와 구체적인 실행 아이디어를 **가장 중요한 순서대로 최대 17줄 이내로** 제안해주세요. 답변은 사장님이 이해하기 쉽도록 친근하고 상세한 설명을 담아주세요. 각 제안은 번호를 붙여서 구분해주세요.
+        ------------------------------------
+        [생성할 인사이트 내용]
+        다음 항목을 포함하되 최대 12문장 안에서 요약된 형태로 생성하세요:
+        - 매출 변화의 핵심 원인 1~2개
+        - 시간대/요일별 고객 행동 패턴 핵심 요약
+        - 메뉴별 판매 특징과 개선 포인트
+        - 주문 유형·결제 패턴 활용 방향
+        - 운영자가 이번 달 가장 먼저 조치해야 할 핵심 1가지
+
+        반드시 “8~12개의 짧은 문장”으로만 구성하세요.
         `;
+
         
         const response = await apiClient.post("/ai/insight", { prompt });
         const insightText = response.data.data;
@@ -149,13 +169,13 @@ export default function Report() {
       </div>
       
       {/* 주간/월간 선택 컨트롤 (인쇄 시 숨김) */}
-      <div className="no-print max-w-4xl mx-auto mb-4 grid w-full grid-cols-2 bg-gray-200 p-1 rounded-lg h-10">
+      <div className="no-print max-w-4xl mx-auto mb-4 grid w-full grid-cols-2 bg-gray-200 p-1 rounded-lg">
         <Button onClick={() => setReportType("weekly")} className={`rounded-lg ${reportType === 'weekly' ? 'bg-white shadow-sm text-black' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}>주간 리포트</Button>
         <Button onClick={() => setReportType("monthly")} className={`rounded-lg ${reportType === 'monthly' ? 'bg-white shadow-sm text-black' : 'bg-transparent text-gray-500 hover:bg-white/50'}`}>월간 리포트</Button>
       </div>
       
       {/* A4 리포트 컨테이너 */}
-      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-4 sm:p-8 text-[11px] leading-snug mx-auto shadow-lg border w-full max-w-4xl">
+      <div id="report-a4-container" className="report-a4 bg-white text-gray-900 p-4 sm:p-8 text-[11px] leading-normal mx-auto shadow-lg border w-full max-w-4xl">
         {/* 1. 헤더 영역 */}
         <header className="flex flex-col sm:flex-row justify-between items-start pb-2 border-b-2 border-gray-900">
           <div>
@@ -212,7 +232,7 @@ export default function Report() {
         {/* 4. 하단 영역: AI 인사이트 */}
         <footer className="mt-3 pt-2 border-t">
           <div>
-            <h3 className="text-xs font-bold mb-1">AI 인사이트 요약</h3>
+            <h3 className="text-xs font-bold mb-1">AI 인사이트 </h3>
             {isLoadingAi ? (
               <p className="text-gray-500 text-sm">AI가 리포트를 분석하고 있습니다. 잠시만 기다려주세요...</p>
             ) : (
@@ -274,13 +294,13 @@ function ReportTable({ title, headers, data }: { title: string; headers: string[
       <table className="w-full border-collapse border border-gray-300">
         <thead>
           <tr>
-            {headers.map(h => <th key={h} className="border border-gray-300 bg-gray-100 px-1 py-0.5 text-left font-semibold">{h}</th>)}
+            {headers.map(h => <th key={h} className="border border-gray-300 bg-gray-100 px-1 pt-0 pb-1 text-left font-semibold">{h}</th>)}
           </tr>
         </thead>
         <tbody>
           {data.map((row, i) => (
             <tr key={i} className="bg-white">
-              {row.map((cell, j) => <td key={j} className="border border-gray-300 px-1 py-0.5">{cell}</td>)}
+              {row.map((cell, j) => <td key={j} className="border border-gray-300 px-1 pt-0 pb-1">{cell}</td>)}
             </tr>
           ))}
         </tbody>

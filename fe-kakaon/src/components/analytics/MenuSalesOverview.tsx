@@ -40,15 +40,37 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
                 labelLine={false}
                 label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, name }) => {
                   if (percent === 0) return null;
-                  const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+                  const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
                   const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
                   const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
-                  const text = percent > 0.05 ? `${name} ${(percent * 100).toFixed(0)}%` : `${(percent * 100).toFixed(0)}%`;
-                  return (
-                    <text x={x} y={y} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 14 : 18}>
-                      {text}
-                    </text>
-                  );
+
+                  // 메뉴명 길이 제한
+                  const maxLength = isMobile ? 4 : 6;
+                  const truncatedName = name.length > maxLength ? `${name.slice(0, maxLength)}..` : name;
+
+                  // 비중에 따라 표시 내용 결정
+                  const percentText = `${(percent * 100).toFixed(0)}%`;
+
+                  if (percent < 0.08) {
+                    // 8% 미만: 퍼센트만 표시
+                    return (
+                      <text x={x} y={y} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="600">
+                        {percentText}
+                      </text>
+                    );
+                  } else {
+                    // 8% 이상: 메뉴명과 퍼센트를 두 줄로 표시
+                    return (
+                      <g>
+                        <text x={x} y={y - (isMobile ? 6 : 8)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="500">
+                          {truncatedName}
+                        </text>
+                        <text x={x} y={y + (isMobile ? 6 : 8)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="600">
+                          {percentText}
+                        </text>
+                      </g>
+                    );
+                  }
                 }}
                 outerRadius={isMobile ? 100 : 150}
                 fill="#8884d8"
@@ -58,7 +80,13 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
                   <Cell key={`cell-${index}`} fill={BROWN_ORANGE_COLORS[index % BROWN_ORANGE_COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => [`${value}건`, "판매량"]} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#FFFFFF', border: '1px solid rgba(0,0,0,0.08)', borderRadius: '8px' }}
+                formatter={(value: number, name: string, props: any) => {
+                  const menuName = props.payload.name;
+                  return [`${value}건`, menuName];
+                }}
+              />
             </PieChart>
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">데이터가 없습니다.</div>
@@ -72,11 +100,11 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
             <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
               <XAxis type="number" allowDecimals={false} ticks={ticks} domain={[0, 'dataMax + 4']} />
-              <YAxis 
-                type="category" 
-                dataKey="name" 
-                width={60} 
-                tickFormatter={(value) => value.length > 3 ? `${value.slice(0, 3)}..` : value} 
+              <YAxis
+                type="category"
+                dataKey="name"
+                width={60}
+                tickFormatter={(value) => value.length > 4 ? `${value.slice(0, 4)}..` : value}
               />
               <Tooltip formatter={(value: number) => [`${value}건`, "판매량"]} />
               <Bar dataKey="quantity" maxBarSize={45} radius={[0, 8, 8, 0]} label={{ position: 'right' }}>

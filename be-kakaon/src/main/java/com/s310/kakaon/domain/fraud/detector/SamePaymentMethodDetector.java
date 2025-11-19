@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.fraud.detector;
 
 import com.s310.kakaon.domain.alert.dto.AlertEvent;
 import com.s310.kakaon.domain.alert.entity.AlertType;
+import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
+import static com.s310.kakaon.global.util.Util.generateAlertId;
 import java.math.BigDecimal;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -20,7 +21,7 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class SamePaymentMethodDetector implements FraudDetector {
-
+    private final AlertRepository alertRepository;
     @Qualifier("paymentEventRedisTemplate")
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
 
@@ -155,7 +156,7 @@ public class SamePaymentMethodDetector implements FraudDetector {
         AlertEvent alertEvent = AlertEvent.builder()
                 .groupId(groupId)
                 .storeId(event.getStoreId())
-                .alertUuid(UUID.randomUUID().toString().replace("-", "").substring(0, 20))
+                .alertUuid(generateAlertId(alertRepository))
                 .storeName(event.getStoreName())
                 .alertType(getAlertType())
                 .description(description)

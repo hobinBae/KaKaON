@@ -27,6 +27,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import static com.s310.kakaon.global.util.Util.validateStoreOwner;
+
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -134,11 +136,13 @@ public class AlertServiceImpl implements AlertService{
     @Transactional
     public PageResponse<AlertResponseDto> checkedAnomalyAlerts(Long storeId, Long memberId, Pageable pageable) {
 
-        memberRepository.findById(memberId)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
 
         Page<Alert> alerts = alertRepository.findByStore(store, pageable);
 
@@ -153,11 +157,13 @@ public class AlertServiceImpl implements AlertService{
     @Override
     @Transactional
     public AlertResponseDto checkedAnomalyAlert(Long memberId, Long storeId, Long id) {
-        memberRepository.findById(memberId)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
-        storeRepository.findById(storeId)
+        Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
 
         Alert alert = alertRepository.findById(id)
                 .orElseThrow(() -> new ApiException(ErrorCode.ALERT_NOT_FOUND));
@@ -171,11 +177,13 @@ public class AlertServiceImpl implements AlertService{
     @Transactional(readOnly = true)
     public AlertUnreadCountResponseDto getUnreadAlertCount(Long memberId, Long storeId) {
 
-        memberRepository.findById(memberId)
+        Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
 
         Store store = storeRepository.findById(storeId)
                 .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+        validateStoreOwner(store, member);
 
 //        List<Alert> alerts = alertRepository.findByStore(store);
 

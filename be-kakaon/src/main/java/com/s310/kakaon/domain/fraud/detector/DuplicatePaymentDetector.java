@@ -2,6 +2,7 @@ package com.s310.kakaon.domain.fraud.detector;
 
 import com.s310.kakaon.domain.alert.dto.AlertEvent;
 import com.s310.kakaon.domain.alert.entity.AlertType;
+import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.payment.dto.PaymentEventDto;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,9 +10,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
-
+import static com.s310.kakaon.global.util.Util.generateAlertId;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import org.springframework.beans.factory.annotation.Qualifier;
 
@@ -19,6 +22,9 @@ import org.springframework.beans.factory.annotation.Qualifier;
 @Component
 @RequiredArgsConstructor
 public class DuplicatePaymentDetector implements FraudDetector {
+    private final AlertRepository alertRepository;
+
+
 
     @Qualifier("paymentEventRedisTemplate")
     private final RedisTemplate<String, PaymentEventDto> paymentEventRedisTemplate;
@@ -113,7 +119,7 @@ public class DuplicatePaymentDetector implements FraudDetector {
         AlertEvent alertEvent = AlertEvent.builder()
                 .groupId(groupId)
                 .storeId(event.getStoreId())
-                .alertUuid(UUID.randomUUID().toString().replace("-", "").substring(0, 20))
+                .alertUuid(generateAlertId(alertRepository))
                 .storeName(event.getStoreName())
                 .alertType(getAlertType())
                 .description(description)
@@ -150,4 +156,6 @@ public class DuplicatePaymentDetector implements FraudDetector {
     public void cleanup() {
         log.debug("Redis TTL이 자동으로 만료 처리합니다.");
     }
+
+
 }

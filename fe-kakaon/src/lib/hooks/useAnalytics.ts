@@ -1,7 +1,7 @@
 import { useQuery, useQueries } from "@tanstack/react-query";
 import { useMemo } from 'react';
 import apiClient from "@/lib/apiClient";
-import { DashboardSummary, MonthlySalesResponse, SalesPeriodResponse, SalesHourlyResponse, CancelRateResponse, PaymentMethodRatioResponse, OrderDetail, PaymentResponse } from "@/types/api";
+import { DashboardSummary, MonthlySalesResponse, SalesPeriodResponse, SalesHourlyResponse, CancelRateResponse, PaymentMethodRatioResponse, PaymentResponse, MenuSummaryResponse } from "@/types/api";
 import { useStoreDetail } from "./useStores";
 import { format, subWeeks, startOfWeek, endOfWeek, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, getWeekOfMonth, getDay, addDays } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -357,44 +357,38 @@ export const useReportData = (storeId: number, reportType: 'weekly' | 'monthly')
     };
   }, [isLoading, isError, results, reportType, storeName, title, period]);
 
-  // Menu data processing (can be slow)
-  const { data: menuData, isLoading: isLoadingMenu } = useQuery({
-    queryKey: ['reportMenuData', storeId, currentPeriod],
+  // Menu data processing (Optimized)
+  const { data: menuData, isLoading: isLoadingMenu } = useQuery<
+    MenuSummaryResponse,
+    Error,
+    {
+      topMenus: { proportion: string; name: string; sales: number; orders: number }[];
+      lowMenus: { proportion: string; name: string; sales: number; orders: number }[];
+    }
+  >({
+    queryKey: ['menuSummary', storeId, { ...currentPeriod, periodType: 'RANGE' }],
     queryFn: async () => {
-      const allTransactions = results[4].data as PaymentResponse[];
-      if (!allTransactions) return { topMenus: [], lowMenus: [] };
-      const completedTransactions = allTransactions.filter(t => t.status === 'APPROVED');
+      const res = await apiClient.get(`/analytics/${storeId}/menu-summary`, { params: { ...currentPeriod, periodType: 'RANGE' } });
+      return res.data.data;
+    },
+    enabled: !!storeId,
+    select: (data) => {
+      if (!data || !data.menuSummaries) return { topMenus: [], lowMenus: [] };
 
-      const menuSales: { [name: string]: { sales: number; orders: number } } = {};
-      
-      const orderDetailPromises = completedTransactions
-        .filter(t => t.orderId)
-        .map(t => apiClient.get(`/orders/${t.orderId}`).then(res => res.data.data as OrderDetail));
-      
-      const orderDetails = await Promise.all(orderDetailPromises);
+      const sortedMenus = data.menuSummaries.map(m => ({
+        name: m.menuName,
+        sales: m.totalSales,
+        orders: m.totalQuantity,
+      })).sort((a, b) => b.sales - a.sales);
 
-      orderDetails.forEach(order => {
-        order.items.forEach(item => {
-          if (!menuSales[item.menuName]) {
-            menuSales[item.menuName] = { sales: 0, orders: 0 };
-          }
-          menuSales[item.menuName].sales += item.price * item.quantity;
-          menuSales[item.menuName].orders += item.quantity;
-        });
-      });
-
-      const sortedMenus = Object.entries(menuSales)
-        .map(([name, data]) => ({ name, ...data }))
-        .sort((a, b) => b.sales - a.sales);
-      
       const totalMenuSales = sortedMenus.reduce((sum, m) => sum + m.sales, 0);
+      if (totalMenuSales === 0) return { topMenus: [], lowMenus: [] };
 
       const topMenus = sortedMenus.slice(0, 3).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
-      const lowMenus = sortedMenus.slice(-2).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
+      const lowMenus = sortedMenus.slice(-3).sort((a,b) => a.sales - b.sales).map(m => ({ ...m, proportion: `${(m.sales / totalMenuSales * 100).toFixed(1)}%` }));
 
       return { topMenus, lowMenus };
-    },
-    enabled: !!results[4].data,
+    }
   });
 
   const finalData = useMemo(() => {

@@ -6,6 +6,7 @@ import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsHourlyRepository;
+import com.s310.kakaon.domain.order.repository.OrderRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepositoryImpl;
 import com.s310.kakaon.domain.store.entity.Store;
