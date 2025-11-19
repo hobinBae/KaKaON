@@ -9,7 +9,7 @@ import { useOperationStatus, useUpdateOperationStatus, useStoreById, useMyStores
 import { toast } from 'sonner';
 import Clock from '@/components/Clock'; // 실시간 시계 컴포넌트
 import ElapsedTimeClock from '@/components/ElapsedTimeClock'; // 영업 경과 시간 시계 컴포넌트
-import { PlayCircle, StopCircle, Calendar, Clock as ClockIcon } from 'lucide-react';
+import { PlayCircle, StopCircle, Calendar, Clock as ClockIcon, Loader2 } from 'lucide-react';
 
 // 이전 값을 추적하는 커스텀 훅
 function usePrevious<T>(value: T): T | undefined {
@@ -131,7 +131,12 @@ export default function BusinessHours() {
   };
 
   if (isLoadingStores) {
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
+        <p className="text-muted-foreground text-lg">로딩중입니다. 조금만 기다려 주세요.</p>
+      </div>
+    );
   }
 
   if (stores && stores.length === 0) {
@@ -155,7 +160,12 @@ export default function BusinessHours() {
   }
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full">영업 상태를 불러오는 중...</div>;
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
+        <p className="text-muted-foreground text-lg">영업 상태를 불러오는 중입니다. 조금만 기다려 주세요.</p>
+      </div>
+    );
   }
 
   return (

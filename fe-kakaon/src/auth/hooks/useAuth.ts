@@ -1,4 +1,4 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import apiClient, { removeToken } from "@/lib/apiClient";
 import { useBoundStore } from "@/stores/storeStore";
@@ -19,6 +19,7 @@ const testLogin = async (data: { testId: string; testPassword: string }) => {
 // 로그아웃 처리를 위한 커스텀 훅
 export const useLogout = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { logout: logoutFromStore } = useBoundStore();
 
   return useMutation({
@@ -29,7 +30,9 @@ export const useLogout = () => {
       removeToken();
       // 2. Zustand 스토어의 상태 초기화
       logoutFromStore();
-      // 3. 인트로 페이지로 이동
+      // 3. 쿼리 캐시 초기화 (이전 사용자의 데이터가 남지 않도록 함)
+      queryClient.clear();
+      // 4. 인트로 페이지로 이동
       navigate("/");
     },
     onError: (error) => {
@@ -37,6 +40,7 @@ export const useLogout = () => {
       console.error("Logout failed", error);
       removeToken();
       logoutFromStore();
+      queryClient.clear();
       navigate("/");
     },
   });

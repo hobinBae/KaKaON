@@ -32,6 +32,7 @@ const FrontKiosk = () => {
     cart,
     addToCart,
     updateQuantity,
+    removeFromCart,
     clearCart,
   } = useBoundStore();
 
@@ -419,9 +420,10 @@ const FrontKiosk = () => {
                       <div key={item.id} className="flex items-center justify-between text-2xl">
                         <span>{item.name} x{item.quantity}</span>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" className="h-12 w-12" onClick={() => updateQuantity(item.id, -1)}><Minus className="size-8"/></Button>
+                          <Button variant="outline" className="h-12 w-12" onClick={() => item.quantity === 1 ? removeFromCart(item.id) : updateQuantity(item.id, -1)}><Minus className="size-8"/></Button>
                           <Button variant="outline" className="h-12 w-12" onClick={() => updateQuantity(item.id, 1)}><Plus className="size-8"/></Button>
                           <span className="w-32 text-right">{(item.price * item.quantity).toLocaleString()}원</span>
+                          <Button variant="ghost" size="icon" className="text-red-500 h-12 w-12" onClick={() => removeFromCart(item.id)}><Trash2 className="size-8"/></Button>
                         </div>
                       </div>
                     ))}
@@ -433,9 +435,10 @@ const FrontKiosk = () => {
                       <div key={lastItem.id} className="flex items-center justify-between mt-2 text-2xl">
                         <span>{lastItem.name} x{lastItem.quantity}</span>
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" className="h-12 w-12" onClick={() => updateQuantity(lastItem.id, -1)}><Minus className="size-8"/></Button>
+                          <Button variant="outline" className="h-12 w-12" onClick={() => lastItem.quantity === 1 ? removeFromCart(lastItem.id) : updateQuantity(lastItem.id, -1)}><Minus className="size-8"/></Button>
                           <Button variant="outline" className="h-12 w-12" onClick={() => updateQuantity(lastItem.id, 1)}><Plus className="size-8"/></Button>
                           <span className="w-32 text-right">{(lastItem.price * lastItem.quantity).toLocaleString()}원</span>
+                          <Button variant="ghost" size="icon" className="text-red-500 h-12 w-12" onClick={() => removeFromCart(lastItem.id)}><Trash2 className="size-8"/></Button>
                         </div>
                       </div>
                     );
