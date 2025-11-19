@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X, Star } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X, Bookmark } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -280,7 +280,7 @@ export function AppLayout() {
                       <SelectItem key={store.storeId} value={String(store.storeId)}>
                         <div className="flex items-center">
                           {store.storeId === favoriteStore?.storeId && (
-                            <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
+                            <Bookmark className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
                           )}
                           {store.name}
                         </div>
@@ -358,7 +358,7 @@ export function AppLayout() {
             </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 transition-transform duration-200 hover:scale-110">
+                <Button variant="ghost" size="icon" className="rounded-full w-7 h-7 sm:w-10 sm:h-10 transition-transform duration-200 hover:scale-110">
                   <img src={profileImage} alt="Profile" className="w-full h-full rounded-full ring-2 ring-yellow-300" />
                 </Button>
               </DropdownMenuTrigger>

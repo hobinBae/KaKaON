@@ -5,6 +5,7 @@ import { setToken } from '@/lib/apiClient';
 import Hero from '@/components/intro/Hero';
 import Benefits from '@/components/intro/Benefits';
 import Features from '@/components/intro/Features';
+import MobileFeatures from '@/components/intro/MobileFeatures';
 import HowItWorks from '@/components/intro/HowItWorks';
 import SocialProof from '@/components/intro/SocialProof';
 import FAQ from '@/components/intro/FAQ';
@@ -49,6 +50,7 @@ export default function Intro() {
         <Hero />
         <Benefits />
         <Features />
+        <MobileFeatures />
         <HowItWorks />
         <SocialProof />
         <FAQ />

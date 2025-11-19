@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect, ReactNode } from 'react';
 import { useBoundStore } from '@/stores/storeStore';
 import { cn } from '@/lib/utils';
+import TestLoginModal from '@/components/auth/TestLoginModal';
 
 interface TypingAnimationProps {
   children: ReactNode;
@@ -68,7 +69,7 @@ function TypingAnimation({
 
 export default function Hero() {
   const { member } = useBoundStore();
-  const subtitleLine1 = "흩어져 있는 매출 데이터를 한눈에 확인하고, 이상 거래를 실시간으로 감지하세요.";
+  const subtitleLine1 = "흩어져 있는 매출 데이터를 AI로 한눈에 정리하고, 이상 거래를 실시간으로 감지하세요.";
   const subtitleLine2 = "사장님은 비즈니스 성장에만 집중할 수 있도록 카카온이 돕겠습니다.";
 
   const handleLogin = () => {
@@ -127,11 +128,15 @@ export default function Hero() {
                 무료로 시작하기
               </Button>
             )}
-            <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
-              <Link to="/dashboard" data-analytics="hero-cta-secondary">
-                라이브 데모 보기
-              </Link>
-            </Button>
+            {!member && (
+              <TestLoginModal 
+                trigger={
+                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
+                    테스트 ID 로그인
+                  </Button>
+                } 
+              />
+            )}
           </div>
         </div>
       </div>

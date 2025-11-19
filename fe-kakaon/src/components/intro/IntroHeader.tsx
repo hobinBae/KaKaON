@@ -27,16 +27,16 @@ export default function IntroHeader() {
         <nav className="flex items-center gap-2 sm:gap-4">
           {isLoggedIn ? (
             <>
-              <Button variant="ghost" asChild className="text-sm sm:text-base">
+              <Button variant="ghost" asChild className="text-sm sm:text-base rounded-full">
                 <Link to="/dashboard">대시보드</Link>
               </Button>
-              <Button onClick={() => logout()} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 text-sm sm:text-base">
+              <Button onClick={() => logout()} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 text-sm sm:text-base rounded-full">
                 로그아웃
               </Button>
             </>
           ) : (
             <>
-              <Button variant="ghost" onClick={handleLogin} className="text-sm sm:text-base">
+              <Button onClick={handleLogin} className="bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 text-sm sm:text-base rounded-full">
                 로그인
               </Button>
             </>

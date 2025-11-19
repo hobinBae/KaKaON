@@ -21,8 +21,25 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const totalQuantity = data.reduce((acc, entry) => acc + entry.quantity, 0);
-  const maxQuantity = Math.max(...data.map(d => d.quantity), 0);
+  // 데이터 가공: 상위 6개 + 기타 (총 7개)
+  const processedData = (() => {
+    if (data.length <= 7) {
+      return [...data].sort((a, b) => b.quantity - a.quantity);
+    }
+
+    const sortedData = [...data].sort((a, b) => b.quantity - a.quantity);
+    const top6 = sortedData.slice(0, 6);
+    const others = sortedData.slice(6);
+    const othersQuantity = others.reduce((acc, curr) => acc + curr.quantity, 0);
+
+    return [
+      ...top6,
+      { name: '기타', quantity: othersQuantity }
+    ];
+  })();
+
+  const totalQuantity = processedData.reduce((acc, entry) => acc + entry.quantity, 0);
+  const maxQuantity = Math.max(...processedData.map(d => d.quantity), 0);
   const tickInterval = 5;
   const ticks = Array.from({ length: Math.ceil(maxQuantity / tickInterval) + 1 }, (_, i) => i * tickInterval);
 
@@ -34,7 +51,7 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
           {totalQuantity > 0 ? (
             <PieChart>
               <Pie
-                data={data}
+                data={processedData}
                 cx="50%"
                 cy="50%"
                 labelLine={false}
@@ -45,7 +62,7 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
                   const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
 
                   // 메뉴명 길이 제한
-                  const maxLength = isMobile ? 4 : 6;
+                  const maxLength = isMobile ? 3 : 5;
                   const truncatedName = name.length > maxLength ? `${name.slice(0, maxLength)}..` : name;
 
                   // 비중에 따라 표시 내용 결정
@@ -62,10 +79,10 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
                     // 8% 이상: 메뉴명과 퍼센트를 두 줄로 표시
                     return (
                       <g>
-                        <text x={x} y={y - (isMobile ? 6 : 8)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="500">
+                        <text x={x} y={y - (isMobile ? 4 : 6)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="500">
                           {truncatedName}
                         </text>
-                        <text x={x} y={y + (isMobile ? 6 : 8)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="600">
+                        <text x={x} y={y + (isMobile ? 4 : 6)} fill="#2f2f2fff" textAnchor="middle" dominantBaseline="central" fontSize={isMobile ? 11 : 13} fontWeight="600">
                           {percentText}
                         </text>
                       </g>
@@ -76,7 +93,7 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
                 fill="#8884d8"
                 dataKey="quantity"
               >
-                {data.map((entry, index) => (
+                {processedData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={BROWN_ORANGE_COLORS[index % BROWN_ORANGE_COLORS.length]} />
                 ))}
               </Pie>
@@ -95,20 +112,20 @@ export default function MenuSalesOverview({ data, title }: MenuSalesOverviewProp
       </Card>
       <Card className="p-1 tablet:p-6 rounded-xl border border-[rgba(0,0,0,0.08)] shadow-none">
         <h3 className="text-[#333333] mb-4 tablet:mb-6 text-center tablet:text-left">{`${title}`}</h3>
-        <ResponsiveContainer width="100%" height={Math.max(300, data.length * 40)}>
+        <ResponsiveContainer width="100%" height={Math.max(300, processedData.length * 40)}>
           {totalQuantity > 0 ? (
-            <BarChart data={data} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
+            <BarChart data={processedData} layout="vertical" margin={{ top: 5, right: 30, left: 10, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#F5F5F5" />
               <XAxis type="number" allowDecimals={false} ticks={ticks} domain={[0, 'dataMax + 4']} />
               <YAxis
                 type="category"
                 dataKey="name"
                 width={60}
-                tickFormatter={(value) => value.length > 4 ? `${value.slice(0, 4)}..` : value}
+                tickFormatter={(value) => value.length > 3 ? `${value.slice(0, 3)}..` : value}
               />
               <Tooltip formatter={(value: number) => [`${value}건`, "판매량"]} />
               <Bar dataKey="quantity" maxBarSize={45} radius={[0, 8, 8, 0]} label={{ position: 'right' }}>
-                {data.map((entry, index) => (
+                {processedData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={BROWN_ORANGE_COLORS[index % BROWN_ORANGE_COLORS.length]} />
                 ))}
               </Bar>
