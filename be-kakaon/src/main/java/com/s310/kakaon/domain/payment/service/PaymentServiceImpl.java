@@ -30,6 +30,10 @@ import java.util.*;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.batch.core.Job;
+import org.springframework.batch.core.JobParameters;
+import org.springframework.batch.core.JobParametersBuilder;
+import org.springframework.batch.core.launch.JobLauncher;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -68,6 +72,8 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentStatsRepository paymentStatsRepository;
     private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final EntityManager entityManager;
+    private final JobLauncher jobLauncher;
+    private final Job paymentCsvUploadJob;
 
     @Override
     @Transactional
@@ -267,24 +273,93 @@ public class PaymentServiceImpl implements PaymentService{
 
     @Async("csvUploadExecutor")
     @Override
-    @Transactional
     public void uploadPaymentsFromCsvAsync(byte[] fileBytes, String fileName, Long storeId, Long memberId) {
-        log.info("[비동기 CSV 업로드] 시작 - storeId: {}, memberId: {}, fileName: {}, thread: {}",
+        log.info("[Spring Batch CSV 업로드] 시작 - storeId: {}, memberId: {}, fileName: {}, thread: {}",
                 storeId, memberId, fileName, Thread.currentThread().getName());
 
         long startTime = System.currentTimeMillis();
+        String tempFilePath = null;
 
         try {
-            uploadPaymentsFromCsv(fileBytes, storeId, memberId);
+            // 1. 권한 검증
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.MEMBER_NOT_FOUND));
+
+            Store store = storeRepository.findById(storeId)
+                    .orElseThrow(() -> new ApiException(ErrorCode.STORE_NOT_FOUND));
+
+            validateStoreOwner(store, member);
+
+            // 2. 임시 파일 생성
+            tempFilePath = createTempCsvFile(fileBytes, fileName);
+            log.info("임시 파일 생성: {}", tempFilePath);
+
+            // 3. JobParameters 설정
+            JobParameters jobParameters = new JobParametersBuilder()
+                    .addString("filePath", tempFilePath)
+                    .addLong("storeId", storeId)
+                    .addLong("memberId", memberId)
+                    .addLong("timestamp", System.currentTimeMillis()) // Job 재실행을 위한 유니크 값
+                    .toJobParameters();
+
+            // 4. Batch Job 실행
+            jobLauncher.run(paymentCsvUploadJob, jobParameters);
 
             long endTime = System.currentTimeMillis();
             long duration = (endTime - startTime) / 1000;
 
-            log.info("[비동기 CSV 업로드] 완료 - storeId: {}, 소요 시간: {}초", storeId, duration);
+            log.info("[Spring Batch CSV 업로드] 완료 - storeId: {}, 소요 시간: {}초", storeId, duration);
+
         } catch (Exception e) {
             long endTime = System.currentTimeMillis();
             long duration = (endTime - startTime) / 1000;
-            log.error("[비동기 CSV 업로드] 완료 - storeId: {}, 소요 시간: {}초", storeId, duration);
+            log.error("[Spring Batch CSV 업로드] 실패 - storeId: {}, 소요 시간: {}초, 오류: {}",
+                    storeId, duration, e.getMessage(), e);
+            throw new ApiException(ErrorCode.CSV_UPLOAD_FAILED);
+        } finally {
+            // 5. 임시 파일 삭제
+            if (tempFilePath != null) {
+                deleteTempFile(tempFilePath);
+            }
+        }
+    }
+
+    /**
+     * 임시 CSV 파일 생성
+     */
+    private String createTempCsvFile(byte[] fileBytes, String originalFileName) throws IOException {
+        // BOM 제거
+        String content = new String(fileBytes, StandardCharsets.UTF_8);
+        if (content.startsWith("\uFEFF")) {
+            content = content.substring(1);
+        }
+
+        // 임시 디렉토리에 파일 생성
+        String tempDir = System.getProperty("java.io.tmpdir");
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"));
+        String tempFileName = "csv_upload_" + timestamp + "_" + originalFileName;
+        String tempFilePath = tempDir + File.separator + tempFileName;
+
+        // 파일 쓰기
+        try (FileOutputStream fos = new FileOutputStream(tempFilePath);
+             OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+            osw.write(content);
+        }
+
+        return tempFilePath;
+    }
+
+    /**
+     * 임시 파일 삭제
+     */
+    private void deleteTempFile(String filePath) {
+        try {
+            File file = new File(filePath);
+            if (file.exists() && file.delete()) {
+                log.info("임시 파일 삭제 완료: {}", filePath);
+            }
+        } catch (Exception e) {
+            log.warn("임시 파일 삭제 실패: {}", filePath, e);
         }
     }
 
@@ -506,7 +581,7 @@ public class PaymentServiceImpl implements PaymentService{
     }
 
     public String generateAuthorizationNo(){
-        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yymmdd"));
+        String datePart = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMdd"));
         int randomPart = new SecureRandom().nextInt(100_000);
         return datePart + String.format("%05d", randomPart);
     }
