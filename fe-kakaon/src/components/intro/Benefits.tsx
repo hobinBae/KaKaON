@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 const benefits = [
   {
     icon: <BarChart className="w-8 h-8 text-[#FEE500]" />,
-    title: '매출 데이터 통합 분석',
+    title: 'AI 매출 데이터 통합 분석',
     description: '여러 채널의 매출을 자동으로 집계하고 시각화하여 비즈니스 현황을 한눈에 파악할 수 있습니다.',
   },
   {
@@ -16,7 +16,7 @@ const benefits = [
   {
     icon: <Zap className="w-8 h-8 text-[#FEE500]" />,
     title: '운영 효율성 극대화',
-    description: '수작업으로 처리하던 정산 및 보고서 작성을 자동화하여 시간과 비용을 절약할 수 있습니다.',
+    description: '수작업으로 처리하던 정산 및 매출 관리를 자동화하여 시간과 비용을 절약할 수 있습니다.',
   },
 ];
 
