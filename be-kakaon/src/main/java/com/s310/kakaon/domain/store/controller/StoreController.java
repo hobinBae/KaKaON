@@ -225,21 +225,21 @@ public class StoreController {
                 .body(ApiResponse.of(HttpStatus.OK, "알림 수신자 삭제 성공", null, httpRequest.getRequestURI()));
     }
 
-    @Operation(summary = "더미 데이터 생성", description = "로그인한 사용자를 오너로 하여 1만개의 가맹점과 결제를 생성합니다.")
-    @PostMapping("/generate-dummy")
-    public ResponseEntity<ApiResponse<String>> generateDummyData(
-            @AuthenticationPrincipal String kakaoId,
-            HttpServletRequest httpRequest
-    ) {
-        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-
-        storeService.generate(memberId); // 👈 새로 만든 서비스 호출
-
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.of(HttpStatus.CREATED,
-                        "더미데이터 생성 완료",
-                        "OK",
-                        httpRequest.getRequestURI()));
-    }
+//    @Operation(summary = "더미 데이터 생성", description = "로그인한 사용자를 오너로 하여 1만개의 가맹점과 결제를 생성합니다.")
+//    @PostMapping("/generate-dummy")
+//    public ResponseEntity<ApiResponse<String>> generateDummyData(
+//            @AuthenticationPrincipal String kakaoId,
+//            HttpServletRequest httpRequest
+//    ) {
+//        Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
+//
+//        storeService.generate(memberId); // 👈 새로 만든 서비스 호출
+//
+//        return ResponseEntity.status(HttpStatus.CREATED)
+//                .body(ApiResponse.of(HttpStatus.CREATED,
+//                        "더미데이터 생성 완료",
+//                        "OK",
+//                        httpRequest.getRequestURI()));
+//    }
 
 }
