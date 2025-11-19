@@ -4,7 +4,6 @@ import com.s310.kakaon.domain.analytics.dto.DashboardSummaryResponseDto;
 import com.s310.kakaon.domain.analytics.dto.MonthlySalesResponseDto;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +28,6 @@ public class DashboardServiceImpl implements DashboardService {
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
     private final PaymentStatsRepository paymentStatsRepository;
-    private final SalesCacheService salesCacheService;
 
     @Override
     public DashboardSummaryResponseDto getDashboardSummary(Long storeId, Long memberId) {
