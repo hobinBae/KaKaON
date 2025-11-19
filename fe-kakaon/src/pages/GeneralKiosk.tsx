@@ -262,7 +262,7 @@ const GeneralKiosk = () => {
             <Card onClick={() => setOrderType('dine-in')} className="cursor-pointer flex-1 bg-white rounded-3xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-lg">
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
-                  <span className="text-9xl mb-12 inline-block">🛒</span>
+                  <img src="/cart.png" alt="매장 주문" className="w-32 h-32 mb-12 object-contain inline-block" />
                   <h2 className="text-4xl font-bold text-gray-700">매장 주문</h2>
                 </div>
               </CardContent>
@@ -270,7 +270,7 @@ const GeneralKiosk = () => {
             <Card onClick={() => setOrderType('take-out')} className="cursor-pointer flex-1 bg-white rounded-3xl shadow-2xl transition-all duration-300 hover:-translate-y-2 hover:shadow-lg">
               <CardContent className="flex items-center justify-center p-16">
                 <div className="text-center">
-                  <span className="text-9xl mb-12 inline-block">🛍️</span>
+                  <img src="/pack.png" alt="포장 주문" className="w-32 h-32 mb-12 object-contain inline-block" />
                   <h2 className="text-4xl font-bold text-gray-700">포장 주문</h2>
                 </div>
               </CardContent>

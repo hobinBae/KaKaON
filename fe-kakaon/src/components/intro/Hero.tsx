@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { useState, useEffect, ReactNode } from 'react';
 import { useBoundStore } from '@/stores/storeStore';
 import { cn } from '@/lib/utils';
+import TestLoginModal from '@/components/auth/TestLoginModal';
 
 interface TypingAnimationProps {
   children: ReactNode;
@@ -127,11 +128,15 @@ export default function Hero() {
                 무료로 시작하기
               </Button>
             )}
-            <Button asChild size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
-              <Link to="/dashboard" data-analytics="hero-cta-secondary">
-                라이브 데모 보기
-              </Link>
-            </Button>
+            {!member && (
+              <TestLoginModal 
+                trigger={
+                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
+                    테스트 ID 로그인
+                  </Button>
+                } 
+              />
+            )}
           </div>
         </div>
       </div>

@@ -5,28 +5,28 @@ const testimonials = [
   {
     quote: '카카온 도입 후, 매일 2시간씩 하던 매출 정산이 10분으로 줄었어요. 이제 남는 시간에 신메뉴 개발에 더 집중할 수 있게 되었습니다.',
     author: '김사장',
-    store: '사장님 카페',
-    avatar: '/path/to/avatar1.png',
+    store: '웊 카페',
+    avatar: '/profile/p1.PNG',
   },
   {
     quote: '이상거래 알림 덕분에 카드 도용 범죄를 막을 수 있었습니다. 소상공인에게 정말 필요한 서비스라고 생각합니다.',
     author: '박점장',
     store: '알찬 편의점',
-    avatar: '/path/to/avatar2.png',
+    avatar: '/profile/p10.PNG',
   },
 ];
 
 const metrics = [
-    { value: '43%', label: '취소탐지 리드타임 단축' },
-    { value: '99.8%', label: '매출 데이터 정확도' },
-    { value: '2,000+', label: '가입 가맹점 수' },
+    { value: '99%', label: '취소탐지 리드타임 단축' },
+    { value: '99%', label: '매출 데이터 정확도' },
+    { value: '500+', label: '가입 대기 가맹점 수' },
 ]
 
 export default function SocialProof() {
   return (
     <Section id="social-proof" className="bg-gray-50 dark:bg-gray-900">
       <div className="text-center space-y-3 md:space-y-4 mb-10 md:mb-12">
-        <h2 className="text-3xl sm:text-4xl font-bold px-4 sm:px-0">이미 많은 사장님들이 경험하고 있습니다</h2>
+        <h2 className="text-3xl sm:text-4xl font-bold px-4 sm:px-0">이미 많은 사장님들이 기다리고 있습니다</h2>
       </div>
       
       {/* Metrics */}

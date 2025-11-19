@@ -358,7 +358,7 @@ export function AppLayout() {
             </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="rounded-full w-10 h-10 transition-transform duration-200 hover:scale-110">
+                <Button variant="ghost" size="icon" className="rounded-full w-7 h-7 sm:w-10 sm:h-10 transition-transform duration-200 hover:scale-110">
                   <img src={profileImage} alt="Profile" className="w-full h-full rounded-full ring-2 ring-yellow-300" />
                 </Button>
               </DropdownMenuTrigger>
