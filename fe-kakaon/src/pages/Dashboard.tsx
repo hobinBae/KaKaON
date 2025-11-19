@@ -8,6 +8,7 @@ import { Carousel, CarouselContent, CarouselItem } from "@/components/ui/carouse
 import { useDashboardSummary, useMonthlySales } from "@/lib/hooks/useAnalytics";
 import { useUnreadAlertCount } from "@/lib/hooks/useAlerts";
 import { usePayments } from "@/lib/hooks/usePayments";
+import { useMyStores } from "@/lib/hooks/useStores";
 import { useBoundStore } from "@/stores/storeStore";
 import { DailySale, Transaction } from "@/types/api";
 import { format } from "date-fns";
@@ -73,11 +74,17 @@ const formatYAxis = (tick: number) => {
   return `${tick / 1000}K`;
 };
 
+import { useNavigate } from 'react-router-dom';
+import { Button } from '@/components/ui/button';
+import { Store } from 'lucide-react';
+
 export default function Dashboard() {
+  const navigate = useNavigate();
   const [date, setDate] = React.useState<Date | undefined>(new Date());
   const [month, setMonth] = React.useState<Date>(new Date());
   const [windowWidth, setWindowWidth] = React.useState(window.innerWidth);
   const { selectedStoreId } = useBoundStore();
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
 
   const storeId = selectedStoreId ? Number(selectedStoreId) : 0;
 
@@ -186,8 +193,29 @@ export default function Dashboard() {
     return last7DaysData;
   }, [summaryData]);
 
-  if (isLoadingSummary) {
+  if (isLoadingStores || isLoadingSummary) {
     return null;
+  }
+
+  if (stores && stores.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] space-y-6">
+
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-[#333333]">등록된 가맹점이 없습니다</h2>
+          <p className="text-[#717182] text-lg">
+            서비스 이용을 위해서 가맹점 등록이 필요합니다.<br />
+            가맹점을 추가해 주세요.
+          </p>
+        </div>
+        <Button 
+          onClick={() => navigate('/stores')}
+          className="bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#3C1E1E] font-medium px-6 py-5 text-base rounded-3xl shadow-sm"
+        >
+          가맹점 관리 가기
+        </Button>
+      </div>
+    );
   }
 
   if (isErrorSummary || isErrorMonthly) {

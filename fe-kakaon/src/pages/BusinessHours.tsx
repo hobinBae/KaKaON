@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import AdminPinModal from '@/components/AdminPinModal';
 import { useBoundStore } from '@/stores/storeStore';
-import { useOperationStatus, useUpdateOperationStatus, useStoreById } from '@/lib/hooks/useStores';
+import { useOperationStatus, useUpdateOperationStatus, useStoreById, useMyStores } from '@/lib/hooks/useStores';
 import { toast } from 'sonner';
 import Clock from '@/components/Clock'; // 실시간 시계 컴포넌트
 import ElapsedTimeClock from '@/components/ElapsedTimeClock'; // 영업 경과 시간 시계 컴포넌트
@@ -20,6 +21,7 @@ function usePrevious<T>(value: T): T | undefined {
 }
 
 export default function BusinessHours() {
+  const navigate = useNavigate();
   const { 
     selectedStoreId, 
     businessHours, 
@@ -27,6 +29,7 @@ export default function BusinessHours() {
     setSessionEndTime 
   } = useBoundStore();
   
+  const { data: stores, isLoading: isLoadingStores } = useMyStores();
   const { data: operationStatus, isLoading } = useOperationStatus(Number(selectedStoreId));
   const { data: storeDetail } = useStoreById(Number(selectedStoreId));
   const { mutate: updateStatus } = useUpdateOperationStatus();
@@ -126,6 +129,30 @@ export default function BusinessHours() {
     toast.success(`영업 상태를 변경합니다: ${newStatus === 'OPEN' ? '영업 시작' : '영업 마감'}`);
     setIsPinModalOpen(false);
   };
+
+  if (isLoadingStores) {
+    return null;
+  }
+
+  if (stores && stores.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] space-y-6">
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold text-[#333333]">등록된 가맹점이 없습니다</h2>
+          <p className="text-[#717182] text-lg">
+            서비스 이용을 위해서 가맹점 등록이 필요합니다.<br />
+            가맹점을 추가해 주세요.
+          </p>
+        </div>
+        <Button 
+          onClick={() => navigate('/stores')}
+          className="bg-[#FEE500] hover:bg-[#FEE500]/90 text-[#3C1E1E] font-medium px-6 py-5 text-base rounded-3xl shadow-sm"
+        >
+          가맹점 관리 가기
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full">영업 상태를 불러오는 중...</div>;
