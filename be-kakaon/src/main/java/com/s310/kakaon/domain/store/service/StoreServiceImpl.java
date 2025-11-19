@@ -4,14 +4,7 @@ import com.s310.kakaon.domain.alert.dto.UnreadCountProjection;
 import com.s310.kakaon.domain.alert.repository.AlertRepository;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.order.entity.OrderStatus;
-import com.s310.kakaon.domain.order.entity.Orders;
-import com.s310.kakaon.domain.order.repository.OrderRepository;
-import com.s310.kakaon.domain.payment.dto.PaymentMethod;
-import com.s310.kakaon.domain.payment.dto.PaymentStatus;
-import com.s310.kakaon.domain.payment.entity.Payment;
 import com.s310.kakaon.domain.payment.repository.PaymentRepository;
-import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.paymentstats.service.PaymentStatsService;
@@ -25,15 +18,14 @@ import com.s310.kakaon.global.dto.PageResponse;
 import com.s310.kakaon.global.exception.ApiException;
 import com.s310.kakaon.global.exception.ErrorCode;
 
-import java.math.BigDecimal;
-import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.*;
-
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -57,7 +49,6 @@ public class StoreServiceImpl implements StoreService{
     private final PaymentRepository paymentRepository;
     private final StoreMapper storeMapper;
     private final PaymentStatsRepository paymentStatsRepository;
-    private final SalesCacheService salesCacheService;
     private final PaymentStatsService paymentStatsService;
 
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
@@ -237,7 +228,6 @@ public class StoreServiceImpl implements StoreService{
         LocalDate yesterday = today.minusDays(1);
         LocalDate weekStart = today.minusDays(6);
         LocalDate monthStart = today.withDayOfMonth(1);
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 
 
         Page<StoreResponseDto> responsePage = stores.map(store -> {
@@ -246,11 +236,14 @@ public class StoreServiceImpl implements StoreService{
             Long currentFavoriteStore = member.getFavoriteStore() != null
                     ? member.getFavoriteStore().getId()
                     : null;
-            // 오늘 매출 및 취소율 (Redis)
-            var todayStats = salesCacheService.getSalesStats(storeId, redisDate);
-            salesCacheService.getSalesStats(storeId, redisDate);
-            int todaySales = todayStats.getTotalSales();
-            double todayCancelRate = todayStats.getCancelRate() != null ? todayStats.getCancelRate() : 0.0;
+            // 오늘 매출 및 취소율 (PaymentStats)
+            PaymentStats todayStats = paymentStatsRepository
+                    .findByStoreIdAndStatsDate(storeId, today)
+                    .orElse(null);
+            int todaySales = todayStats != null ? todayStats.getTotalSales() : 0;
+            double todayCancelRate = todayStats != null && todayStats.getSalesCnt() > 0
+                    ? (todayStats.getCancelCnt() * 100.0) / todayStats.getSalesCnt()
+                    : 0.0;
             // 어제 매출
             int yesterdaySales = paymentStatsRepository
                     .findByStoreIdAndStatsDate(storeId, yesterday)

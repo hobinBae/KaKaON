@@ -4,7 +4,6 @@ import com.s310.kakaon.domain.analytics.dto.DashboardSummaryResponseDto;
 import com.s310.kakaon.domain.analytics.dto.MonthlySalesResponseDto;
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
-import com.s310.kakaon.domain.payment.service.SalesCacheService;
 import com.s310.kakaon.domain.paymentstats.entity.PaymentStats;
 import com.s310.kakaon.domain.paymentstats.repository.PaymentStatsRepository;
 import com.s310.kakaon.domain.store.entity.Store;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -30,7 +28,6 @@ public class DashboardServiceImpl implements DashboardService {
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
     private final PaymentStatsRepository paymentStatsRepository;
-    private final SalesCacheService salesCacheService;
 
     @Override
     public DashboardSummaryResponseDto getDashboardSummary(Long storeId, Long memberId) {
@@ -50,9 +47,11 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate monthStart = today.withDayOfMonth(1);
         LocalDate weekStart = today.minusDays(6);
 
-        // 오늘 실시간 매출 (redis)
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int todaySales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales();
+        // 오늘 실시간 매출
+        int todaySales = paymentStatsRepository
+                .findByStoreIdAndStatsDate(storeId, today)
+                .map(PaymentStats::getTotalSales)
+                .orElse(0);
 
         // 어제 매출
         int yesterdaySales = paymentStatsRepository
@@ -96,7 +95,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         // 최근 7일 매출 (과거부터 현재 순서)
         List<DashboardSummaryResponseDto.DailySalesDto> last7days = paymentStatsRepository
-                .findByStoreIdAndStatsDateBetween(storeId, weekStart, yesterday)
+                .findByStoreIdAndStatsDateBetween(storeId, weekStart, today)
                 .stream()
                 .sorted(Comparator.comparing(PaymentStats::getStatsDate))  // 날짜 오름차순 정렬
                 .map(ps -> DashboardSummaryResponseDto.DailySalesDto.builder()
@@ -106,12 +105,6 @@ public class DashboardServiceImpl implements DashboardService {
                 )
                 .collect(Collectors.toList());
 
-        // 오늘 데이터 마지막에 추가
-        last7days.add(DashboardSummaryResponseDto.DailySalesDto.builder()
-                .date(today.toString())
-                .totalSales(todaySales)
-                .build()
-        );
 
 
         return DashboardSummaryResponseDto.builder()
@@ -170,19 +163,6 @@ public class DashboardServiceImpl implements DashboardService {
                                 .totalSales(ps.getTotalSales())
                                 .build()
                         ).collect(Collectors.toList());
-
-        // Redis에서 오늘 매출 조회 (yyyyMMdd 형식 사용)
-        String redisDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Integer todayTotalSales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales();
-        Integer todayDeliverySales = salesCacheService.getSalesStats(storeId, redisDate).getDeliverySales();
-
-        MonthlySalesResponseDto.DailySales today = MonthlySalesResponseDto.DailySales.builder()
-                .date(LocalDate.now().toString())
-                .storeSales(todayTotalSales-todayDeliverySales)
-                .deliverySales(todayDeliverySales)
-                .totalSales(todayTotalSales)
-                .build();
-        dailySalesList.add(today);
 
         return MonthlySalesResponseDto.builder()
                 .storeId(storeId)

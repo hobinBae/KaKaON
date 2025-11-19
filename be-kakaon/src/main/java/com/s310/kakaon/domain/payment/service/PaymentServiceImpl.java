@@ -99,6 +99,9 @@ public class PaymentServiceImpl implements PaymentService{
         // ✅ Redis 통계 즉시 반영
         salesCacheService.updatePaymentStats(storeId, payment.getAmount(), payment.getApprovedAt(), payment.getDelivery());
 
+        // ✅ DB 통계도 즉시 저장
+        updatePaymentStatsToDb(savedPayment);
+
         // Kafka 이벤트 발행
         PaymentEventDto event = PaymentEventDto.builder()
                 .paymentId(savedPayment.getId())
@@ -743,6 +746,57 @@ public class PaymentServiceImpl implements PaymentService{
         }
         LocalDateTime startTime = LocalDateTime.parse(startTimeObj.toString());
         return approveTime.isBefore(startTime);
+    }
+
+    /**
+     * Payment 발생 시 DB 통계 업데이트
+     * Redis와 별도로 DB에도 즉시 저장
+     *
+     * @param payment 저장된 Payment 엔티티
+     */
+    private void updatePaymentStatsToDb(Payment payment) {
+        Store store = payment.getStore();
+        LocalDateTime approvedAt = payment.getApprovedAt();
+        Integer amount = payment.getAmount();
+        PaymentMethod paymentMethod = payment.getPaymentMethod();
+        Boolean isDelivery = payment.getDelivery();
+
+        LocalDate statsDate = approvedAt.toLocalDate();
+        int hour = approvedAt.getHour();
+
+        // PaymentStats 조회 또는 생성
+        PaymentStats stats = paymentStatsRepository
+                .findByStoreIdAndStatsDate(store.getId(), statsDate)
+                .orElseGet(() -> {
+                    PaymentStats newStats = PaymentStats.builder()
+                            .store(store)
+                            .statsDate(statsDate)
+                            .totalSales(0)
+                            .totalCancelSales(0)
+                            .salesCnt(0L)
+                            .cancelCnt(0L)
+                            .build();
+                    return paymentStatsRepository.save(newStats);
+                });
+
+        // PaymentStatsHourly 조회 또는 생성
+        PaymentStatsHourly hourly = paymentStatsHourlyRepository
+                .findByPaymentStatsIdAndHour(stats.getId(), hour)
+                .orElseGet(() -> {
+                    PaymentStatsHourly newHourly = PaymentStatsHourly.builder()
+                            .paymentStats(stats)
+                            .hour(hour)
+                            .hourlyTotalSales(0)
+                            .hourlyPaymentCount(0)
+                            .hourlyCancelCount(0)
+                            .hourlyCancelRate(0.0)
+                            .build();
+                    return paymentStatsHourlyRepository.save(newHourly);
+                });
+
+        // Stats 업데이트 (엔티티 메서드 활용)
+        stats.applyPayment(amount, paymentMethod, isDelivery);
+        hourly.applyPaymentHourly(amount);
     }
 
 
