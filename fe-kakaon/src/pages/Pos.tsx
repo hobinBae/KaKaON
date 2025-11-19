@@ -277,11 +277,13 @@ const Pos = () => {
         <main className="flex-1 rounded-xl p-6 flex flex-col min-h-0">
           {view === 'products' ? (
             <>
-              <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 p-2">
-                {isLoadingProducts ? (
-                  <p>메뉴를 불러오는 중입니다...</p>
-                ) : paginatedProducts.length > 0 ? (
-                  paginatedProducts.map((product) => (
+              {isLoadingProducts ? (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xl text-gray-500">메뉴를 불러오는 중입니다...</p>
+                </div>
+              ) : paginatedProducts.length > 0 ? (
+                <div className="flex-1 grid grid-cols-6 grid-rows-4 gap-3 p-2">
+                  {paginatedProducts.map((product) => (
                     <Card key={product.id} onClick={() => addToCart(product)} className="cursor-pointer bg-white border-gray-300 rounded-lg shadow-sm flex flex-col justify-between p-3 h-full relative transition-transform hover:scale-105">
                       {isEditMode && (
                       <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center gap-2 rounded-lg">
@@ -292,11 +294,13 @@ const Pos = () => {
                       <p className="text-gray-800">{product.name}</p>
                       <p className="text-lg font-bold text-right text-gray-800">{product.price.toLocaleString()}원</p>
                     </Card>
-                  ))
-                ) : (
-                  <p>등록된 메뉴가 없습니다.</p>
-                )}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex-1 flex items-center justify-center">
+                  <p className="text-xl text-gray-500">등록된 메뉴가 없습니다.</p>
+                </div>
+              )}
               <div className="flex justify-center items-center gap-2 pt-4 flex-shrink-0">
                 {[...Array(totalPages)].map((_, i) => (
                   <button
