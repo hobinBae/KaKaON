@@ -36,7 +36,7 @@ export default function MobileFeatures() {
           <CarouselContent className="-ml-12">
             {mobileGifs.map((gif, index) => (
               <CarouselItem key={index} className="pl-12 basis-full sm:basis-1/2 md:basis-1/3 lg:basis-1/4 xl:basis-1/5">
-                <div className="flex justify-center py-4">
+                <div className="flex justify-center py-8 px-2">
                   {/* 핸드폰 목업 프레임 (삼성 스타일) */}
                   <div className="relative w-[200px] h-[420px] bg-black rounded-[1.5rem] p-1.5 shadow-xl border-2 border-gray-800 ring-1 ring-gray-700 transform transition-transform hover:scale-105 duration-300">
                     {/* 펀치홀 카메라 */}
@@ -59,8 +59,8 @@ export default function MobileFeatures() {
               </CarouselItem>
             ))}
           </CarouselContent>
-          <CarouselPrevious className="hidden sm:flex -left-12" />
-          <CarouselNext className="hidden sm:flex -right-12" />
+          <CarouselPrevious className="hidden sm:flex xl:hidden -left-4" />
+          <CarouselNext className="hidden sm:flex xl:hidden -right-4" />
         </Carousel>
       </div>
     </Section>

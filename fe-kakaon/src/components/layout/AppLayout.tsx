@@ -1,6 +1,6 @@
 import { Outlet, Link, useLocation } from "react-router-dom";
 import { useState, useRef, useMemo, useEffect } from "react";
-import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X, Star } from "lucide-react";
+import { Home, CreditCard, TrendingUp, Bell, Store, Settings, LogOut, Lock, Menu, User, X, Bookmark } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -280,7 +280,7 @@ export function AppLayout() {
                       <SelectItem key={store.storeId} value={String(store.storeId)}>
                         <div className="flex items-center">
                           {store.storeId === favoriteStore?.storeId && (
-                            <Star className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
+                            <Bookmark className="w-4 h-4 mr-2 text-yellow-400 fill-yellow-400" />
                           )}
                           {store.name}
                         </div>

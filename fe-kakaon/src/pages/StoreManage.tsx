@@ -2,7 +2,7 @@ import { useState, Fragment } from "react";
 import {
   Plus,
   Search,
-  Star,
+  Bookmark,
   X,
   ChevronDown,
   Pencil, // 수정 아이콘 import
@@ -836,7 +836,7 @@ export default function StoreManage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         {favoriteStore?.storeId === store.storeId && (
-                          <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                          <Bookmark className="w-4 h-4 text-yellow-400 fill-yellow-400 mr-2" />
                         )}
                         <h3 className="font-medium text-[#333333]">{store.name}</h3>
                         <Badge
@@ -1182,7 +1182,7 @@ export default function StoreManage() {
                         {/* 별 아이콘을 위한 고정 너비 컨테이너 추가 */}
                         <div className="w-4 h-4 flex-shrink-0">
                           {favoriteStore?.storeId === store.storeId && (
-                            <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                            <Bookmark className="w-4 h-4 text-yellow-400 fill-yellow-400" />
                           )}
                         </div>
                         <span className="text-sm text-[#333333] truncate">{store.name}</span>
