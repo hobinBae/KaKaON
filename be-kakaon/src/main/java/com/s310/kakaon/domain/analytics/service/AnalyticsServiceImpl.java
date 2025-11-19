@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -32,8 +31,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
     private final PaymentStatsHourlyRepository paymentStatsHourlyRepository;
     private final StoreRepository storeRepository;
     private final MemberRepository memberRepository;
-    private final SalesCacheService salesCacheService;
-    private final PaymentStatsRepositoryImpl paymentStatsRepositoryImpl;
 
     /**
      * 가맹점의 점주가 로그인된 사람인지 확인하는 유효성 검사 메서드
@@ -62,10 +59,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         LocalDate today = LocalDate.now();
         List<PaymentStats> statsList = new ArrayList<>();
 
-        // 오늘 실시간 매출 (redis)
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Integer todaySales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales() != null ?  salesCacheService.getSalesStats(storeId, redisDate).getTotalSales() : 0;
-
         switch (periodType.toUpperCase()) {
             case "WEEK" :
                 start = today.minusDays(6);
@@ -91,7 +84,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                                 .build()
                         )
                         .toList();
-                long total = monthlyStats.stream().mapToLong(MonthlySalesDto::getTotalSales).sum() + todaySales;
+                long total = monthlyStats.stream().mapToLong(MonthlySalesDto::getTotalSales).sum();
 
                 return SalesPeriodResponseDto.builder()
                         .storeId(storeId)
@@ -111,7 +104,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                 throw new ApiException(ErrorCode.INVALID_PERIOD);
         }
 
-        long total = statsList.stream().mapToLong(PaymentStats::getTotalSales).sum() + todaySales.longValue();
+        long total = statsList.stream().mapToLong(PaymentStats::getTotalSales).sum();
 
 
         List<SalesPeriodResponseDto.SalesData> list = statsList.stream()
@@ -121,13 +114,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         .sales(ps.getTotalSales().longValue())
                         .build()
                 ).collect(Collectors.toList());
-
-
-        list.add(SalesPeriodResponseDto.SalesData.builder()
-                .date(today.toString())
-                .sales(todaySales.longValue())
-                .build()
-        );
 
         return SalesPeriodResponseDto.builder()
                 .storeId(storeId)
@@ -149,18 +135,14 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         LocalDate today = LocalDate.now();
         List<SalesHourlyResponseDto.HourlyData> hourlyList = new ArrayList<>();
 
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        SalesStatsResponseDto redisStats = salesCacheService.getSalesStats(storeId, redisDate);
-
         switch (periodType.toUpperCase()) {
 
             case "TODAY" :
 
-
-                hourlyList = redisStats.getHourlySales().stream()
+                hourlyList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(storeId, periodType, today, today).stream()
                         .map(hs -> SalesHourlyResponseDto.HourlyData.builder()
                                 .hour(hs.getHour())
-                                .avgSales(hs.getSales().doubleValue())
+                                .avgSales(hs.getAvgTotalSales())
                                 .build()
                         ).toList();
 
@@ -174,8 +156,8 @@ public class AnalyticsServiceImpl implements AnalyticsService {
 
             case "WEEK" :
 
-                start = today.minusDays(7);
-                end = today.minusDays(1);
+                start = today.minusDays(6);
+                end = today;
                 List<HourlyAvgDto> hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
                         storeId, periodType, start, end);
 
@@ -194,7 +176,7 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         .build();
             case "MONTH" :
                 start = today.withDayOfMonth(1);
-                end = today.minusDays(1);
+                end = today;
                 hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(
                         storeId, periodType, start, end);
 
@@ -228,15 +210,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
                         .endDate(end.toString())
                         .hourlySales(hourlyList)
                         .build();
-
-
-//                hourlyList = redisStats.getHourlySales().stream()
-//                        .map(hs -> SalesHourlyResponseDto.HourlyData.builder()
-//                                .hour(hs.getHour())
-//                                .avgSales(hs.getSales().doubleValue())
-//                                .paymentCount(hs.getPaymentCount())
-//                                .build()
-//                        ).toList();
 
             case "RANGE" :
                 hourlyAvgList = paymentStatsHourlyRepository.findAvgHourlySalesByPeriod(storeId, periodType, start, end);
@@ -279,17 +252,17 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         switch (periodType.toUpperCase()) {
             case "WEEK":
                 startDate = today.minusDays(6);
-                endDate = today.minusDays(1);
+                endDate = today;
                 break;
 
             case "MONTH":
                 startDate = today.withDayOfMonth(1);
-                endDate = today.minusDays(1);
+                endDate = today;
                 break;
 
             case "YEAR":
                 startDate = LocalDate.of(today.getYear(), 1, 1);
-                endDate = today.minusDays(1);
+                endDate = today;
                 break;
 
             case "RANGE":
@@ -304,56 +277,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }
 
         List<CancelRateResponseDto.CancelRateDailyDto> list = paymentStatsRepository.findCancelRateByPeriod(storeId, periodType, startDate, endDate);
-
-        // Redis에서 오늘 데이터 가져오기
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        SalesStatsResponseDto todayStats = salesCacheService.getSalesStats(storeId, redisDate);
-        Double todayCancelRate = todayStats.getCancelRate() != null ? todayStats.getCancelRate() : 0.0;
-        Long todayPaymentCount = todayStats.getPaymentCount() != null ? todayStats.getPaymentCount().longValue() : 0L;
-        Long todayCancelCount = todayStats.getCancelCount() != null ? todayStats.getCancelCount().longValue() : 0L;
-
-        // YEAR가 아닐 때: 오늘 데이터를 리스트에 추가
-        if (!periodType.equalsIgnoreCase("YEAR")) {
-            list.add(CancelRateResponseDto.CancelRateDailyDto.builder()
-                    .date(today.toString())
-                    .cancelRate(todayCancelRate)
-                    .totalSales(todayPaymentCount)
-                    .cancelSales(todayCancelCount)
-                    .build());
-
-            return CancelRateResponseDto.builder()
-                    .storeId(storeId)
-                    .periodType(periodType)
-                    .startDate(startDate.toString())
-                    .endDate(today.toString())
-                    .cancelRateList(list)
-                    .build();
-        }
-
-        // YEAR일 때: 현재 월 데이터에 오늘 데이터를 병합하여 취소율 재계산
-        String currentMonth = String.valueOf(today.getMonthValue());
-
-        // 현재 월 데이터 찾기
-        for (int i = 0; i < list.size(); i++) {
-            CancelRateResponseDto.CancelRateDailyDto monthData = list.get(i);
-            if (monthData.getDate().equals(currentMonth)) {
-                // 현재 월의 취소건수와 판매건수에 오늘 데이터 추가
-                Long updatedSalesCount = monthData.getTotalSales() + todayPaymentCount;
-                Long updatedCancelCount = monthData.getCancelSales() + todayCancelCount;
-                Double updatedCancelRate = updatedSalesCount > 0
-                        ? (updatedCancelCount.doubleValue() / updatedSalesCount.doubleValue()) * 100.0
-                        : 0.0;
-
-                // 업데이트된 데이터로 교체
-                list.set(i, CancelRateResponseDto.CancelRateDailyDto.builder()
-                        .date(today.getYear() + "-" + String.format("%02d", today.getMonthValue()))
-                        .cancelRate(updatedCancelRate)
-                        .totalSales(updatedSalesCount)
-                        .cancelSales(updatedCancelCount)
-                        .build());
-                break;
-            }
-        }
 
         return CancelRateResponseDto.builder()
                 .storeId(storeId)
@@ -401,15 +324,6 @@ public class AnalyticsServiceImpl implements AnalyticsService {
         }
 
         List<StoreSalesResponseDto.StoreSalesDto> storeList = paymentStatsRepository.findStoreSalesByPeriod(memberId, periodType, startDate, endDate);
-
-        //endDate가 오늘 포함이면 오늘 매출 내역 더해주기
-        if(endDate.isAfter(today) || endDate.equals(today)) {
-            String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            for(StoreSalesResponseDto.StoreSalesDto store : storeList) {
-                Integer todaySales = salesCacheService.getSalesStats(store.getStoreId(), redisDate).getTotalSales();
-                if(todaySales != null) store.setTotalSales(store.getTotalSales() + todaySales);
-            }
-        }
 
         return StoreSalesResponseDto.builder()
                 .memberId(memberId)

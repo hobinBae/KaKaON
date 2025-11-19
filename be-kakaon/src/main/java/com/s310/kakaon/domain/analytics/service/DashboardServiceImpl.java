@@ -50,9 +50,11 @@ public class DashboardServiceImpl implements DashboardService {
         LocalDate monthStart = today.withDayOfMonth(1);
         LocalDate weekStart = today.minusDays(6);
 
-        // 오늘 실시간 매출 (redis)
-        String redisDate = today.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        int todaySales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales();
+        // 오늘 실시간 매출
+        int todaySales = paymentStatsRepository
+                .findByStoreIdAndStatsDate(storeId, today)
+                .map(PaymentStats::getTotalSales)
+                .orElse(0);
 
         // 어제 매출
         int yesterdaySales = paymentStatsRepository
@@ -96,7 +98,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         // 최근 7일 매출 (과거부터 현재 순서)
         List<DashboardSummaryResponseDto.DailySalesDto> last7days = paymentStatsRepository
-                .findByStoreIdAndStatsDateBetween(storeId, weekStart, yesterday)
+                .findByStoreIdAndStatsDateBetween(storeId, weekStart, today)
                 .stream()
                 .sorted(Comparator.comparing(PaymentStats::getStatsDate))  // 날짜 오름차순 정렬
                 .map(ps -> DashboardSummaryResponseDto.DailySalesDto.builder()
@@ -106,12 +108,6 @@ public class DashboardServiceImpl implements DashboardService {
                 )
                 .collect(Collectors.toList());
 
-        // 오늘 데이터 마지막에 추가
-        last7days.add(DashboardSummaryResponseDto.DailySalesDto.builder()
-                .date(today.toString())
-                .totalSales(todaySales)
-                .build()
-        );
 
 
         return DashboardSummaryResponseDto.builder()
@@ -170,19 +166,6 @@ public class DashboardServiceImpl implements DashboardService {
                                 .totalSales(ps.getTotalSales())
                                 .build()
                         ).collect(Collectors.toList());
-
-        // Redis에서 오늘 매출 조회 (yyyyMMdd 형식 사용)
-        String redisDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        Integer todayTotalSales = salesCacheService.getSalesStats(storeId, redisDate).getTotalSales();
-        Integer todayDeliverySales = salesCacheService.getSalesStats(storeId, redisDate).getDeliverySales();
-
-        MonthlySalesResponseDto.DailySales today = MonthlySalesResponseDto.DailySales.builder()
-                .date(LocalDate.now().toString())
-                .storeSales(todayTotalSales-todayDeliverySales)
-                .deliverySales(todayDeliverySales)
-                .totalSales(todayTotalSales)
-                .build();
-        dailySalesList.add(today);
 
         return MonthlySalesResponseDto.builder()
                 .storeId(storeId)

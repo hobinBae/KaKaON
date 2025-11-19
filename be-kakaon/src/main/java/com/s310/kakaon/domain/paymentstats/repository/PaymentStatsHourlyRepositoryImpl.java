@@ -45,6 +45,8 @@ public class PaymentStatsHourlyRepositoryImpl implements PaymentStatsHourlyRepos
                 .where(paymentStats.store.id.eq(storeId));
 
         switch (periodType.toUpperCase()) {
+            case "TODAY" ->
+                query.where(paymentStats.statsDate.between(startDate, endDate));
             case "WEEK" ->
                 query.where(paymentStats.statsDate.between(LocalDate.now().minusDays(6), LocalDate.now()));
             case "MONTH" ->
