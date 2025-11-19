@@ -163,11 +163,11 @@
 
 ### 프론트엔드
 
-| 구분        | 기술                   |
-| ----------- | ---------------------- |
-| 프레임워크  | React, TypeScript      |
-| 상태관리    | Zustand, TanStack Query   |
-| 차트/시각화 | Recharts |
+| 구분        | 기술                    |
+| ----------- | ----------------------- |
+| 프레임워크  | React, TypeScript       |
+| 상태관리    | Zustand, TanStack Query |
+| 차트/시각화 | Recharts                |
 | 스타일링    | Tailwind CSS, shadcn/ui |
 
 ### 인프라 & 협업
@@ -186,4 +186,4 @@
 
 ### 6) ERD
 
-<!-- 이미지 들어갈 자리 (예: ERD.png) -->
+![ERD](/docs/images/erd.png)
