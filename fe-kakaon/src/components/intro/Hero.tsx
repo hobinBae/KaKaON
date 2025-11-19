@@ -69,7 +69,7 @@ function TypingAnimation({
 
 export default function Hero() {
   const { member } = useBoundStore();
-  const subtitleLine1 = "흩어져 있는 매출 데이터를 한눈에 확인하고, 이상 거래를 실시간으로 감지하세요.";
+  const subtitleLine1 = "흩어져 있는 매출 데이터를 AI로 한눈에 정리하고, 이상 거래를 실시간으로 감지하세요.";
   const subtitleLine2 = "사장님은 비즈니스 성장에만 집중할 수 있도록 카카온이 돕겠습니다.";
 
   const handleLogin = () => {

@@ -17,8 +17,8 @@ const testimonials = [
 ];
 
 const metrics = [
-    { value: '99%', label: '취소탐지 리드타임 단축' },
-    { value: '99%', label: '매출 데이터 정확도' },
+    { value: '90%', label: '이상거래 탐지 정확도' },
+    { value: '99.8%', label: '매출 데이터 정확도' },
     { value: '500+', label: '가입 대기 가맹점 수' },
 ]
 
