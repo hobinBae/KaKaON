@@ -1,0 +1,83 @@
+HELP.md
+.gradle
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+!**/src/main/**/bin/
+!**/src/test/**/bin/
+
+### IntelliJ IDEA ###
+.idea
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+!**/src/main/**/out/
+!**/src/test/**/out/
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+### VS Code ###
+.vscode/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# 로그 파일, 환경 설정
+*.log
+*.env
+.env.*
+
+# 실행 결과물 (패키징된 jar/war 등)
+*.jar
+*.war
+*.ear
+*.zip
+!gradle/wrapper/gradle-wrapper.jar
+
+# Java Crash Dumps / Heap Dump
+hs_err_pid*
+*.hprof
+
+# JUnit / Jacoco / Test Coverage 툴 관련
+/test-output/
+/coverage/
+/jacoco.exec
+
+# IDE Plugin 캐시 / 기타 툴
+# SonarLint
+.idea/sonarlint/
+
+# Lombok generated
+lombok.config
+
+application.properties
+application.yml
+
+# Claude Code documentation
+CLAUDE.md
+
+# QueryDSL generated files
+src/main/generated
