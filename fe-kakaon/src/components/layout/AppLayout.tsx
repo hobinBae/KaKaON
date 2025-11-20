@@ -169,7 +169,7 @@ export function AppLayout() {
         }`}
       >
         <div className="h-18 flex items-center justify-center p-4">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/dashboard" className="flex items-center gap-2">
             <img src={logoImg} alt="KaKaON Logo" className="h-12" />
           </Link>
         </div>

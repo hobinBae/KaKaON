@@ -23,7 +23,7 @@ export default function FinalCTA() {
         </h2>
         {member ? (
           <Button asChild size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base">
-            <Link to="/analytics">매출분석 확인하기</Link>
+            <Link to="/dashboard">대시보드 가기</Link>
           </Button>
         ) : (
           <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>

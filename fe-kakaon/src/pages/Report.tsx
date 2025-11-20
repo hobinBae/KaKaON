@@ -80,47 +80,37 @@ export default function Report() {
       }
 
       try {
-        const formatKpis = (kpis: SummaryKpi[]) => kpis.map(k => `${k.label}: ${k.value} (${k.change})`).join(', ');
-        const formatSummary = (summary: DailySummary[]) => summary.map(d => `${d.date} 매출 ${d.sales.toLocaleString()}원`).join(', ');
-        const formatPatterns = (patterns: PatternData[]) => patterns.map(p => `${p.label} 매출 ${p.sales.toLocaleString()}원`).join(', ');
-        const formatMenus = (menus: MenuItem[]) => menus.map(m => `${m.name} (${m.proportion})`).join(', ');
+        // 토큰 절약을 위해 불필요한 텍스트 제거하고 데이터만 전달
+        const formatKpis = (kpis: SummaryKpi[]) => kpis.map(k => `${k.label}:${k.value}(${k.change})`).join(',');
+        const formatSummary = (summary: DailySummary[]) => summary.map(d => `${d.date}:${Math.round(d.sales/10000)}만`).join(',');
+        const formatPatterns = (patterns: PatternData[]) => patterns.map(p => `${p.label}:${Math.round(p.sales/10000)}만`).join(',');
+        const formatMenus = (menus: MenuItem[]) => menus.map(m => `${m.name}(${m.proportion})`).join(',');
 
         const prompt = `
-        당신은 '${data.storeName}' 매장의 전문 데이터 분석가입니다. 
-        아래 ${reportType === "weekly" ? "주간" : "월간"} 매출 데이터를 기반으로 인사이트를 생성하되,
-        리포트 A4 하단 영역에 들어가도록 **총 8~12개의 짧은 문장**만 출력하세요.
+        역할: '${data.storeName}' 전문 데이터 분석가.
+        목표: ${reportType === "weekly" ? "주간" : "월간"} 매출 분석 인사이트 8~12개 문장 생성.
 
-        ------------------------------------
-        [출력 형식 규칙 – 반드시 지키기]
-        1) 무조건 번호를 붙여 1~12번까지만 작성
-        2) 한 문장은 최대 18~22단어 안에서 끝낼 것 (너무 긴 문장 금지)
-        3) 각 번호당 한 문장만 작성 (줄 넘김 없이)
-        4) 데이터 요약 금지, 반드시 원인 + 실행 전략을 포함
-        5) 두 문항 이상 비슷한 내용 금지
-        6) 지나치게 디테일한 실행 항목(예: 세트명, 게시물 문구 등) 금지
-        7) 너무 전문적인 표현 금지. 사장님이 바로 이해 가능한 말만 작성
+        [규칙]
+        1. **반드시 문장 앞에 "1. ", "2. " 번호를 붙일 것.**
+        2. **각 번호당 내용은 절대 줄바꿈 하지 말고 한 줄로 작성할 것.**
+        3. 원인 분석과 구체적인 실행 방안을 포함하되, 핵심만 간결하게 요약.
+        4. 어조: 사장님께 조언하듯 부드럽고 정중한 '해보세요체', '추천드립니다체' 사용.
+        5. 단순 현상 나열보다 '실행 가능한 행동' 위주 제안.
+        6. 중복 내용 금지.
 
-        ------------------------------------
-        [매출 데이터]
-        ■ 핵심 지표: ${formatKpis(data.summaryKpis)}
-        ■ ${reportType === "weekly" ? "일별" : "주차별"} 매출 추이: ${formatSummary(data.dailySummary)}
-        ■ 시간대별 매출: ${formatPatterns(data.hourlyPatterns)}
-        ■ 인기 메뉴: ${formatMenus(data.topMenus)}
-        ■ 부진 메뉴: ${formatMenus(data.lowMenus)}
-        ■ 주문 유형별 매출: ${data.orderTypes
-          .map(o => `${o.type}: 매출 ${o.sales.toLocaleString()}원, 주문 ${o.orders}건`)
-          .join(', ')}
+        [데이터(단위:만원)]
+        -지표:${formatKpis(data.summaryKpis)}
+        -추이:${formatSummary(data.dailySummary)}
+        -시간대:${formatPatterns(data.hourlyPatterns)}
+        -상위메뉴:${formatMenus(data.topMenus)}
+        -하위메뉴:${formatMenus(data.lowMenus)}
+        -주문유형:${data.orderTypes.map(o => `${o.type}:${Math.round(o.sales/10000)}만`).join(',')}
 
-        ------------------------------------
-        [생성할 인사이트 내용]
-        다음 항목을 포함하되 최대 12문장 안에서 요약된 형태로 생성하세요:
-        - 매출 변화의 핵심 원인 1~2개
-        - 시간대/요일별 고객 행동 패턴 핵심 요약
-        - 메뉴별 판매 특징과 개선 포인트
-        - 주문 유형·결제 패턴 활용 방향
-        - 운영자가 이번 달 가장 먼저 조치해야 할 핵심 1가지
-
-        반드시 “8~12개의 짧은 문장”으로만 구성하세요.
+        [필수포함]
+        - 매출 등락 원인
+        - 시간/요일 패턴 및 대응
+        - 메뉴 판매 특징/개선점
+        - 운영/마케팅 핵심 제안 1가지
         `;
 
         
@@ -128,7 +118,8 @@ export default function Report() {
         const insightText = response.data.data;
 
         if (insightText) {
-          const insights = insightText.split('\n').map(line => line.replace(/^[0-9]+\.\s*/, '')).filter(line => line.trim() !== '');
+          // 번호를 포함한 전체 문장을 그대로 사용 (빈 줄만 제거)
+          const insights = insightText.split('\n').filter(line => line.trim() !== '');
           setAiInsight(insights);
           // 성공적으로 받아온 인사이트를 로컬 스토리지에 저장
           localStorage.setItem(cacheKey, JSON.stringify(insights));
