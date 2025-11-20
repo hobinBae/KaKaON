@@ -225,7 +225,7 @@ export function AppLayout() {
                 />
                 <div className="flex-1">
                   <div className="text-base text-[#333333] font-semibold">
-                    {member.name.length > 5 ? `${member.name.substring(0, 5)}...` : member.name}님
+                    {member.name.length > 8 ? `${member.name.substring(0, 8)}..` : member.name}님
                   </div>
                 </div>
               </div>

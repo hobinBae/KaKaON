@@ -407,7 +407,7 @@ const GeneralKiosk = () => {
                   <p className="font-bold text-xl">{item.name}</p>
                   <div className="flex items-center gap-4">
                     <div className="flex items-center gap-2">
-                      <Button className="h-12 w-12" variant="outline" onClick={() => updateQuantity(item.id, -1)}><Minus className="size-8"/></Button>
+                      <Button className="h-12 w-12" variant="outline" onClick={() => item.quantity === 1 ? removeFromCart(item.id) : updateQuantity(item.id, -1)}><Minus className="size-8"/></Button>
                       <span className="text-2xl w-8 text-center">{item.quantity}</span>
                       <Button className="h-12 w-12" variant="outline" onClick={() => updateQuantity(item.id, 1)}><Plus className="size-8"/></Button>
                     </div>

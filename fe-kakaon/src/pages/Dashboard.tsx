@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Card } from "@/components/ui/card";
-import { TrendingUp, TrendingDown, DollarSign, AlertTriangle } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, AlertTriangle, Loader2 } from "lucide-react";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Calendar } from "@/components/ui/calendar";
 import { DayProps } from "react-day-picker";
@@ -194,7 +194,12 @@ export default function Dashboard() {
   }, [summaryData]);
 
   if (isLoadingStores || isLoadingSummary) {
-    return null;
+    return (
+      <div className="flex flex-col items-center justify-center h-[calc(100vh-200px)] gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary/50" />
+        <p className="text-muted-foreground text-lg">로딩중입니다. 조금만 기다려 주세요.</p>
+      </div>
+    );
   }
 
   if (stores && stores.length === 0) {
@@ -219,7 +224,11 @@ export default function Dashboard() {
   }
 
   if (isErrorSummary || isErrorMonthly) {
-    return <div>데이터를 불러오는 중 오류가 발생했습니다.</div>;
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-200px)]">
+        <div className="text-center text-muted-foreground">데이터를 불러오는 중 오류가 발생했습니다.</div>
+      </div>
+    );
   }
 
   return (
