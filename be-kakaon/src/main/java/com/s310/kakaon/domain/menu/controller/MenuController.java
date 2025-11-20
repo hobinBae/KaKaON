@@ -54,7 +54,7 @@ public class MenuController {
             @RequestParam(name = "size", defaultValue = "24") int size,
             HttpServletRequest httpRequest) {
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.ASC, "createdDateTime"));
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdDateTime"));
         var paged = menuService.getMenus(memberId, storeId, pageable);
         var response = PageResponseDto.of(paged);
         return ResponseEntity.ok(ApiResponse.of(HttpStatus.OK, "메뉴 조회가 성공적으로 완료 되었습니다.", response, httpRequest.getRequestURI()));
