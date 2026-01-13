@@ -19,8 +19,9 @@ public class PaymentCsvDto {
     private Integer amount;
     private String paymentMethod;
     private String status;
-    @DateTimeFormat(pattern = "yyyy.M.d HH:mm")
     private String deliveryType;
+    @DateTimeFormat(pattern = "yyyy.M.d HH:mm")
     private LocalDateTime approvedAt;
+    @DateTimeFormat(pattern = "yyyy.M.d HH:mm")
     private LocalDateTime canceledAt;
 }
