@@ -35,7 +35,7 @@ import java.util.Map;
 public class BatchConfig {
 
     private static final int CHUNK_SIZE = 2000;
-    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy.M.d HH:mm");
 
     @Bean
     public Job paymentCsvUploadJob(
