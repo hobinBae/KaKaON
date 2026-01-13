@@ -2,7 +2,6 @@ package com.s310.kakaon.domain.menu.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.s310.kakaon.domain.file.service.FileStorageService;
 import com.s310.kakaon.domain.member.service.MemberService;
 import com.s310.kakaon.domain.menu.dto.PageResponseDto;
 import com.s310.kakaon.domain.menu.service.MenuService;
@@ -35,8 +34,8 @@ public class MenuController {
 
     private final MemberService memberService;
     private final MenuService menuService;
-    private final FileStorageService fileStorageService;
     private final ObjectMapper objectMapper;
+//    private final FileStorageServive fileStorageServive;
 
     /** 메뉴 리스트 조회 */
     @Operation(
@@ -114,10 +113,10 @@ public class MenuController {
         MenuRequestDto req = objectMapper.readValue(data, MenuRequestDto.class);
 
         // 2) 이미지가 있을 경우 S3 업로드
-        if (image != null && !image.isEmpty()) {
-            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
-            req.setImgUrl(imgUrl);
-        }
+//        if (image != null && !image.isEmpty()) {
+//            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
+//            req.setImgUrl(imgUrl);
+//        }
 
         // 3) 회원 정보 가져오기
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
@@ -182,11 +181,11 @@ public class MenuController {
         // 1) JSON 문자열을 DTO로 변환
         MenuRequestDto req = objectMapper.readValue(data, MenuRequestDto.class);
 
-        // 2) 이미지가 있을 경우 S3 업로드 후 imgUrl 설정
-        if (image != null && !image.isEmpty()) {
-            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
-            req.setImgUrl(imgUrl);
-        }
+//        // 2) 이미지가 있을 경우 S3 업로드 후 imgUrl 설정
+//        if (image != null && !image.isEmpty()) {
+//            String imgUrl = fileStorageService.uploadMenuImage(storeId, image);
+//            req.setImgUrl(imgUrl);
+//        }
 
         // 3) 회원 정보 가져오기
         Long memberId = memberService.getMemberByProviderId(kakaoId).getId();
