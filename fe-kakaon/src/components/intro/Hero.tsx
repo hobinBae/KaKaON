@@ -1,9 +1,10 @@
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { useState, useEffect, ReactNode } from 'react';
+import { useState, useEffect, ReactNode, Suspense } from 'react';
 import { useBoundStore } from '@/stores/storeStore';
 import { cn } from '@/lib/utils';
 import TestLoginModal from '@/components/auth/TestLoginModal';
+import HeroBackground3D from './HeroBackground3D';
 
 interface TypingAnimationProps {
   children: ReactNode;
@@ -73,45 +74,28 @@ export default function Hero() {
   const subtitleLine2 = "사장님은 비즈니스 성장에만 집중할 수 있도록 카카온이 돕겠습니다.";
 
   const handleLogin = () => {
-    const url = import.meta.env.VITE_OAUTH2_AUTHORIZE ;
-    const width = 500;
-    const height = 700;
-    const left = window.screen.width / 2 - width / 2;
-    const top = window.screen.height / 2 - height / 2;
-    window.open(url, 'kakaoLogin', `width=${width},height=${height},top=${top},left=${left}`);
+    // 카카오 로그인 페이지로 직접 리디렉션
+    window.location.href = import.meta.env.VITE_OAUTH2_AUTHORIZE;
   };
 
   return (
     <section id="hero" className="relative w-full text-center overflow-hidden">
       {/* Full-width background */}
-      <div className="absolute inset-0 z-0">
-        <video
-          autoPlay
-          loop
-          muted
-          playsInline
-          className="w-full h-full object-cover"
-          poster="/images/hero-poster.jpg"
-          aria-label="카카온 대시보드 기능 시연 영상"
-          preload="eager"
-        >
-          <source src="/videos/hero-video.webm" type="video/webm" />
-          <source src="/videos/hero-video.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-black/40" />
-      </div>
+      <Suspense fallback={<div className="absolute inset-0 z-0 bg-gradient-to-b from-[#FFDB58] to-[#FFFFFF]" />}>
+        <HeroBackground3D />
+      </Suspense>
 
       {/* Constrained content */}
       <div className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-6 py-16 md:py-20 lg:py-28">
         <div className="flex flex-col items-center space-y-6 md:space-y-8">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-white text-center w-full overflow-hidden">
+          <h1 className="text-4xl sm:text-5xl md:text-6xl font-bold text-[#3C1E1E] text-center w-full overflow-hidden">
             <TypingAnimation duration={1.5}>
               복잡한 매출 관리, <br className="sm:hidden" />
-              <span className="text-primary">카카온</span>으로 간편하게
+              <span className="text-[#E56717]">카카온</span>으로 간편하게
             </TypingAnimation>
           </h1>
           <p
-            className="max-w-xl md:max-w-3xl text-base sm:text-lg text-white/90 opacity-0 animate-slide-bottom text-center"
+            className="max-w-xl md:max-w-3xl text-base sm:text-lg font-semibold text-[#3C1E1E]/90 opacity-0 animate-slide-bottom text-center"
             style={{ animationDelay: '1.6s' }}
           >
             {subtitleLine1}
@@ -120,18 +104,18 @@ export default function Hero() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto pt-4">
             {member ? (
-              <Button asChild size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base">
+              <Button asChild size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base shadow-lg">
                 <Link to="/analytics">매출분석 확인하기</Link>
               </Button>
             ) : (
-              <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base" onClick={handleLogin}>
+              <Button size="lg" className="w-full sm:w-auto bg-[#FEE500] text-[#3C1E1E] hover:bg-[#FEE500]/90 rounded-full px-8 py-6 text-base shadow-lg" onClick={handleLogin}>
                 무료로 시작하기
               </Button>
             )}
             {!member && (
               <TestLoginModal 
                 trigger={
-                  <Button size="lg" variant="outline" className="bg-transparent border-white text-white hover:bg-white/10 rounded-full px-8 py-6 text-base">
+                  <Button size="lg" variant="outline" className="bg-transparent border-[#3C1E1E] text-[#3C1E1E] hover:bg-[#3C1E1E]/10 rounded-full px-8 py-6 text-base">
                     테스트 ID 로그인
                   </Button>
                 } 
