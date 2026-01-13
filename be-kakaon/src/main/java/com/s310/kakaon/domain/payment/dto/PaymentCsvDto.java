@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import org.springframework.format.annotation.DateTimeFormat;
 
 @Data
 @NoArgsConstructor
@@ -18,6 +19,7 @@ public class PaymentCsvDto {
     private Integer amount;
     private String paymentMethod;
     private String status;
+    @DateTimeFormat(pattern = "yyyy.M.d HH:mm")
     private String deliveryType;
     private LocalDateTime approvedAt;
     private LocalDateTime canceledAt;
