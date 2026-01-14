@@ -24,7 +24,7 @@ public class AlertEventListener {
 
     @Async("alertExecutor")
     //결제 내역이 커밋되기 전에 이 안에 로직이 실행해서 결제내역을 찾을 수 없음
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @EventListener
     public void handle(AlertEvent event){
 
         log.info("[AlertEvent 수신] {}", event);

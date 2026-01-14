@@ -1,8 +1,6 @@
 package com.s310.kakaon.domain.payment.service;
 
-import com.s310.kakaon.domain.alert.dto.AlertEvent;
-import com.s310.kakaon.domain.alert.entity.AlertType;
-import com.s310.kakaon.domain.alert.repository.AlertRepository;
+
 import com.s310.kakaon.domain.member.entity.Member;
 import com.s310.kakaon.domain.member.repository.MemberRepository;
 import com.s310.kakaon.domain.order.entity.Orders;
@@ -41,7 +39,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
@@ -49,7 +46,6 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.stream.Collectors;
 
-import static com.s310.kakaon.global.util.Util.generateAlertId;
 import static com.s310.kakaon.global.util.Util.validateStoreOwner;
 
 @Service
@@ -62,9 +58,7 @@ public class PaymentServiceImpl implements PaymentService{
     private final PaymentRepository paymentRepository;
     private final PaymentMapper paymentMapper;
     private final OrderRepository orderRepository;
-    private final AlertRepository alertRepository;
     private final PaymentCancelRepository paymentCancelRepository;
-    private final ApplicationEventPublisher publisher;
     private final StringRedisTemplate stringRedisTemplate;
     private static final String REDIS_KEY_PREFIX = "store:operation:startTime:";
     private final SalesCacheService salesCacheService;
@@ -130,13 +124,6 @@ public class PaymentServiceImpl implements PaymentService{
         // 커밋 후 발사: AFTER_COMMIT 리스너가 잡아서 Kafka로 보냄
         eventPublisher.publishEvent(event);
 
-
-        long t1 = System.currentTimeMillis();
-        if(!detectAfterHoursTransaction(store, payment)){
-            detectHighValueTransaction(store, payment);
-        }
-        long t2 = System.currentTimeMillis();
-        log.info("[PERF] 이상거래 탐지 완료 시점: {} ms", (t2 - t1));
         return paymentMapper.fromEntity(payment);
     }
 
@@ -759,60 +746,6 @@ public class PaymentServiceImpl implements PaymentService{
             return "\"" + field.replace("\"", "\"\"") + "\"";
         }
         return field;
-    }
-
-    public boolean detectAfterHoursTransaction(Store store, Payment payment) {
-        String redisKey = REDIS_KEY_PREFIX + store.getId();
-
-        boolean open = stringRedisTemplate.hasKey(redisKey);
-
-        if (!open) {
-            AlertEvent event = AlertEvent.builder()
-                    .alertUuid(generateAlertId(alertRepository))
-                    .storeId(store.getId())
-                    .storeName(store.getName())
-                    .alertType(AlertType.OUT_OF_BUSINESS_HOUR)
-                    .description("영업시간 외 거래가 발생했습니다.")
-                    .detectedAt(LocalDateTime.now())
-                    .paymentId(payment.getId())
-                    .build();
-            publisher.publishEvent(event);
-            log.info("[AlertEvent 발행] {}", event.getDescription());
-
-            return true;
-        }
-        return false;
-    }
-
-    public void detectHighValueTransaction(Store store, Payment payment) {
-
-        String redisKey = REDIS_KEY_PREFIX + store.getId();
-        Object avgObj = stringRedisTemplate.opsForHash().get(redisKey, "avgPaymentAmountPrevMonth");
-
-
-        // 전월 평균이 0이면 비교 불가하므로 스킵
-        if (avgObj != null) {
-            double avgAmount = Double.parseDouble(avgObj.toString());
-            double currentAmount = payment.getAmount();
-
-            if (avgAmount > 0 && currentAmount >= avgAmount * 10) {
-                AlertEvent event = AlertEvent.builder()
-                        .alertUuid(generateAlertId(alertRepository))
-                        .storeId(store.getId())
-                        .storeName(store.getName())
-                        .alertType(AlertType.HIGH_AMOUNT_SPIKE)
-                        .description(String.format(
-                                "결제 금액 %,d원이 전월 평균(%,.0f원)의 10배이상을 초과했습니다.",
-                                (long) currentAmount, avgAmount))
-                        .detectedAt(LocalDateTime.now())
-                        .paymentId(payment.getId())
-                        .build();
-
-                publisher.publishEvent(event);
-                log.info("[AlertEvent 발행 - 고액결제 급증] storeId={}, current={}, avgPrevMonth={}",
-                        store.getId(), currentAmount, avgAmount);
-            }
-        }
     }
 
     private boolean shouldUpdateDb(LocalDateTime approveTime, Object startTimeObj){
