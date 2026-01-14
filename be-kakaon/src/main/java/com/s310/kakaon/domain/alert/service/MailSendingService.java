@@ -33,7 +33,6 @@ public class MailSendingService {
 
         List<AlertRecipient> alertRecipients = store.getAlertRecipient();
 
-        // 메일 내용 구성
         String subject = "[이상거래 탐지 알림] " + persisted.getAlertType().getDescription();
         String htmlContent = buildAlertMailHtml(persisted, store);
 
